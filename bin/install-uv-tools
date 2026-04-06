@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# install-uv-tools - Install Python tools from an inf manifest using uv
+#
+# This script reads a tool manifest file (.inf format), strips out
+# comment lines and blank lines, and installs each tool using
+# `uv tool install`. If uv is not installed, it is bootstrapped
+# automatically via the official install script.
+#
+# The inf format uses shell-style comments (lines starting with #) and
+# lists one tool name per line.
+#
+# Usage:
+#     install-uv-tools <manifest.inf>
+#
+# Arguments:
+#     $1  Path to the tool manifest file
+#
+# Example:
+#     install-uv-tools uv-tools.inf
+#
+# Exit codes:
+#     0  All tools installed successfully
+#     1  Missing argument or file not found
+#     *  Exit code from uv on failure
+#
+# Dependencies:
+#     - curl (for uv bootstrap)
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: install-uv-tools <manifest.inf>" >&2
+    exit 1
+fi
+
+manifest="$1"
+
+if [[ ! -f "$manifest" ]]; then
+    echo "install-uv-tools: file not found: $manifest" >&2
+    exit 1
+fi
+
+# Ensure uv is installed
+if ! command -v uv &>/dev/null; then
+    echo "uv not found, installing..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
+grep -v '^#' "$manifest" | grep -v '^[[:space:]]*$' | while read -r tool; do
+    echo "Installing: $tool"
+    "${HOME}/.local/bin/uv" tool install "$tool"
+done

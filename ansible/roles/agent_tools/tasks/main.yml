@@ -1,0 +1,592 @@
+---
+# Clone and install agent skills from agent-helper-scripts
+
+- name: Ensure git directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/git"
+    state: directory
+    mode: '0755'
+
+- name: Clone agent-helper-scripts repository
+  ansible.builtin.git:
+    repo: https://github.com/leynos/agent-helper-scripts.git
+    dest: "{{ ansible_env.HOME }}/git/agent-helper-scripts"
+    version: HEAD
+    depth: 1
+    single_branch: true
+
+- name: Clone nextest-skill repository
+  ansible.builtin.git:
+    repo: https://github.com/leynos/nextest-skill.git
+    dest: "{{ ansible_env.HOME }}/git/nextest-skill"
+    version: HEAD
+    depth: 1
+    single_branch: true
+
+- name: Clone vidai-mock-skill repository
+  ansible.builtin.git:
+    repo: https://github.com/leynos/vidai-mock-skill.git
+    dest: "{{ ansible_env.HOME }}/git/vidai-mock-skill"
+    version: HEAD
+    depth: 1
+    single_branch: true
+
+- name: Clone rust-skill repository
+  ansible.builtin.git:
+    repo: https://github.com/leynos/rust-skill.git
+    dest: "{{ ansible_env.HOME }}/git/rust-skill"
+    version: HEAD
+    depth: 1
+    single_branch: true
+
+- name: Check if SSH key exists for private repos
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
+  register: ssh_key_stat
+
+- name: Clone df12-readme-skill repository via SSH
+  ansible.builtin.git:
+    repo: git@github.com:leynos/df12-readme-skill.git
+    dest: "{{ ansible_env.HOME }}/git/df12-readme-skill"
+    version: HEAD
+    depth: 1
+    single_branch: true
+    key_file: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
+    accept_hostkey: true
+  when: ssh_key_stat.stat.exists
+
+- name: Ensure Codex skills directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.codex/skills"
+    state: directory
+    mode: '0755'
+
+- name: Ensure Claude skills directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.claude/skills"
+    state: directory
+    mode: '0755'
+
+- name: Find skills in agent-helper-scripts
+  ansible.builtin.find:
+    paths: "{{ ansible_env.HOME }}/git/agent-helper-scripts/skills"
+    file_type: directory
+    depth: 1
+  register: agent_helper_skills
+
+- name: Install agent-helper-scripts skills to Codex
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ agent_helper_skills.files }}"
+
+- name: Install agent-helper-scripts skills to Claude
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ agent_helper_skills.files }}"
+
+- name: Find skills in nextest-skill
+  ansible.builtin.find:
+    paths: "{{ ansible_env.HOME }}/git/nextest-skill"
+    file_type: directory
+    depth: 1
+  register: nextest_skills
+
+- name: Install nextest-skill skills to Codex
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ nextest_skills.files }}"
+
+- name: Install nextest-skill skills to Claude
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ nextest_skills.files }}"
+
+- name: Find skills in vidai-mock-skill
+  ansible.builtin.find:
+    paths: "{{ ansible_env.HOME }}/git/vidai-mock-skill"
+    file_type: directory
+    depth: 1
+  register: vidai_skills
+
+- name: Install vidai-mock-skill skills to Codex
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ vidai_skills.files }}"
+
+- name: Install vidai-mock-skill skills to Claude
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ vidai_skills.files }}"
+
+- name: Find skills in rust-skill
+  ansible.builtin.find:
+    paths: "{{ ansible_env.HOME }}/git/rust-skill/skills"
+    file_type: directory
+    depth: 1
+  register: rust_skills
+
+- name: Install rust-skill skills to Codex
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ rust_skills.files }}"
+
+- name: Install rust-skill skills to Claude
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ rust_skills.files }}"
+
+- name: Find skills in df12-readme-skill
+  ansible.builtin.find:
+    paths: "{{ ansible_env.HOME }}/git/df12-readme-skill"
+    file_type: directory
+    depth: 1
+  register: df12_readme_skills
+  when: ssh_key_stat.stat.exists
+
+- name: Install df12-readme-skill skills to Codex
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_readme_skills.files }}"
+  when: ssh_key_stat.stat.exists
+
+- name: Install df12-readme-skill skills to Claude
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_readme_skills.files }}"
+  when: ssh_key_stat.stat.exists
+
+# Install context_pack tool for agent communication
+- name: Install context_pack tool
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://raw.githubusercontent.com/AmirTlinov/context_pack/main/scripts/install.sh | bash
+  args:
+    creates: "{{ ansible_env.HOME }}/.local/bin/context_pack"
+
+# Configure Codex with sub-agents using collection modules
+- name: Ensure Codex directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.codex"
+    state: directory
+    mode: '0755'
+
+- name: Ensure Codex agents directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.codex/agents"
+    state: directory
+    mode: '0755'
+
+- name: Configure Codex CLI MCP servers
+  agentic.agent_configs.codex_cli_mcp:
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    scope: user
+    transport: "{{ item.transport }}"
+    command: "{{ item.command | default(omit) }}"
+    args: "{{ item.args | default(omit) }}"
+    env: "{{ item.env | default(omit) }}"
+  loop:
+    - name: context_pack
+      transport: stdio
+      command: mcp-context-pack
+      env:
+        CONTEXT_PACK_ROOT: "{{ ansible_env.HOME }}/.local/state/context-pack"
+        CONTEXT_PACK_SOURCE_ROOT: "__SESSION_CWD__"
+        CONTEXT_PACK_LOG: "mcp_context_pack=info"
+        CONTEXT_PACK_INITIALIZE_TIMEOUT_MS: "20000"
+        CONTEXT_PACK_MAX_PACK_BYTES: "524288"
+        CONTEXT_PACK_MAX_SOURCE_BYTES: "2097152"
+        CONTEXT_PACK_EXPIRED_GRACE_SECONDS: "900"
+    - name: playwright
+      transport: stdio
+      command: podman
+      args:
+        - run
+        - --rm
+        - -i
+        - --network=host
+        - -e
+        - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+        - -e
+        - PLAYWRIGHT_SKIP_BROWSER_GC=1
+        - -e
+        - PLAYWRIGHT_MCP_BROWSER=chromium
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/ms-playwright:/ms-playwright:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/google-chrome:/opt/google/chrome:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/npm:/root/.npm:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/work:/work:z"
+        - -w
+        - /work
+        - mcr.microsoft.com/playwright:latest
+        - bash
+        - -lc
+        - npx @playwright/mcp@latest --no-sandbox
+
+- name: Configure Codex CLI subagents
+  agentic.agent_configs.codex_cli_subagent:
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    scope: user
+    description: "{{ item.description }}"
+    model: "{{ item.model }}"
+    reasoning_effort: "{{ item.reasoning_effort | default('medium') }}"
+    sandbox_mode: "{{ item.sandbox_mode | default('workspace-write') }}"
+    developer_instructions: "{{ item.developer_instructions }}"
+  loop:
+    - name: wyvern
+      description: "Fast reconnaissance sub-agent for read-heavy exploration, file triage, and concise summaries. Use when speed matters more than deep reasoning or code edits."
+      model: gpt-5.3-codex-spark
+      reasoning_effort: medium
+      sandbox_mode: read-only
+      developer_instructions: |
+        You are wyvern, a fast reconnaissance agent.
+
+        Your responsibilities:
+        - explore the codebase quickly
+        - identify the relevant files, symbols, call paths, tests, and config
+        - return concise, evidence-backed summaries
+        - suggest likely next places to inspect
+
+        Rules:
+        - do not edit files
+        - do not propose broad refactors
+        - prefer targeted search and focused file reads over repo-wide wandering
+        - cite exact file paths, symbols, and commands where possible
+        - surface uncertainty explicitly instead of bluffing
+        - return distilled findings, not raw stream-of-consciousness notes
+    - name: scribe
+      description: "Documentation-focused sub-agent for targeted changes to READMEs, ADRs, design docs, comments, and other prose-heavy project materials. Use when the task is primarily explanatory, editorial, or structural rather than behavioural."
+      model: gpt-5.4-mini
+      reasoning_effort: medium
+      sandbox_mode: workspace-write
+      developer_instructions: |
+        You are scribe, a documentation editing agent.
+
+        Your responsibilities:
+        - make targeted documentation changes
+        - improve clarity, structure, and technical accuracy
+        - update README files, ADRs, design docs, developer guides, comments, and docstrings when asked
+        - preserve project terminology, tone, and intent
+        - keep diffs tight and easy to review
+
+        Rules:
+        - do not change runtime behaviour, APIs, tests, build config, or dependency manifests unless the task explicitly requires documentation-adjacent edits to keep docs accurate
+        - prefer minimal, surgical edits over stylistic rewrites
+        - do not invent features, commands, flags, or architectural intent
+        - derive claims from the repository contents; if something is unclear, say so in your summary
+        - keep examples internally consistent with the current codebase
+        - call out any documentation gaps that could not be resolved from available evidence
+        - when editing comments or docstrings, preserve code semantics and formatting conventions
+        - return a concise summary of what changed, where, and any uncertainties
+
+# Install Claude hooks
+- name: Ensure Claude hooks directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.claude/hooks"
+    state: directory
+    mode: '0755'
+
+- name: Copy post-turn-quality-stop-hook.py
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/hooks/post-turn-quality-stop-hook.py"
+    dest: "{{ ansible_env.HOME }}/.claude/hooks/post-turn-quality-stop-hook.py"
+    mode: '0755'
+    remote_src: true
+
+- name: Copy install-hook-cmd.sh to ~/.local/bin
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/bin/install-hook-cmd.sh"
+    dest: "{{ ansible_env.HOME }}/.local/bin/install-hook-cmd"
+    mode: '0755'
+    remote_src: true
+
+- name: Initialize Claude settings.json if not exists
+  ansible.builtin.copy:
+    content: "{}"
+    dest: "{{ ansible_env.HOME }}/.claude/settings.json"
+    mode: '0644'
+    force: false
+
+- name: Check if Stop hook is already installed
+  ansible.builtin.shell:
+    cmd: |
+      jq -e '.hooks.Stop // [] | any(.hooks[]?; .type == "command" and (.command | contains("post-turn-quality-stop-hook.py")))' \
+        "{{ ansible_env.HOME }}/.claude/settings.json" 2>/dev/null || true
+  register: hook_installed
+  changed_when: false
+
+- name: Install Stop hook in Claude settings
+  ansible.builtin.shell:
+    cmd: |
+      jq '.hooks.Stop = [{"hooks": [{"type": "command", "command": "python3 {{ ansible_env.HOME }}/.claude/hooks/post-turn-quality-stop-hook.py", "timeout": 600}]}]' \
+        "{{ ansible_env.HOME }}/.claude/settings.json" > "{{ ansible_env.HOME }}/.claude/settings.json.tmp" && \
+        mv "{{ ansible_env.HOME }}/.claude/settings.json.tmp" "{{ ansible_env.HOME }}/.claude/settings.json"
+  when: hook_installed.stdout != "true"
+
+# Configure Claude MCP servers using collection module
+- name: Configure Claude Code MCP servers
+  agentic.agent_configs.claude_code_mcp:
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    scope: user
+    transport: "{{ item.transport }}"
+    command: "{{ item.command | default(omit) }}"
+    args: "{{ item.args | default(omit) }}"
+    env: "{{ item.env | default(omit) }}"
+  loop:
+    - name: context_pack
+      transport: stdio
+      command: mcp-context-pack
+      env:
+        CONTEXT_PACK_ROOT: "{{ ansible_env.HOME }}/.local/state/context-pack"
+        CONTEXT_PACK_SOURCE_ROOT: "__SESSION_CWD__"
+        CONTEXT_PACK_LOG: "mcp_context_pack=info"
+        CONTEXT_PACK_INITIALIZE_TIMEOUT_MS: "20000"
+        CONTEXT_PACK_MAX_PACK_BYTES: "524288"
+        CONTEXT_PACK_MAX_SOURCE_BYTES: "2097152"
+        CONTEXT_PACK_EXPIRED_GRACE_SECONDS: "900"
+    - name: playwright
+      transport: stdio
+      command: podman
+      args:
+        - run
+        - --rm
+        - -i
+        - --network=host
+        - -e
+        - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+        - -e
+        - PLAYWRIGHT_SKIP_BROWSER_GC=1
+        - -e
+        - PLAYWRIGHT_MCP_BROWSER=chromium
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/ms-playwright:/ms-playwright:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/google-chrome:/opt/google/chrome:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/npm:/root/.npm:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/work:/work:z"
+        - -w
+        - /work
+        - mcr.microsoft.com/playwright:latest
+        - bash
+        - -lc
+        - npx @playwright/mcp@latest --no-sandbox
+
+# Create context directory for agent communication
+- name: Ensure context directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/context"
+    state: directory
+    mode: '0755'
+
+- name: Ensure context-pack-data directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.local/state/context-pack"
+    state: directory
+    mode: '0755'
+
+# Ensure playwright directories exist
+- name: Ensure playwright-mcp cache directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ ansible_env.HOME }}/.local/state/playwright/cache/ms-playwright"
+    - "{{ ansible_env.HOME }}/.local/state/playwright/cache/google-chrome"
+    - "{{ ansible_env.HOME }}/.local/state/playwright/cache/npm"
+    - "{{ ansible_env.HOME }}/.local/state/playwright/work"
+
+# Factory Droid configuration
+- name: Ensure Factory Droid directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.factory"
+    state: directory
+    mode: '0755'
+
+- name: Ensure Factory Droid skills directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.factory/skills"
+    state: directory
+    mode: '0755'
+
+- name: Ensure Factory Droid hooks directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.factory/hooks"
+    state: directory
+    mode: '0755'
+
+- name: Ensure Factory Droid droids directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.factory/droids"
+    state: directory
+    mode: '0755'
+
+- name: Install skills to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ agent_helper_skills.files }}"
+
+- name: Install nextest-skill to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ nextest_skills.files }}"
+
+- name: Install vidai-mock-skill to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ vidai_skills.files }}"
+
+- name: Install rust-skill to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ rust_skills.files }}"
+
+- name: Install df12-readme-skill to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_readme_skills.files }}"
+  when: ssh_key_stat.stat.exists
+
+# Configure Factory Droid hooks using collection module
+- name: Configure Factory Droid hooks
+  agentic.agent_configs.factory_droid_hook:
+    name: claude_import
+    state: present
+    scope: user
+    hook_type: Stop
+    command: python3 {{ ansible_env.HOME }}/.claude/hooks/post-turn-quality-stop-hook.py
+    timeout: 600
+
+# Configure Factory Droid MCP servers using collection module
+- name: Configure Factory Droid MCP servers
+  agentic.agent_configs.factory_droid_mcp:
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    scope: user
+    transport: "{{ item.transport }}"
+    command: "{{ item.command | default(omit) }}"
+    args: "{{ item.args | default(omit) }}"
+    env: "{{ item.env | default(omit) }}"
+  loop:
+    - name: context_pack
+      transport: stdio
+      command: mcp-context-pack
+      env:
+        CONTEXT_PACK_ROOT: "{{ ansible_env.HOME }}/.local/state/context-pack"
+        CONTEXT_PACK_SOURCE_ROOT: "__SESSION_CWD__"
+        CONTEXT_PACK_LOG: "mcp_context_pack=info"
+        CONTEXT_PACK_INITIALIZE_TIMEOUT_MS: "20000"
+        CONTEXT_PACK_MAX_PACK_BYTES: "524288"
+        CONTEXT_PACK_MAX_SOURCE_BYTES: "2097152"
+        CONTEXT_PACK_EXPIRED_GRACE_SECONDS: "900"
+    - name: playwright
+      transport: stdio
+      command: podman
+      args:
+        - run
+        - --rm
+        - -i
+        - --network=host
+        - -e
+        - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+        - -e
+        - PLAYWRIGHT_SKIP_BROWSER_GC=1
+        - -e
+        - PLAYWRIGHT_MCP_BROWSER=chromium
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/ms-playwright:/ms-playwright:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/google-chrome:/opt/google/chrome:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/npm:/root/.npm:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/work:/work:z"
+        - -w
+        - /work
+        - mcr.microsoft.com/playwright:latest
+        - bash
+        - -lc
+        - npx @playwright/mcp@latest --no-sandbox
+
+# Droid daemon systemd user service
+- name: Ensure systemd user directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/systemd/user"
+    state: directory
+    mode: '0755'
+
+- name: Install droid daemon systemd user service
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/.config/systemd/user/droid-daemon.service"
+    content: |
+      [Unit]
+      Description=Droid Daemon (Remote Access)
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=%h/.local/bin/droid daemon --remote-access
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=default.target
+    mode: '0644'
+
+- name: Enable droid daemon service
+  ansible.builtin.systemd:
+    name: droid-daemon.service
+    scope: user
+    enabled: true
+    daemon_reload: true

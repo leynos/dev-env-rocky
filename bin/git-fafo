@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# git-fafo - Quickly scaffold and publish a new GitHub repository
+#
+# This script automates the creation of a new project by:
+#   1. Copying a template repository using copier
+#   2. Creating a public GitHub repository
+#   3. Configuring the git remote and branch
+#   4. Making initial commits (empty + skeleton)
+#   5. Pushing to the remote with upstream tracking
+#
+# The template is expected to exist at git@github.com:<owner>/<repo>
+# where <owner> defaults to the current user.
+#
+# Usage:
+#     git fafo <repo-name> <language>
+#
+# Arguments:
+#     repo-name  Name for the new repository (alphanumeric, _, -, . only)
+#     language   Programming language for the project (alphanumeric, _, -, . only)
+#
+# Example:
+#     git fafo my-new-project python
+#
+# Exit codes:
+#     0  Repository created successfully
+#     1  Invalid arguments, missing dependencies, or directory exists
+#
+# Dependencies:
+#     - git
+#     - gh (GitHub CLI, authenticated)
+#     - copier
+
+set -euo pipefail
+
+if [[ $# -lt 2 ]]; then
+    echo "Usage: git fafo <repo-name> <language>" >&2
+    exit 1
+fi
+
+# Check required commands are available
+for cmd in git gh copier; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "git-fafo: required command not found: $cmd" >&2
+        exit 1
+    fi
+done
+
+typeset owner=$USER
+typeset repo=$1
+typeset lang=$2
+
+# Validate repo name and language contain only safe characters
+if [[ ! "$repo" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+    echo "git-fafo: invalid repo name: $repo" >&2
+    echo "  (allowed characters: a-z A-Z 0-9 _ - .)" >&2
+    exit 1
+fi
+
+if [[ ! "$lang" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+    echo "git-fafo: invalid language: $lang" >&2
+    echo "  (allowed characters: a-z A-Z 0-9 _ - .)" >&2
+    exit 1
+fi
+
+if [[ -e "$repo" ]]; then
+    echo "You did that one already!" >&2
+    exit 1
+fi
+
+copier copy "git@github.com:$owner/$repo" "$repo"
+gh repo create "$owner/$repo" --public
+pushd "$repo"
+git remote add origin "git@github.com:$owner/$repo"
+git branch -m main
+git commit -m "Initial commit" --allow-empty
+git commit -a -m "Add repo skeleton"
+git push --set-upstream origin main

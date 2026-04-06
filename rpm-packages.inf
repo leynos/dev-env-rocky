@@ -1,0 +1,93 @@
+# Terminal multiplexer and CLI utilities
+# General-purpose command-line tools for terminal productivity,
+# text processing, and JSON manipulation.
+tmux
+jq
+fd-find
+gawk
+perl
+
+# Text editors
+# Terminal and graphical text editors for code and document editing.
+neovim
+vim-enhanced
+vim-minimal
+gedit
+
+# Version control and diff tools
+# Git and supporting tools for visualising diffs and interacting
+# with GitHub.
+git
+git-delta
+difftastic
+gh
+
+# Programming languages and toolchains
+# Compilers, interpreters, and development environments for
+# various programming languages.
+clang
+golang
+nodejs
+rustup
+python3-devel
+
+# Container and infrastructure tools
+# Tools for container management, Kubernetes deployments,
+# and infrastructure-as-code provisioning.
+podman
+helm
+tofu
+
+# Database development libraries
+# Headers and libraries for building applications that interface
+# with SQLite and PostgreSQL databases.
+sqlite-devel
+libpq-devel
+
+# XML and XSLT development libraries
+# Development files for XML parsing and XSLT transformations.
+libxml2-devel
+libxslt-devel
+
+# Cryptography and security libraries
+# SSL/TLS and network security services for secure communications.
+openssl-devel
+nss
+
+# X11 and graphics libraries
+# Low-level X11 extensions and graphics buffer management for
+# GUI applications and compositing.
+libXrandr
+libXdamage
+libXcomposite
+libxkbcommon-devel
+libxkbcommon-x11-devel
+mesa-libgbm
+libglvnd-gles
+
+# Accessibility toolkit libraries
+# ATK and AT-SPI libraries for assistive technology support
+# in GTK applications.
+atk
+at-spi2-atk
+
+# Audio libraries
+# ALSA library for audio playback and recording support.
+alsa-lib
+
+# D-Bus and systemd services
+# Inter-process communication and system service management
+# components.
+dbus-devel
+dbus-x11
+systemd-udev
+systemd-resolved
+
+# Desktop utilities
+# GNOME desktop applications and XDG integration tools.
+gnome-calculator
+xdg-utils
+
+# System locale support
+# Language pack for English locale data.
+glibc-langpack-en

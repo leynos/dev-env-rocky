@@ -1,0 +1,25 @@
+# JavaScript/TypeScript linting and formatting
+# Fast linter and formatter for JS/TS codebases.
+@biomejs/biome
+
+# Markdown linting
+# Linter for Markdown files with configurable rules.
+markdownlint-cli2
+
+# API documentation tools
+# CLI tools for AsyncAPI and OpenAPI specification workflows.
+@asyncapi/cli
+@redocly/cli
+
+# Diagram generation
+# CLI for rendering Mermaid diagrams to images.
+@mermaid-js/mermaid-cli
+
+# AI coding assistants
+# Command-line interfaces for AI-assisted development.
+@anthropic-ai/claude-code
+@openai/codex
+
+# Package managers
+# Fast, disk-efficient package manager for Node.js.
+pnpm

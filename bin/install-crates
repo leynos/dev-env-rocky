@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# install-crates - Install Rust crates from an inf manifest using cargo-binstall
+#
+# This script reads a crate manifest file (.inf format), strips out
+# comment lines and blank lines, and installs each crate using
+# `cargo binstall`.
+#
+# Prerequisites are installed automatically if missing:
+#   1. If cargo is not found, installs Rust stable via rustup
+#   2. If cargo-binstall is not found, installs it via the official script
+#
+# The inf format uses shell-style comments (lines starting with #) and
+# lists one crate name per line.
+#
+# Usage:
+#     install-crates <manifest.inf>
+#
+# Arguments:
+#     $1  Path to the crate manifest file
+#
+# Example:
+#     install-crates crates.inf
+#
+# Exit codes:
+#     0  All crates installed successfully
+#     1  Missing argument, file not found, or installation failed
+#
+# Dependencies:
+#     - rustup (for Rust installation)
+#     - curl (for cargo-binstall bootstrap)
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: install-crates <manifest.inf>" >&2
+    exit 1
+fi
+
+manifest="$1"
+
+if [[ ! -f "$manifest" ]]; then
+    echo "install-crates: file not found: $manifest" >&2
+    exit 1
+fi
+
+# Ensure cargo is installed
+if ! command -v cargo &>/dev/null; then
+    echo "cargo not found, installing Rust stable via rustup..."
+    if ! command -v rustup &>/dev/null; then
+        echo "install-crates: rustup not found, please install rustup first" >&2
+        exit 1
+    fi
+    rustup install stable
+    rustup default stable
+fi
+
+# Ensure cargo-binstall is installed
+if ! command -v cargo-binstall &>/dev/null; then
+    echo "cargo-binstall not found, installing..."
+    curl -L --proto '=https' --tlsv1.2 -sSf \
+        https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+fi
+
+# Install crates from manifest
+grep -v '^#' "$manifest" | grep -v '^[[:space:]]*$' | while read -r crate; do
+    echo "Installing: $crate"
+    cargo binstall -y "$crate"
+done

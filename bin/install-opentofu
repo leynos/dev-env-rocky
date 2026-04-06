@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# install-opentofu - Install OpenTofu via the official RPM installer
+#
+# This script downloads and runs the official OpenTofu installer using
+# the RPM installation method. Skips installation if tofu is already
+# present.
+#
+# Usage:
+#     install-opentofu
+#
+# Exit codes:
+#     0  OpenTofu installed successfully or already present
+#     1  Installation failed
+#
+# Dependencies:
+#     - curl
+#     - rpm-based system
+
+set -euo pipefail
+
+if command -v tofu &>/dev/null; then
+    echo "OpenTofu is already installed: $(tofu version | head -n1)"
+    exit 0
+fi
+
+echo "Installing OpenTofu..."
+
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+
+pushd "$workdir" >/dev/null
+
+curl --proto '=https' --tlsv1.2 -fsSL \
+    https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
+
+chmod +x install-opentofu.sh
+./install-opentofu.sh --install-method rpm
+
+popd >/dev/null
+
+echo "OpenTofu installed successfully."

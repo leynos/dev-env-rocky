@@ -1,0 +1,340 @@
+#!/usr/bin/env python3
+"""
+Claude Code statusline generator with Nerdfonts glyphs.
+
+This script generates a stylised statusline for use with Claude Code's
+status hook. It displays:
+
+  - Project name (extracted from git remote or directory name)
+  - Current git branch with status indicators:
+    - Dirty (unstaged changes)
+    - Staged (changes ready to commit)
+    - Ahead/behind remote tracking branch
+    - Clean (no uncommitted changes)
+  - Pull request number (if applicable)
+  - Context window usage percentage (parsed from Claude transcript)
+
+The output uses ANSI escape sequences and Nerdfonts glyphs for a compact,
+visually informative display in terminals that support 256-colour mode.
+
+Usage:
+    As a Claude Code post-tool hook (receives JSON on stdin):
+        claude --status-line-hook "python3 /path/to/claude-status"
+
+    Standalone (uses environment/cwd):
+        CLAUDE_PROJECT_DIR=/path/to/repo ./claude-status
+
+Environment variables:
+    CLAUDE_PROJECT_DIR  Override the project directory (optional)
+
+Stdin (when used as hook):
+    JSON object with fields: cwd, transcript_path, model
+
+Output:
+    Single line of styled text to stdout
+"""
+
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+# Nerdfonts glyphs
+GLYPH = {
+    "fade_right": "\ue0c6",
+    "fade_left": "\ue0c7",
+    "branch": "\uf418",
+    "pr": "\uf407",
+    "chip": "\ue266",
+    "dirty": "\uf444",
+    "staged": "\uf457",
+    "ahead": "\uf432",
+    "behind": "\uf433",
+    "clean": "\uf42e",
+}
+
+
+class C:
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+    # Foregrounds
+    BLACK = "\033[30m"
+    WHITE = "\033[97m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    MAGENTA = "\033[95m"
+    GREY = "\033[90m"
+    # Backgrounds
+    BG_RESET = "\033[49m"
+    BG_BLACK = "\033[40m"
+    BG_GREY = "\033[100m"
+    BG_CYAN = "\033[46m"
+    BG_BLUE = "\033[44m"
+    BG_MAGENTA = "\033[45m"
+
+    # 256-colour for subtler backgrounds
+    @staticmethod
+    def bg(n: int) -> str:
+        return f"\033[48;5;{n}m"
+
+    @staticmethod
+    def fg(n: int) -> str:
+        return f"\033[38;5;{n}m"
+
+
+# Colour palette (256-colour mode for nicer backgrounds)
+PALETTE = {
+    "project_bg": C.bg(24),      # Deep blue-grey
+    "project_fg": C.fg(117),     # Soft cyan
+    "fade": C.fg(24),            # Matches project_bg for seamless fade
+    "branch_clean": C.fg(114),   # Soft green
+    "branch_dirty": C.fg(221),   # Soft yellow
+    "pr": C.fg(176),             # Soft magenta
+    "chip_ok": C.fg(114),
+    "chip_warn": C.fg(221),
+    "chip_danger": C.fg(203),
+}
+
+CONTEXT_WINDOW = 200_000
+
+
+def run(cmd: list[str], cwd: str | None = None) -> str:
+    try:
+        return subprocess.check_output(
+            cmd, cwd=cwd, stderr=subprocess.DEVNULL, text=True
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return ""
+
+
+def get_project_name(project_dir: str) -> str:
+    origin = run(["git", "remote", "get-url", "origin"], cwd=project_dir)
+    if origin:
+        match = re.search(r"[/:]([^/]+?)(?:\.git)?$", origin)
+        if match:
+            return match.group(1).removesuffix(".git")
+
+    if ".worktrees" in project_dir:
+        match = re.search(r"/([^/]+)\.worktrees/", project_dir)
+        if match:
+            return match.group(1)
+
+    return Path(project_dir).name
+
+
+def get_branch(project_dir: str) -> str:
+    return run(["git", "branch", "--show-current"], cwd=project_dir) or "detached"
+
+
+def get_git_status(project_dir: str) -> dict:
+    status = {"dirty": False, "staged": False, "ahead": 0, "behind": 0}
+
+    porcelain = run(["git", "status", "--porcelain"], cwd=project_dir)
+    if porcelain:
+        for line in porcelain.splitlines():
+            if line and len(line) >= 2:
+                index, worktree = line[0], line[1]
+                if worktree in "MADRCU?":
+                    status["dirty"] = True
+                if index in "MADRC":
+                    status["staged"] = True
+
+    tracking = run(
+        ["git", "rev-list", "--left-right", "--count", "@{upstream}...HEAD"],
+        cwd=project_dir,
+    )
+    if tracking and "\t" in tracking:
+        behind, ahead = tracking.split("\t")
+        status["behind"] = int(behind)
+        status["ahead"] = int(ahead)
+
+    return status
+
+
+def get_pr_number(project_dir: str) -> str:
+    pr_num = run(["gh", "pr", "view", "--json", "number", "--jq", ".number"], cwd=project_dir)
+    if pr_num:
+        return pr_num
+
+    branch = get_branch(project_dir)
+    match = re.match(r"^(?:pr|pull)[/-](\d+)", branch)
+    return match.group(1) if match else ""
+
+
+def usage_total(usage: dict) -> int:
+    return (
+        usage.get("input_tokens", 0)
+        + usage.get("output_tokens", 0)
+        + usage.get("cache_read_input_tokens", 0)
+        + usage.get("cache_creation_input_tokens", 0)
+    )
+
+
+def is_main_context_message(entry: dict) -> bool:
+    if entry.get("isSidechain"):
+        return False
+    if entry.get("isApiErrorMessage"):
+        return False
+
+    message = entry.get("message", {})
+
+    if message.get("role") != "assistant":
+        return False
+
+    model = str(message.get("model", "")).lower()
+    if model == "<synthetic>" or "synthetic" in model:
+        return False
+
+    content = message.get("content", [])
+    if isinstance(content, list):
+        for block in content:
+            if (
+                isinstance(block, dict)
+                and block.get("type") == "text"
+                and re.search(r"no\s+response\s+requested", block.get("text", ""), re.I)
+            ):
+                return False
+
+    usage = message.get("usage", {})
+    if usage_total(usage) == 0:
+        return False
+
+    return True
+
+
+def parse_timestamp(entry: dict) -> float:
+    ts = entry.get("timestamp")
+    if ts:
+        try:
+            from datetime import datetime
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+        except (ValueError, TypeError):
+            pass
+    return float("-inf")
+
+
+def get_context_usage(transcript_path: str | None) -> float | None:
+    if not transcript_path:
+        return None
+
+    path = Path(transcript_path)
+    if not path.exists():
+        return None
+
+    latest_ts = float("-inf")
+    latest_usage = None
+
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return None
+
+    for line in reversed(lines):
+        line = line.strip()
+        if not line:
+            continue
+
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+        if not is_main_context_message(entry):
+            continue
+
+        ts = parse_timestamp(entry)
+        usage = entry.get("message", {}).get("usage", {})
+        total = usage_total(usage)
+
+        if ts > latest_ts or (ts == latest_ts and total > usage_total(latest_usage or {})):
+            latest_ts = ts
+            latest_usage = usage
+
+    if not latest_usage:
+        return None
+
+    used = usage_total(latest_usage)
+    return round((used * 100) / CONTEXT_WINDOW, 1)
+
+
+def chip_colour(pct: float) -> str:
+    if pct >= 90:
+        return PALETTE["chip_danger"]
+    if pct >= 70:
+        return PALETTE["chip_warn"]
+    return PALETTE["chip_ok"]
+
+
+def build_statusline(
+    project_dir: str | None = None,
+    transcript_path: str | None = None,
+    model_name: str | None = None,
+) -> str:
+    project_dir = project_dir or os.getcwd()
+
+    project = get_project_name(project_dir)
+    branch = get_branch(project_dir)
+    status = get_git_status(project_dir)
+    pr = get_pr_number(project_dir)
+    ctx_usage = get_context_usage(transcript_path)
+
+    parts = []
+
+    # Project segment with background
+    parts.append(
+        f"{PALETTE['project_bg']}{PALETTE['project_fg']} {project} "
+        f"{C.BG_RESET}{PALETTE['fade']}{GLYPH['fade_right']}{C.RESET}"
+    )
+
+    # Branch segment
+    branch_color = PALETTE["branch_clean"] if not status["dirty"] else PALETTE["branch_dirty"]
+    branch_str = f"{branch_color}{GLYPH['branch']} {branch}"
+
+    indicators = []
+    if status["staged"]:
+        indicators.append(f"{PALETTE['branch_clean']}{GLYPH['staged']}")
+    if status["dirty"]:
+        indicators.append(f"{PALETTE['branch_dirty']}{GLYPH['dirty']}")
+    if status["ahead"]:
+        indicators.append(f"{PALETTE['project_fg']}{GLYPH['ahead']}{status['ahead']}")
+    if status["behind"]:
+        indicators.append(f"{PALETTE['chip_danger']}{GLYPH['behind']}{status['behind']}")
+    if not indicators and not status["dirty"]:
+        indicators.append(f"{PALETTE['branch_clean']}{GLYPH['clean']}")
+
+    branch_str += " " + " ".join(indicators)
+    parts.append(branch_str + C.RESET)
+
+    # PR segment
+    if pr:
+        parts.append(f"{PALETTE['pr']}{GLYPH['pr']} #{pr}{C.RESET}")
+
+    # Context usage segment
+    if ctx_usage is not None:
+        parts.append(f"{chip_colour(ctx_usage)}{GLYPH['chip']} {ctx_usage:.1f}%{C.RESET}")
+
+    return " ".join(parts)
+
+
+def main():
+    hook_input = {}
+    if not sys.stdin.isatty():
+        try:
+            hook_input = json.load(sys.stdin)
+        except json.JSONDecodeError:
+            pass
+
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR") or hook_input.get("cwd") or os.getcwd()
+    transcript_path = hook_input.get("transcript_path")
+    model = hook_input.get("model", {})
+    model_name = model.get("display_name")
+
+    print(build_statusline(project_dir, transcript_path, model_name))
+
+
+if __name__ == "__main__":
+    main()

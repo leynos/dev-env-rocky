@@ -1,0 +1,357 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#   "GitPython>=3.1.45",
+# ]
+# ///
+"""
+git-donkey - Create linked git worktrees with a standardised layout.
+
+This script automates the creation of git worktrees in a sibling directory
+structure, making it easy to work on multiple branches simultaneously
+without stashing or committing incomplete work.
+
+Worktrees are created at:
+    ../<repo-name>.worktrees/<branch-name>
+
+For example, if your repo is at ~/projects/myrepo and you run:
+    git donkey feature-x
+
+A worktree is created at ~/projects/myrepo.worktrees/feature-x
+
+Features:
+  - Fetches from the remote before creating the worktree
+  - Optionally updates the base branch if it's behind remote
+  - Creates new branches from a specified base (default: main)
+  - Uses '.' as base branch to branch from the current checkout
+  - Reuses existing local or remote branches if they exist
+  - Works correctly when invoked from within a linked worktree
+
+Usage:
+    git donkey <branch-name> [base-branch]
+    git donkey --no-pull <branch-name> [base-branch]
+
+Arguments:
+    branch_name    Name for the new worktree/branch
+    origin_branch  Base branch (default: main, or '.' for current branch)
+
+Options:
+    --no-pull      Skip prompting to update the base branch
+
+Exit codes:
+    0  Worktree created successfully
+    1  Operation failed (e.g., branch already checked out elsewhere)
+    2  Invalid repository or configuration error
+
+Dependencies:
+    - Python 3.13+
+    - GitPython
+    - uv (for script execution)
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import NoReturn
+
+from git import Git, GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
+
+
+def eprint(*args: object) -> None:
+    print(*args, file=sys.stderr)
+
+
+def die(msg: str, code: int = 2) -> NoReturn:
+    eprint(f"git-donkey: 💀 {msg}")
+    raise SystemExit(code)
+
+
+def prompt_yes_no(question: str, default: bool = False) -> bool:
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        eprint("Non-interactive stdin/stdout; skipping prompt (treating as 'no').")
+        return False
+
+    suffix = " [Y/n] " if default else " [y/N] "
+    while True:
+        ans = input(question + suffix).strip().lower()
+        if not ans:
+            return default
+        if ans in {"y", "yes"}:
+            return True
+        if ans in {"n", "no"}:
+            return False
+        eprint("Please answer y or n.")
+
+
+def find_repo() -> Repo:
+    try:
+        return Repo(Path.cwd(), search_parent_directories=True)
+    except (InvalidGitRepositoryError, NoSuchPathError):
+        die("not inside a Git repository", 2)
+
+
+def get_checked_out_branch_name(repo: Repo) -> str:
+    if repo.head.is_detached:
+        die("HEAD is detached in the current directory; checkout a branch first", 2)
+    return repo.active_branch.name
+
+
+def parse_worktree_porcelain(repo: Repo) -> list[dict[str, object]]:
+    # Prefer -z for safe parsing; fall back if the Git version is old. :contentReference[oaicite:2]{index=2}
+    try:
+        out = repo.git.worktree("list", "--porcelain", "-z")
+        parts = out.split("\0")
+    except GitCommandError:
+        out = repo.git.worktree("list", "--porcelain")
+        parts = out.splitlines()
+
+    stanzas: list[dict[str, object]] = []
+    cur: dict[str, object] = {}
+    for part in parts:
+        if part == "":
+            if cur:
+                stanzas.append(cur)
+                cur = {}
+            continue
+        if " " in part:
+            k, v = part.split(" ", 1)
+            cur[k] = v
+        else:
+            cur[part] = True
+    if cur:
+        stanzas.append(cur)
+    return stanzas
+
+
+def main_worktree_path_from_list(stanzas: list[dict[str, object]]) -> Path:
+    if not stanzas or "worktree" not in stanzas[0]:
+        die("could not parse `git worktree list --porcelain` output", 2)
+
+    if stanzas[0].get("bare", False):
+        die("repository appears to be bare; this command expects a non-bare repo with a main worktree", 2)
+
+    return Path(str(stanzas[0]["worktree"])).expanduser().resolve()
+
+
+def branch_to_worktree_map(stanzas: list[dict[str, object]]) -> dict[str, Path]:
+    out: dict[str, Path] = {}
+    for st in stanzas:
+        wt = st.get("worktree")
+        br = st.get("branch")
+        if not (wt and br):
+            continue
+        br_s = str(br)
+        prefix = "refs/heads/"
+        if br_s.startswith(prefix):
+            out[br_s[len(prefix) :]] = Path(str(wt)).expanduser().resolve()
+    return out
+
+
+def first_remote_name(repo: Repo) -> str:
+    names = [ln.strip() for ln in repo.git.remote().splitlines() if ln.strip()]
+    if not names:
+        die("no remotes configured", 1)
+    return names[0]
+
+
+def ref_exists(repo: Repo, ref: str) -> bool:
+    try:
+        repo.git.show_ref("--verify", "--quiet", ref)
+        return True
+    except GitCommandError:
+        return False
+
+
+def local_branch_exists(repo: Repo, branch: str) -> bool:
+    return ref_exists(repo, f"refs/heads/{branch}")
+
+
+def remote_branch_exists(repo: Repo, remote: str, branch: str) -> bool:
+    return ref_exists(repo, f"refs/remotes/{remote}/{branch}")
+
+
+def ensure_local_tracking_branch(repo: Repo, remote: str, branch: str) -> None:
+    if local_branch_exists(repo, branch):
+        return
+    if not remote_branch_exists(repo, remote, branch):
+        die(f"branch '{branch}' does not exist locally, and '{remote}/{branch}' does not exist on the remote", 1)
+    repo.git.branch("--track", branch, f"{remote}/{branch}")
+
+
+def ahead_behind(repo: Repo, left: str, right: str) -> tuple[int, int]:
+    out = repo.git.rev_list("--left-right", "--count", f"{left}...{right}").strip()
+    a_s, b_s = out.split()
+    return int(a_s), int(b_s)
+
+
+@dataclass(frozen=True)
+class BaseBranchChoice:
+    base_branch: str
+    from_saved_cwd_branch: bool
+
+
+def choose_base_branch(saved_cwd_branch: str, origin_arg: str | None) -> BaseBranchChoice:
+    if origin_arg is None:
+        return BaseBranchChoice("main", False)
+    if origin_arg == ".":
+        return BaseBranchChoice(saved_cwd_branch, True)
+    return BaseBranchChoice(origin_arg, False)
+
+
+def pull_rebase_in_worktree(worktree_dir: Path, remote: str, branch: str) -> None:
+    g = Git(str(worktree_dir))
+    # Explicit remote+branch for determinism (don’t rely on upstream config).
+    g.pull("--rebase", remote, branch)
+
+
+def maybe_update_base_branch(
+    *,
+    repo_home: Repo,
+    remote: str,
+    base_branch: str,
+    branch_to_wt: dict[str, Path],
+    worktrees_root: Path,
+    no_pull: bool,
+) -> None:
+    if no_pull:
+        return
+
+    ensure_local_tracking_branch(repo_home, remote, base_branch)
+
+    if not remote_branch_exists(repo_home, remote, base_branch):
+        # Shouldn’t happen after ensure_local_tracking_branch, but keep it explicit.
+        die(f"remote counterpart '{remote}/{base_branch}' not found", 1)
+
+    _ahead, behind = ahead_behind(repo_home, base_branch, f"{remote}/{base_branch}")
+    if behind <= 0:
+        return
+
+    if not prompt_yes_no(
+        f"Base branch '{base_branch}' is behind '{remote}/{base_branch}' by {behind} commit(s). Pull --rebase it first?"
+    ):
+        return
+
+    wt = branch_to_wt.get(base_branch)
+    if wt is not None:
+        eprint(f"Updating '{base_branch}' in worktree: {wt}")
+        try:
+            pull_rebase_in_worktree(wt, remote, base_branch)
+        except GitCommandError as ex:
+            die(f"pull --rebase failed in {wt}: {ex}", 1)
+        return
+
+    # No worktree currently has the base branch checked out; create a temporary one to safely run pull.
+    tmp_root = worktrees_root / ".donkey-tmp"
+    tmp_root.mkdir(parents=True, exist_ok=True)
+    tmp_path = (tmp_root / f"update-{base_branch}-{os.getpid()}").resolve()
+
+    eprint(f"No worktree has '{base_branch}' checked out; using temporary worktree: {tmp_path}")
+    try:
+        repo_home.git.worktree("add", str(tmp_path), base_branch)
+        pull_rebase_in_worktree(tmp_path, remote, base_branch)
+    except GitCommandError as ex:
+        die(f"failed to update base branch via temporary worktree: {ex}", 1)
+    finally:
+        try:
+            repo_home.git.worktree("remove", str(tmp_path))
+        except GitCommandError:
+            # Best-effort cleanup; don’t hide the update result if removal is picky.
+            try:
+                repo_home.git.worktree("remove", "-f", str(tmp_path))
+            except GitCommandError:
+                eprint(f"Warning: could not remove temporary worktree at {tmp_path}; remove it manually.")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="git donkey",
+        description=(
+            "Create a linked worktree at ../<repo>.worktrees/<branch>, branching from main (default), "
+            "a specified origin branch, or '.' meaning the branch currently checked out in the CWD."
+        ),
+    )
+    parser.add_argument("--no-pull", action="store_true", help="Do not prompt to pull --rebase the base branch")
+    parser.add_argument("branch_name", help="Branch name for the new worktree")
+    parser.add_argument("origin_branch", nargs="?", help="Base branch (default: main). Use '.' for the CWD branch.")
+    args = parser.parse_args(argv)
+
+    repo_cwd = find_repo()
+    saved_cwd_branch = get_checked_out_branch_name(repo_cwd)  # Step 0
+
+    stanzas = parse_worktree_porcelain(repo_cwd)
+    home_dir = main_worktree_path_from_list(stanzas)  # Step 1 via “main worktree listed first”. :contentReference[oaicite:3]{index=3}
+    branch_to_wt = branch_to_worktree_map(stanzas)
+
+    # Step 1: if invoked inside a linked worktree, operate from the home repo directory.
+    os.chdir(home_dir)
+    repo_home = Repo(home_dir)
+
+    remote = first_remote_name(repo_home)  # 2a
+    eprint(f"Using remote: {remote}")
+
+    # 2b: fetch from that remote
+    eprint(f"Fetching: {remote}")
+    try:
+        repo_home.git.fetch("--prune", remote)
+    except GitCommandError as ex:
+        die(f"fetch failed: {ex}", 1)
+
+    base_choice = choose_base_branch(saved_cwd_branch, args.origin_branch)  # 3a/3b/3c
+    base_branch = base_choice.base_branch
+
+    # Step 4: optionally update base branch if behind remote
+    worktrees_root = (home_dir.parent / f"{home_dir.name}.worktrees").resolve()
+    maybe_update_base_branch(
+        repo_home=repo_home,
+        remote=remote,
+        base_branch=base_branch,
+        branch_to_wt=branch_to_wt,
+        worktrees_root=worktrees_root,
+        no_pull=args.no_pull,
+    )
+
+    # Step 6: ../<home-repo-dir-basename>.worktrees/<branch-name>
+    target_path = (worktrees_root / args.branch_name).resolve()
+    worktrees_root.mkdir(parents=True, exist_ok=True)
+
+    # Refuse if the branch is already checked out somewhere (git will also refuse, but give a clearer message).
+    existing_wt = branch_to_wt.get(args.branch_name)
+    if existing_wt is not None:
+        die(f"branch '{args.branch_name}' is already checked out at: {existing_wt}", 1)
+
+    if target_path.exists():
+        die(f"target path already exists: {target_path}", 1)
+
+    # Step 5: create branch if needed while creating the worktree
+    if local_branch_exists(repo_home, args.branch_name):
+        eprint(f"Creating worktree for existing local branch '{args.branch_name}'")
+        try:
+            repo_home.git.worktree("add", str(target_path), args.branch_name)
+        except GitCommandError as ex:
+            die(f"worktree add failed: {ex}", 1)
+    elif remote_branch_exists(repo_home, remote, args.branch_name):
+        eprint(f"Branch '{args.branch_name}' exists on {remote}; creating a local tracking branch")
+        try:
+            ensure_local_tracking_branch(repo_home, remote, args.branch_name)
+            repo_home.git.worktree("add", str(target_path), args.branch_name)
+        except GitCommandError as ex:
+            die(f"worktree add failed: {ex}", 1)
+    else:
+        eprint(f"Creating new branch '{args.branch_name}' from '{base_branch}' in a new worktree")
+        try:
+            ensure_local_tracking_branch(repo_home, remote, base_branch)
+            repo_home.git.worktree("add", "-b", args.branch_name, str(target_path), base_branch)
+        except GitCommandError as ex:
+            die(f"worktree add failed: {ex}", 1)
+
+    print(f"🫏 Worktree created: {target_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

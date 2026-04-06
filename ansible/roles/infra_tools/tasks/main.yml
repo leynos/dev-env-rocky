@@ -1,0 +1,80 @@
+---
+- name: Add OpenTofu repository
+  ansible.builtin.yum_repository:
+    name: opentofu
+    description: opentofu
+    baseurl: https://packages.opentofu.org/opentofu/tofu/rpm_any/rpm_any/$basearch
+    gpgcheck: true
+    gpgkey:
+      - https://get.opentofu.org/opentofu.gpg
+      - https://packages.opentofu.org/opentofu/tofu/gpgkey
+    sslverify: true
+    sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+    metadata_expire: 300
+    state: present
+  become: true
+
+- name: Add OpenTofu source repository
+  ansible.builtin.yum_repository:
+    name: opentofu-source
+    description: opentofu-source
+    baseurl: https://packages.opentofu.org/opentofu/tofu/rpm_any/rpm_any/SRPMS
+    gpgcheck: true
+    gpgkey:
+      - https://get.opentofu.org/opentofu.gpg
+      - https://packages.opentofu.org/opentofu/tofu/gpgkey
+    sslverify: true
+    sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+    metadata_expire: 300
+    state: present
+  become: true
+
+- name: Install OpenTofu
+  ansible.builtin.dnf:
+    name: tofu
+    state: present
+  become: true
+
+- name: Check if TFLint is installed
+  ansible.builtin.command:
+    cmd: which tflint
+  register: tflint_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Install TFLint via official installer
+  ansible.builtin.shell:
+    cmd: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+  when: tflint_check.rc != 0
+  become: true
+  changed_when: true
+
+- name: Check if Conftest is installed
+  ansible.builtin.command:
+    cmd: which conftest
+  register: conftest_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Get latest Conftest version
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/open-policy-agent/conftest/releases/latest
+    return_content: true
+  register: conftest_release
+  when: conftest_check.rc != 0
+
+- name: Set Conftest version fact
+  ansible.builtin.set_fact:
+    conftest_version: "{{ conftest_release.json.tag_name | regex_replace('^v', '') }}"
+  when: conftest_check.rc != 0
+
+- name: Install Conftest
+  ansible.builtin.unarchive:
+    src: "https://github.com/open-policy-agent/conftest/releases/download/v{{ conftest_version }}/conftest_{{ conftest_version }}_Linux_{{ ansible_architecture }}.tar.gz"
+    dest: /usr/local/bin
+    remote_src: true
+    include:
+      - conftest
+    mode: '0755'
+  when: conftest_check.rc != 0
+  become: true

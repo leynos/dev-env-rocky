@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# install-bun-packages - Install npm packages globally using bun
+#
+# This script reads a package manifest file (.inf format), strips out
+# comment lines and blank lines, and installs each package globally
+# using `bun install -g`. If bun is not installed, it is bootstrapped
+# automatically via the official install script.
+#
+# The inf format uses shell-style comments (lines starting with #) and
+# lists one package name per line.
+#
+# Usage:
+#     install-bun-packages <manifest.inf>
+#
+# Arguments:
+#     $1  Path to the package manifest file
+#
+# Example:
+#     install-bun-packages bun-packages.inf
+#
+# Exit codes:
+#     0  All packages installed successfully
+#     1  Missing argument or file not found
+#     *  Exit code from bun on failure
+#
+# Dependencies:
+#     - curl (for bun bootstrap)
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: install-bun-packages <manifest.inf>" >&2
+    exit 1
+fi
+
+manifest="$1"
+
+if [[ ! -f "$manifest" ]]; then
+    echo "install-bun-packages: file not found: $manifest" >&2
+    exit 1
+fi
+
+# Ensure bun is installed
+if ! command -v bun &>/dev/null; then
+    echo "bun not found, installing..."
+    curl -fsSL https://bun.sh/install | bash
+    # Source the updated PATH for this session
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
+fi
+
+# Install packages from manifest
+grep -v '^#' "$manifest" | grep -v '^[[:space:]]*$' | while read -r package; do
+    echo "Installing: $package"
+    bun install -g "$package"
+done

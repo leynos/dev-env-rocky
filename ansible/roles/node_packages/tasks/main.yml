@@ -1,0 +1,44 @@
+---
+- name: Check if bun is installed
+  ansible.builtin.command:
+    cmd: which bun
+  register: bun_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Install bun via official installer
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://bun.sh/install | bash
+  when: bun_check.rc != 0
+  changed_when: true
+
+- name: Install Node packages globally via bun
+  bun_global:
+    name: "{{ item }}"
+    bun_path: "{{ ansible_env.HOME }}/.bun/bin/bun"
+  loop:
+    - "@biomejs/biome"
+    - "markdownlint-cli2"
+    - "@asyncapi/cli"
+    - "@redocly/cli"
+    - "@mermaid-js/mermaid-cli"
+    - "@anthropic-ai/claude-code"
+    - "@openai/codex"
+    - "droid"
+    - "pnpm"
+    - "typescript-language-server"
+    - "@typescript/native-preview"
+    - "lody"
+
+- name: Ensure ~/.local/bin directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.local/bin"
+    state: directory
+    mode: '0755'
+
+- name: Create tsgo symlink for tsc
+  ansible.builtin.file:
+    src: "{{ ansible_env.HOME }}/.local/bin/tsgo"
+    dest: "{{ ansible_env.HOME }}/.local/bin/tsc"
+    state: link
+    force: true

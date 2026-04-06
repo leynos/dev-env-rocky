@@ -1,0 +1,10 @@
+---
+- name: Install Go packages
+  ansible.builtin.command:
+    cmd: "go install {{ item }}"
+  environment:
+    GOPATH: "{{ ansible_env.HOME }}/go"
+  loop:
+    - github.com/rhysd/actionlint/cmd/actionlint@latest
+    - github.com/checkmake/checkmake/cmd/checkmake@v0.3.2
+  changed_when: true

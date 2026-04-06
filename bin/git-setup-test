@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# git-setup - Configure Git with sensible defaults and user identity
+#
+# This script sets up global Git configuration including:
+#   - Default branch name (main)
+#   - Merge driver for mergiraf (semantic merge tool)
+#   - Conflict style (zdiff3)
+#   - Auto-setup of remote tracking branches on push
+#   - External diff tool (difftastic)
+#   - Pager configuration (delta for diff/show)
+#   - User identity (name and email, prompted)
+#
+# Usage:
+#     git setup
+#
+# Exit codes:
+#     0  Configuration applied successfully
+#     1  User cancelled or git not available
+#
+# Dependencies:
+#     - git
+#     - difft (difftastic, for external diff)
+#     - delta (for pager)
+#     - mergiraf (for semantic merging)
+
+set -euo pipefail
+
+if ! command -v git &>/dev/null; then
+    echo "git-setup: git not found" >&2
+    exit 1
+fi
+
+echo "Configuring Git globals..."
+
+# Default branch
+git config --global init.defaultBranch main
+
+# Mergiraf merge driver
+git config --global merge.mergiraf.name mergiraf
+git config --global merge.mergiraf.driver 'mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L'
+
+# Merge settings
+git config --global merge.conflictStyle zdiff3
+
+# Push settings
+git config --global push.autoSetupRemote true
+
+# Diff settings
+git config --global diff.external difft
+
+# Pager settings
+git config --global pager.diff delta
+git config --global pager.show delta
+
+
+echo
+echo "Git configured successfully."

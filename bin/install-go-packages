@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# install-go-packages - Install Go packages from an inf manifest
+#
+# This script reads a package manifest file (.inf format), strips out
+# comment lines and blank lines, and installs each package using
+# `go install`. Packages are installed with @latest suffix.
+#
+# The inf format uses shell-style comments (lines starting with #) and
+# lists one package name per line (without the full module path - common
+# packages are resolved via known prefixes).
+#
+# Usage:
+#     install-go-packages <manifest.inf>
+#
+# Arguments:
+#     $1  Path to the package manifest file
+#
+# Example:
+#     install-go-packages go-packages.inf
+#
+# Exit codes:
+#     0  All packages installed successfully
+#     1  Missing argument, file not found, or go not available
+#     *  Exit code from go on failure
+#
+# Dependencies:
+#     - go
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: install-go-packages <manifest.inf>" >&2
+    exit 1
+fi
+
+manifest="$1"
+
+if [[ ! -f "$manifest" ]]; then
+    echo "install-go-packages: file not found: $manifest" >&2
+    exit 1
+fi
+
+if ! command -v go &>/dev/null; then
+    echo "install-go-packages: go not found" >&2
+    echo "  Install Go from your package manager or https://go.dev/dl/" >&2
+    exit 1
+fi
+
+# Map short package names to full module paths
+resolve_package() {
+    local pkg="$1"
+    case "$pkg" in
+        actionlint)
+            echo "github.com/rhysd/actionlint/cmd/actionlint"
+            ;;
+        checkmake)
+            echo "github.com/mrtazz/checkmake/cmd/checkmake"
+            ;;
+        *)
+            echo "$pkg"
+            ;;
+    esac
+}
+
+# Install packages from manifest
+grep -v '^#' "$manifest" | grep -v '^[[:space:]]*$' | while read -r pkg; do
+    resolved=$(resolve_package "$pkg")
+    echo "Installing: $pkg ($resolved)"
+    go install "${resolved}@latest"
+done

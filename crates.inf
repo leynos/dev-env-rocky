@@ -1,0 +1,16 @@
+# Rust build and test tools
+# Enhanced test runner and cross-compilation support for Cargo.
+cargo-nextest
+cross
+
+# Git tooling
+# Semantic merge driver for reduced merge conflicts.
+mergiraf
+
+# GitHub Actions validation
+# Linter for GitHub Actions workflow files.
+action-validator
+
+# Markdown utilities
+# Tool for formatting and fixing Markdown tables.
+mdtablefix

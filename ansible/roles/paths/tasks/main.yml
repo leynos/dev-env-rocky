@@ -1,0 +1,27 @@
+---
+- name: Ensure .bashrc.d directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.bashrc.d"
+    state: directory
+    mode: '0755'
+
+- name: Generate PATH configuration file
+  ansible.builtin.template:
+    src: 00-paths.j2
+    dest: "{{ ansible_env.HOME }}/.bashrc.d/00-paths"
+    mode: '0644'
+
+- name: Ensure .bashrc sources .bashrc.d
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    block: |
+      # Source all files in ~/.bashrc.d
+      if [ -d ~/.bashrc.d ]; then
+          for rc in ~/.bashrc.d/*; do
+              if [ -f "$rc" ]; then
+                  . "$rc"
+              fi
+          done
+      fi
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - bashrc.d"
+    insertafter: EOF

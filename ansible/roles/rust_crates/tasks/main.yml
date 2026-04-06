@@ -1,0 +1,45 @@
+---
+- name: Install Rust stable via rustup
+  ansible.builtin.command:
+    cmd: "{{ ansible_env.HOME }}/.cargo/bin/rustup install stable"
+  args:
+    creates: "{{ ansible_env.HOME }}/.cargo/bin/rustc"
+
+- name: Set Rust stable as default
+  ansible.builtin.command:
+    cmd: "{{ ansible_env.HOME }}/.cargo/bin/rustup default stable"
+  changed_when: false
+
+- name: Install wasm32-wasip2 target
+  ansible.builtin.command:
+    cmd: "{{ ansible_env.HOME }}/.cargo/bin/rustup target add wasm32-wasip2"
+  changed_when: false
+
+- name: Check if cargo-binstall is installed
+  ansible.builtin.command:
+    cmd: which cargo-binstall
+  register: cargo_binstall_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Install cargo-binstall
+  ansible.builtin.shell:
+    cmd: "curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash"
+  when: cargo_binstall_check.rc != 0
+  changed_when: true
+
+- name: Install Rust crates via cargo-binstall
+  cargo_binstall:
+    name: "{{ item }}"
+    cargo_path: "{{ ansible_env.HOME }}/.cargo/bin/cargo"
+    no_confirm: true
+  loop:
+    - cargo-nextest
+    - cross
+    - mergiraf
+    - action-validator
+    - sccache
+    #- sem-cli
+    - weave-cli
+    - weave-driver
+    - leta

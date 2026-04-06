@@ -1,0 +1,60 @@
+---
+- name: Enable CRB repository
+  community.general.dnf_config_manager:
+    name: crb
+  become: true
+
+- name: Install EPEL release
+  ansible.builtin.dnf:
+    name:
+      - epel-release
+    state: present
+  become: true
+
+- name: Install system packages (RPM)
+  ansible.builtin.dnf:
+    name:
+      - tmux
+      - jq
+      - fd-find
+      - gawk
+      - perl
+      - neovim
+      - vim-enhanced
+      - vim-minimal
+      - gedit
+      - git
+      - difftastic
+      - gh
+      - clang
+      - golang
+      - nodejs
+      - python3-devel
+      - podman
+      - helm
+      - sqlite-devel
+      - libpq-devel
+      - libxml2-devel
+      - libxslt-devel
+      - openssl-devel
+      - nss
+      - libXrandr
+      - libXdamage
+      - libXcomposite
+      - libxkbcommon-devel
+      - libxkbcommon-x11-devel
+      - mesa-libgbm
+      - libglvnd-gles
+      - atk
+      - at-spi2-atk
+      - alsa-lib
+      - dbus-devel
+      - dbus-x11
+      - systemd-udev
+      - systemd-resolved
+      - gnome-calculator
+      - xdg-utils
+      - glibc-langpack-en
+      - mold
+    state: present
+  become: true

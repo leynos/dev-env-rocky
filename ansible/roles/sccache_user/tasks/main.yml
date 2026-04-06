@@ -1,0 +1,39 @@
+---
+- name: Ensure sccache cache directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.cache/sccache"
+    state: directory
+    mode: '0755'
+
+- name: Copy notdeadyet script to ~/.local/bin
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/notdeadyet"
+    dest: "{{ ansible_env.HOME }}/.local/bin/notdeadyet"
+    mode: '0755'
+    remote_src: true
+
+- name: Configure sccache environment in Codex
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.codex/config.toml"
+    block: |
+      [env]
+      RUSTC_WRAPPER = "{{ ansible_env.HOME }}/.local/bin/notdeadyet"
+      RUSTC_HEARTBEAT_SECS = "45"
+      SCCACHE_DIR = "{{ ansible_env.HOME }}/.cache/sccache"
+      SCCACHE_CACHE_SIZE = "120G"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - sccache env"
+    create: true
+    mode: '0644'
+
+- name: Configure sccache environment in Claude settings
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.claude/config.toml"
+    block: |
+      [env]
+      RUSTC_WRAPPER = "{{ ansible_env.HOME }}/.local/bin/notdeadyet"
+      RUSTC_HEARTBEAT_SECS = "45"
+      SCCACHE_DIR = "{{ ansible_env.HOME }}/.cache/sccache"
+      SCCACHE_CACHE_SIZE = "120G"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - sccache env"
+    create: true
+    mode: '0644'

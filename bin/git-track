@@ -1,0 +1,161 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#   "GitPython>=3.1.0",
+# ]
+# ///
+"""
+git-track - Fetch and switch to a remote branch with automatic tracking.
+
+This script simplifies the workflow of checking out remote branches by
+combining fetch, branch creation, and checkout into a single command.
+It handles both existing local branches and new tracking branches.
+
+Behaviour:
+  1. Fetches from the first configured remote (with --prune)
+  2. If a local branch exists:
+     - Switches to it
+     - Merges updates from the remote tracking branch
+  3. If only a remote branch exists:
+     - Creates a local tracking branch
+     - Checks it out
+
+This is particularly useful when starting work on a branch that exists
+on the remote but hasn't been checked out locally yet.
+
+Usage:
+    git track <branch-name>
+
+Examples:
+    git track feature/new-api    # Fetch and checkout feature/new-api
+    git track main               # Update local main from remote
+
+Arguments:
+    branch  The branch name to track/checkout
+
+Exit codes:
+    0  Branch checked out/updated successfully
+    1  Remote branch not found or operation failed
+    2  Not inside a git repository
+
+Dependencies:
+    - Python 3.13+
+    - GitPython
+    - uv (for script execution)
+"""
+from __future__ import annotations
+
+import argparse
+import difflib
+import sys
+from pathlib import Path
+
+from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
+
+
+def eprint(*args: object) -> None:
+    print(*args, file=sys.stderr)
+
+
+def die(msg: str, code: int = 2) -> "NoReturn":
+    eprint(f"git-track: {msg}")
+    raise SystemExit(code)
+
+
+def find_repo() -> Repo:
+    try:
+        return Repo(Path.cwd(), search_parent_directories=True)
+    except (InvalidGitRepositoryError, NoSuchPathError):
+        die("not inside a Git repository", 2)
+
+
+def first_remote_name(repo: Repo) -> str:
+    # Use `git remote` ordering (whatever Git considers “first”). :contentReference[oaicite:1]{index=1}
+    out = repo.git.remote()
+    names = [line.strip() for line in out.splitlines() if line.strip()]
+    if not names:
+        die("no remotes configured (add one with `git remote add <name> <url>`)", 1)
+    return names[0]
+
+
+def remote_branch_exists(repo: Repo, remote: str, branch: str) -> bool:
+    ref = f"refs/remotes/{remote}/{branch}"
+    try:
+        repo.git.show_ref("--verify", "--quiet", ref)
+        return True
+    except GitCommandError:
+        return False
+
+
+def suggest_remote_branches(repo: Repo, remote: str, branch: str) -> list[str]:
+    r = repo.remote(remote)
+    available = sorted({ref.remote_head for ref in r.refs if ref.remote_head != "HEAD"})
+    return difflib.get_close_matches(branch, available, n=8, cutoff=0.35)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="git track",
+        description=(
+            "Fetch from the first remote, then switch to an existing local branch "
+            "and update it, or create a new tracking branch from <remote>/<branch>."
+        ),
+    )
+    parser.add_argument("branch", help="Branch name (e.g. feature/foo)")
+    args = parser.parse_args(argv)
+
+    repo = find_repo()
+    remote = first_remote_name(repo)
+
+    eprint(f"Using remote: {remote}")
+    eprint(f"Fetching: {remote}")
+    try:
+        # Fetch once (with prune); we’ll merge from the updated remote-tracking ref afterwards.
+        # GitPython translates prune=True into --prune. :contentReference[oaicite:2]{index=2}
+        repo.remote(remote).fetch(prune=True)
+    except GitCommandError as ex:
+        die(f"fetch failed: {ex}", 1)
+
+    branch = args.branch
+
+    # Local branch exists?
+    try:
+        head = repo.heads[branch]
+        eprint(f"Local branch exists: {branch}")
+        eprint(f"Switching to: {branch}")
+        head.checkout()
+    except IndexError:
+        head = None
+    except GitCommandError as ex:
+        die(f"could not switch to local branch '{branch}': {ex}", 1)
+
+    # Remote branch must exist for update/create
+    if not remote_branch_exists(repo, remote, branch):
+        suggestions = suggest_remote_branches(repo, remote, branch)
+        hint = ""
+        if suggestions:
+            hint = "\nDid you mean:\n  " + "\n  ".join(suggestions)
+        die(f"remote branch not found: {remote}/{branch}{hint}", 1)
+
+    if head is not None:
+        eprint(f"Updating from: {remote}/{branch}")
+        try:
+            # Equivalent effect to “pull” after we already fetched: merge the remote-tracking branch.
+            repo.git.merge(f"{remote}/{branch}")
+        except GitCommandError as ex:
+            die(f"update failed (merge): {ex}", 1)
+        return 0
+
+    eprint(f"Creating tracking branch from: {remote}/{branch}")
+    try:
+        repo.git.checkout("-t", f"{remote}/{branch}")
+    except GitCommandError as ex:
+        die(f"could not create tracking branch '{branch}' from {remote}/{branch}: {ex}", 1)
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

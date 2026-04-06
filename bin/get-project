@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# get-project - Extract the project name from the current directory
+#
+# This script determines the project name based on the current working
+# directory. It handles both regular git repositories and git worktree
+# checkouts.
+#
+# For worktrees, the project name is extracted from the parent repository
+# path (the portion before ".worktrees/"). For regular directories, the
+# project name is simply the basename of the current directory.
+#
+# Examples:
+#   /home/user/projects/myrepo              -> "myrepo"
+#   /home/user/projects/myrepo.worktrees/feature-x  -> "myrepo"
+#
+# Output:
+#   Project name on stdout
+#
+# Exit codes:
+#   0  Always succeeds
+
+if [[ $PWD == *".worktrees/"* ]]; then
+  PROJECT="${PWD%%.worktrees/*}"
+  PROJECT="${PROJECT##*/}"
+else
+  PROJECT="${PWD##*/}"
+fi
+
+echo "${PROJECT}"

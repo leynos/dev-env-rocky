@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# install-packages - Install RPM packages from an inf manifest file
+#
+# This script reads a package manifest file (.inf format), strips out
+# comment lines and blank lines, and passes the resulting package names
+# to dnf for installation.
+#
+# The inf format uses shell-style comments (lines starting with #) and
+# lists one package name per line.
+#
+# Usage:
+#     install-packages <manifest.inf>
+#
+# Arguments:
+#     $1  Path to the package manifest file
+#
+# Example:
+#     install-packages rpm-packages.inf
+#
+# Exit codes:
+#     0  All packages installed successfully
+#     1  Missing argument or file not found
+#     *  Exit code from dnf on failure
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: install-packages <manifest.inf>" >&2
+    exit 1
+fi
+
+manifest="$1"
+
+if [[ ! -f "$manifest" ]]; then
+    echo "install-packages: file not found: $manifest" >&2
+    exit 1
+fi
+
+grep -v '^#' "$manifest" | grep -v '^[[:space:]]*$' | xargs sudo dnf install -y

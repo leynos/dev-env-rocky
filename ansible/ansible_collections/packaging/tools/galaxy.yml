@@ -1,0 +1,17 @@
+namespace: packaging
+name: tools
+version: 0.1.0
+authors:
+  - Payton McIntosh
+readme: README.md
+description: Ansible modules for package management with uv, cargo-binstall, and Bun.
+license:
+  - MIT
+tags:
+  - packaging
+  - uv
+  - cargo
+  - bun
+  - rust
+  - javascript
+dependencies: {}

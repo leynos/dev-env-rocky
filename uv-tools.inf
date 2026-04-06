@@ -1,0 +1,20 @@
+# Python linting and formatting
+# Fast linter and formatter for Python code.
+ruff
+
+# Python type checkers
+# Static type checking tools for Python codebases.
+pyrefly
+ty
+
+# YAML linting
+# Linter for YAML files to catch syntax and style issues.
+yamllint
+
+# Project templating
+# Tool for generating projects from templates with Jinja2 support.
+copier
+
+# Build tools
+# Templating and build utilities.
+mbake

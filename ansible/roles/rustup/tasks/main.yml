@@ -1,0 +1,21 @@
+---
+- name: Check if cargo is installed
+  ansible.builtin.command:
+    cmd: command -v cargo
+  register: cargo_exists
+  ignore_errors: true
+  changed_when: false
+
+- name: Download rustup installer
+  ansible.builtin.get_url:
+    url: https://sh.rustup.rs
+    dest: /tmp/sh.rustup.rs
+    mode: '0755'
+    force: true
+  when: cargo_exists.rc != 0
+
+- name: Install rustup
+  ansible.builtin.command:
+    cmd: /tmp/sh.rustup.rs -y
+  when: cargo_exists.rc != 0
+  changed_when: true

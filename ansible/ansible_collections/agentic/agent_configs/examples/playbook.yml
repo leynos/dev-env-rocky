@@ -1,0 +1,68 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: false
+
+  collections:
+    - agentic.agent_configs
+
+  tasks:
+    - name: Configure Claude project hooks and skills
+      block:
+        - name: Add a Claude post-edit hook
+          claude_code_hook:
+            agent_executable: /home/payton/.local/bin/claude
+            scope: project
+            project_dir: /srv/my-repo
+            event: PostToolUse
+            matcher: Edit|Write
+            command: /srv/my-repo/.claude/hooks/post-edit.sh
+
+        - name: Add a Claude skill
+          claude_code_skill:
+            name: Release helper
+            scope: project
+            project_dir: /srv/my-repo
+            description: Run the release workflow.
+            body: |
+              Follow docs/release.md and summarise blockers.
+
+    - name: Configure Codex MCP and agent files
+      block:
+        - name: Add a Codex MCP server
+          codex_cli_mcp:
+            name: repo-tools
+            scope: project
+            project_dir: /srv/my-repo
+            transport: stdio
+            command: /usr/local/bin/repo-tools-mcp
+            args: [--stdio]
+
+        - name: Add a Codex reviewer subagent
+          codex_cli_subagent:
+            name: Reviewer
+            scope: project
+            project_dir: /srv/my-repo
+            description: Review diffs and identify risks.
+            developer_instructions: |
+              Review carefully and focus on correctness.
+
+    - name: Configure Factory Droid resources
+      block:
+        - name: Add a Factory Droid hook
+          factory_droid_hook:
+            agent_executable: /usr/local/bin/droid
+            scope: project
+            project_dir: /srv/my-repo
+            event: PostToolUse
+            matcher: Edit|Write
+            command: /srv/my-repo/.factory/hooks/post-edit.sh
+
+        - name: Add a Factory Droid custom droid
+          factory_droid_droid:
+            name: Reviewer
+            scope: project
+            project_dir: /srv/my-repo
+            description: Review changes and identify risks.
+            body: |
+              Review the supplied changes and highlight concrete defects.

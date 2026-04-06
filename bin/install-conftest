@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# install-conftest - Install Conftest from GitHub releases
+#
+# This script downloads the latest Conftest release from GitHub and
+# installs it to /usr/local/bin. Skips installation if conftest is
+# already present.
+#
+# Usage:
+#     install-conftest
+#
+# Exit codes:
+#     0  Conftest installed successfully or already present
+#     1  Installation failed
+#
+# Dependencies:
+#     - wget
+#     - tar
+#     - sudo (for /usr/local/bin)
+
+set -euo pipefail
+
+if command -v conftest &>/dev/null; then
+    echo "Conftest is already installed: $(conftest --version)"
+    exit 0
+fi
+
+echo "Installing Conftest..."
+
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+
+pushd "$workdir" >/dev/null
+
+LATEST_VERSION=$(wget -qO - "https://api.github.com/repos/open-policy-agent/conftest/releases/latest" \
+    | grep '"tag_name":' \
+    | sed -E 's/.*"([^"]+)".*/\1/' \
+    | cut -c 2-)
+
+ARCH=$(arch)
+SYSTEM=$(uname)
+
+echo "Downloading conftest v${LATEST_VERSION} for ${SYSTEM}_${ARCH}..."
+
+wget -q "https://github.com/open-policy-agent/conftest/releases/download/v${LATEST_VERSION}/conftest_${LATEST_VERSION}_${SYSTEM}_${ARCH}.tar.gz"
+tar xzf "conftest_${LATEST_VERSION}_${SYSTEM}_${ARCH}.tar.gz"
+sudo mv conftest /usr/local/bin/
+
+popd >/dev/null
+
+echo "Conftest installed successfully."

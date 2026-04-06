@@ -1,0 +1,9 @@
+---
+- name: Enable Linger for {{ systemd_user }} user
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/loginctl
+      - enable-linger
+      - "{{ systemd_user }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ systemd_user }}"

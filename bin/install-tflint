@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# install-tflint - Install TFLint via the official installer
+#
+# This script downloads and runs the official TFLint installer for Linux.
+# Skips installation if tflint is already present.
+#
+# Usage:
+#     install-tflint
+#
+# Exit codes:
+#     0  TFLint installed successfully or already present
+#     1  Installation failed
+#
+# Dependencies:
+#     - curl
+#     - bash
+
+set -euo pipefail
+
+if command -v tflint &>/dev/null; then
+    echo "TFLint is already installed: $(tflint --version | head -n1)"
+    exit 0
+fi
+
+echo "Installing TFLint..."
+
+curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+
+echo "TFLint installed successfully."

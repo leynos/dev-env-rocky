@@ -1,0 +1,29 @@
+---
+- name: Configure development environment on servers
+  hosts: servers
+  become: true
+  vars:
+    systemd_user: leynos
+  roles:
+    - packages
+    - infra_tools
+    - user
+    - user_linger
+
+- name: Configure user environment for leynos
+  hosts: servers
+  become: true
+  become_user: leynos
+  vars:
+    ansible_ssh_private_key_file: "{{ hostvars[inventory_hostname]['ansible_ssh_private_key_file'] | default('~/.ssh/id_ed25519') }}"
+  roles:
+    - git
+    - rustup
+    - rust_crates
+    - uv_tools
+    - node_packages
+    - go_packages
+    - paths
+    - agent_tools
+    - sccache_user
+    - weave

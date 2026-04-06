@@ -1,0 +1,4 @@
+# Linting tools
+# Linters for GitHub Actions workflows and Makefiles.
+actionlint
+checkmake

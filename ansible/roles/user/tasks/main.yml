@@ -1,0 +1,27 @@
+---
+- name: Create user leynos
+  ansible.builtin.user:
+    name: leynos
+    state: present
+    shell: /bin/bash
+    create_home: true
+
+- name: Ensure .ssh directory exists
+  ansible.builtin.file:
+    path: /home/leynos/.ssh
+    state: directory
+    owner: leynos
+    group: leynos
+    mode: '0700'
+
+- name: Add authorized keys for leynos
+  ansible.builtin.lineinfile:
+    path: /home/leynos/.ssh/authorized_keys
+    create: true
+    owner: leynos
+    group: leynos
+    mode: '0600'
+    line: "{{ item }}"
+  loop:
+    - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJwPHz4woB7Ijlh0vuURsccOn4dUAKIh3dxYjkbl4YFV payton@DESKTOP-PG5N0BL"
+    - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8YI8fWC7Lo1ZUDf34OrnBP2VWzqJnWBP1pXMH8M/Y6 leynos@DESKTOP-PG5N0BL"
