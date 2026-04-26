@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 
 def expand_home(path: str) -> str:
-    return os.path.expanduser(path)
+    try:
+        return str(Path(path).expanduser())
+    except RuntimeError:
+        return path
 
 
 def resolve_global_dir(param_value: str | None) -> str:

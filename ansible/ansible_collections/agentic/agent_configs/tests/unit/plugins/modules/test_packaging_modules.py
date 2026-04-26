@@ -65,6 +65,12 @@ def test_bun_expand_home_preserves_expanduser_user_lookup(monkeypatch: pytest.Mo
     assert bun_paths.expand_home(user_path) == os.path.expanduser(user_path)
 
 
+def test_bun_expand_home_returns_original_unknown_user_path() -> None:
+    user_path = "~definitely-no-such-user-xyz/projects"
+
+    assert bun_paths.expand_home(user_path) == user_path
+
+
 def test_bun_resolve_global_dir_env_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
     home = "/tmp/test-home"
     monkeypatch.setenv("HOME", home)

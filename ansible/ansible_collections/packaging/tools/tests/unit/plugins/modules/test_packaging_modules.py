@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import getpass
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -46,6 +48,27 @@ def test_bun_expand_home_uses_home_for_tilde(monkeypatch: pytest.MonkeyPatch) ->
 
     assert bun_paths.expand_home("~") == home
     assert bun_paths.expand_home("~/projects") == str(Path(home) / "projects")
+
+
+def test_bun_expand_home_uses_system_home_when_home_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("HOME", raising=False)
+    system_home = Path.home()
+
+    assert bun_paths.expand_home("~") == str(system_home)
+    assert bun_paths.expand_home("~/projects") == str(system_home / "projects")
+
+
+def test_bun_expand_home_preserves_expanduser_user_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOME", "/tmp/test-home")
+    user_path = f"~{getpass.getuser()}/projects"
+
+    assert bun_paths.expand_home(user_path) == os.path.expanduser(user_path)
+
+
+def test_bun_expand_home_returns_original_unknown_user_path() -> None:
+    user_path = "~definitely-no-such-user-xyz/projects"
+
+    assert bun_paths.expand_home(user_path) == user_path
 
 
 def test_bun_resolve_global_dir_env_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
