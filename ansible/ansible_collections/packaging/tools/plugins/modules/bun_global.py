@@ -113,6 +113,7 @@ import json
 import os
 
 from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.agentic.agent_configs.plugins.module_utils.bun_paths import resolve_global_bin_dir, resolve_global_dir
 
 
 def resolve_binary(module: AnsibleModule, value: str) -> str:
@@ -125,32 +126,6 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
 def run(module: AnsibleModule, cmd: list[str], env: dict[str, str] | None = None):
     rc, stdout, stderr = module.run_command(cmd, environ_update=env or {})
     return rc, stdout, stderr
-
-
-def expand_home(path: str) -> str:
-    if path == "~":
-        return os.environ.get("HOME", path)
-    if path.startswith("~/"):
-        return os.path.join(os.environ.get("HOME", "~"), path[2:])
-    return path
-
-
-def resolve_global_dir(param_value: str | None) -> str:
-    if param_value:
-        return expand_home(param_value)
-    env_value = os.environ.get("BUN_INSTALL_GLOBAL_DIR")
-    if env_value:
-        return expand_home(env_value)
-    return expand_home("~/.bun/install/global")
-
-
-def resolve_global_bin_dir(param_value: str | None) -> str:
-    if param_value:
-        return expand_home(param_value)
-    env_value = os.environ.get("BUN_INSTALL_BIN")
-    if env_value:
-        return expand_home(env_value)
-    return expand_home("~/.bun/bin")
 
 
 def package_json_path(global_dir: str, package_name: str) -> str:

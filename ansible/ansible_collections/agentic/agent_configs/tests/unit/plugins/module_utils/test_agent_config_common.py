@@ -78,6 +78,15 @@ def test_dump_toml_handles_nested_tables_and_arrays() -> None:
     assert "[profiles.settings]" in rendered
 
 
+@pytest.mark.parametrize(
+    "value",
+    [float("nan"), float("inf"), float("-inf")],
+)
+def test_dump_toml_rejects_nan_and_infinity(value: float) -> None:
+    with pytest.raises(TypeError, match="TOML does not support NaN or infinity"):
+        common.dump_toml({"field": value})
+
+
 def test_dump_toml_rejects_unsupported_values() -> None:
     with pytest.raises(TypeError, match="Unsupported TOML scalar type"):
         common.dump_toml({"bad": object()})

@@ -133,6 +133,17 @@ class TestDeleteDirectory:
         target = tmp_path / "does_not_exist"
         assert delete_directory(target) is False
 
+    def test_returns_false_and_logs_on_rmtree_error(self, tmp_path: Path, capfd) -> None:
+        target = tmp_path / "to_delete"
+        target.mkdir()
+        error_message = "permission denied"
+
+        with mock.patch("rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)):
+            assert delete_directory(target) is False
+
+        captured = capfd.readouterr()
+        assert error_message in captured.err
+
 
 class TestFindTargetDirs:
     """Tests for find_target_dirs."""

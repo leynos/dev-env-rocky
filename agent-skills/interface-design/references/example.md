@@ -2,15 +2,15 @@
 
 # Craft in Action
 
-This shows how the subtle layering principle translates to real decisions. Learn the thinking, not the code. Your values will differ — the approach won't.
+This shows how the subtle layering principle translates to real decisions. Learn the thinking, not the code. The values will differ — the approach won't.
 
 ---
 
 ## The Subtle Layering Mindset
 
-Before looking at any example, internalize this: **you should barely notice the system working.**
+Before looking at any example, internalize this: **the system should be barely noticeable.**
 
-When you look at Vercel's dashboard, you don't think "nice borders." You just understand the structure. When you look at Supabase, you don't think "good surface elevation." You just know what's above what. The craft is invisible — that's how you know it's working.
+When looking at Vercel's dashboard, the viewer does not think "nice borders." The structure is understood implicitly. When looking at Supabase, the viewer does not think "good surface elevation." Layering is understood without explanation. The craft is invisible — that is how craft is known to be working.
 
 ---
 
@@ -18,21 +18,21 @@ When you look at Vercel's dashboard, you don't think "nice borders." You just un
 
 ### The Surface Decisions
 
-**Why so subtle?** Each elevation jump should be only a few percentage points of lightness. You can barely see the difference in isolation. But when surfaces stack, the hierarchy emerges. This is the Vercel/Supabase way — whisper-quiet shifts that you feel rather than see.
+**Why so subtle?** Each elevation jump should be only a few percentage points of lightness. The difference is barely visible in isolation. But when surfaces stack, the hierarchy emerges. This is the Vercel/Supabase way — whisper-quiet shifts that the viewer feels rather than sees.
 
 **What NOT to do:** Don't make dramatic jumps between elevations. That's jarring. Don't use different hues for different levels. Keep the same hue, shift only lightness.
 
 ### The Border Decisions
 
-**Why rgba, not solid colors?** Low opacity borders blend with their background. A low-opacity white border on a dark surface is barely there — it defines the edge without demanding attention. Solid hex borders look harsh in comparison.
+**Why rgba, not solid colours?** Low opacity borders blend with their background. A low-opacity white border on a dark surface is barely there — it defines the edge without demanding attention. Solid hex borders look harsh in comparison.
 
-**The test:** Look at your interface from arm's length. If borders are the first thing you notice, reduce opacity. If you can't find where regions end, increase slightly.
+**The test:** Look at the interface from arm's length. If borders are the first visible element, reduce opacity. If region boundaries cannot be found, increase slightly.
 
 ### The Sidebar Decision
 
 **Why same background as canvas, not different?**
 
-Many dashboards make the sidebar a different color. This fragments the visual space — now you have "sidebar world" and "content world."
+Many dashboards make the sidebar a different colour. This fragments the visual space into "sidebar world" and "content world."
 
 Better: Same background, subtle border separation. The sidebar is part of the app, not a separate region. Vercel does this. Supabase does this. The border is enough.
 
@@ -40,7 +40,7 @@ Better: Same background, subtle border separation. The sidebar is part of the ap
 
 **Why surface-200, not surface-100?**
 
-The dropdown floats above the card it emerged from. If both were surface-100, the dropdown would blend into the card — you'd lose the sense of layering. Surface-200 is just light enough to feel "above" without being dramatically different.
+The dropdown floats above the card it emerged from. If both were surface-100, the dropdown would blend into the card — the design would lose the sense of layering. Surface-200 is just light enough to feel "above" without being dramatically different.
 
 **Why border-overlay instead of border-default?**
 
@@ -60,16 +60,16 @@ Inputs are "inset" — they receive content, they don't project it. A slightly d
 
 **Why subtle focus states?**
 
-Focus needs to be visible, but you don't need a glowing ring or dramatic color. A noticeable increase in border opacity is enough for a clear state change. Subtle-but-noticeable — the same principle as surfaces.
+Focus needs to be visible, but there is no need for a glowing ring or dramatic colour. A noticeable increase in border opacity is enough for a clear state change. Subtle-but-noticeable — the same principle as surfaces.
 
 ---
 
 ## Adapt to Context
 
-Your product might need:
+The product might need:
 
 - Warmer hues (slight yellow/orange tint)
-- Cooler hues (blue-gray base)
+- Cooler hues (blue-grey base)
 - Different lightness progression
 - Light mode (principles invert — higher elevation = shadow, not lightness)
 
@@ -79,11 +79,11 @@ Your product might need:
 
 ## The Craft Check
 
-Apply the squint test to your work:
+Apply the squint test to the work:
 
-1. Blur your eyes or step back
-2. Can you still perceive hierarchy?
-3. Is anything jumping out at you?
-4. Can you tell where regions begin and end?
+1. Blur the view or step back
+2. Can the structure still be perceived hierarchy?
+3. Is anything jumping out?
+4. Can the reviewer tell where regions begin and end?
 
 If hierarchy is visible and nothing is harsh — the subtle layering is working.

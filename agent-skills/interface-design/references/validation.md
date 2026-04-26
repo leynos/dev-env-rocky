@@ -47,6 +47,6 @@ If system.md defines specific values, check consistency:
 
 **Depth** — Using the declared strategy throughout? (borders-only means no shadows)
 
-**Colors** — Using defined palette, not random hex codes?
+**Colours** — Using defined palette, not random hex codes?
 
 **Patterns** — Reusing documented patterns instead of creating new?

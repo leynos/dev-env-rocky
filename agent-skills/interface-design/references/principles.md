@@ -8,19 +8,19 @@ These apply regardless of design direction. This is the quality floor.
 
 ## Surface & Token Architecture
 
-Professional interfaces don't pick colors randomly — they build systems. Understanding this architecture is the difference between "looks okay" and "feels like a real product."
+Professional interfaces don't pick colours randomly — they build systems. Understanding this architecture is the difference between "looks okay" and "feels like a real product."
 
 ### The Primitive Foundation
 
-Every color in your interface should trace back to a small set of primitives:
+Every colour in the interface should trace back to a small set of primitives:
 
-- **Foreground** — text colors (primary, secondary, muted)
-- **Background** — surface colors (base, elevated, overlay)
-- **Border** — edge colors (default, subtle, strong)
-- **Brand** — your primary accent
-- **Semantic** — functional colors (destructive, warning, success)
+- **Foreground** — text colours (primary, secondary, muted)
+- **Background** — surface colours (base, elevated, overlay)
+- **Border** — edge colours (default, subtle, strong)
+- **Brand** — the primary accent
+- **Semantic** — functional colours (destructive, warning, success)
 
-Don't invent new colors. Map everything to these primitives.
+Don't invent new colours. Map everything to these primitives.
 
 ### Surface Elevation Hierarchy
 
@@ -40,29 +40,29 @@ In dark mode, higher elevation = slightly lighter. In light mode, higher elevati
 
 This is where most interfaces fail. Study Vercel, Supabase, Linear — their surfaces are **barely different** but still distinguishable. Their borders are **light but not invisible**.
 
-**For surfaces:** The difference between elevation levels should be subtle — a few percentage points of lightness, not dramatic jumps. In dark mode, surface-100 might be 7% lighter than base, surface-200 might be 9%, surface-300 might be 12%. You can barely see it, but you feel it.
+**For surfaces:** The difference between elevation levels should be subtle — a few percentage points of lightness, not dramatic jumps. In dark mode, surface-100 might be 7% lighter than base, surface-200 might be 9%, surface-300 might be 12%. The difference is barely visible it, but the viewer feels it.
 
-**For borders:** Borders should define regions without demanding attention. Use low opacity (0.05-0.12 alpha for dark mode, slightly higher for light). The border should disappear when you're not looking for it, but be findable when you need to understand the structure.
+**For borders:** Borders should define regions without demanding attention. Use low opacity (0.05-0.12 alpha for dark mode, slightly higher for light). The border should disappear when attention is elsewhere, but be findable when the structure needs to be understood.
 
-**The test:** Squint at your interface. You should still perceive the hierarchy — what's above what, where regions begin and end. But no single border or surface should jump out at you. If borders are the first thing you notice, they're too strong. If you can't find where one region ends and another begins, they're too subtle.
+**The test:** Squint at the interface. The hierarchy should remain perceptible — what's above what, where regions begin and end. But no single border or surface should jump out. If borders are the first visible element, they're too strong. If one region cannot be separated from another, they're too subtle.
 
-**Common AI mistakes to avoid:**
+**Common artificial intelligence (AI) mistakes to avoid:**
 
-- Borders that are too visible (1px solid gray instead of subtle rgba)
+- Borders that are too visible (1px solid grey instead of subtle rgba)
 - Surface jumps that are too dramatic (going from dark to light instead of dark to slightly-less-dark)
-- Using different hues for different surfaces (gray card on blue background)
+- Using different hues for different surfaces (grey card on blue background)
 - Harsh dividers where subtle borders would do
 
 ### Text Hierarchy via Tokens
 
-Don't just have "text" and "gray text." Build four levels:
+Don't just have "text" and "grey text." Build four levels:
 
 - **Primary** — default text, highest contrast
 - **Secondary** — supporting text, slightly muted
 - **Tertiary** — metadata, timestamps, less important
 - **Muted** — disabled, placeholder, lowest contrast
 
-Use all four consistently. If you're only using two, your hierarchy is too flat.
+Use all four consistently. If only two are used, the hierarchy is too flat.
 
 ### Border Progression
 
@@ -83,11 +83,11 @@ Form controls (inputs, checkboxes, selects) have specific needs. Don't just reus
 - **Control border** — needs to feel interactive
 - **Control focus** — clear focus indication
 
-This separation lets you tune controls independently from layout surfaces.
+This separation lets designers tune controls independently from layout surfaces.
 
 ### Context-Aware Bases
 
-Different areas of your app might need different base surfaces:
+Different areas of an app might need different base surfaces:
 
 - **Marketing pages** — might use darker/richer backgrounds
 - **Dashboard/app** — might use neutral working backgrounds
@@ -132,13 +132,13 @@ padding: 24px 16px 12px 16px;
 
 ## Border Radius Consistency
 
-Sharper corners feel technical, rounder corners feel friendly. Pick a scale that fits your product's personality and use it consistently.
+Sharper corners feel technical, rounder corners feel friendly. Pick a scale that fits the product's personality and use it consistently.
 
 The key is having a system: small radius for inputs and buttons, medium for cards, large for modals or containers. Don't mix sharp and soft randomly — inconsistent radius is as jarring as inconsistent spacing.
 
 ## Depth & Elevation Strategy
 
-Match your depth approach to your design direction. Choose ONE and commit:
+Match the depth approach to the design direction. Choose ONE and commit:
 
 **Borders-only (flat)** — Clean, technical, dense. Works for utility-focused tools where information density matters more than visual lift. Linear, Raycast, and many developer tools use almost no shadows — just subtle borders to define regions.
 
@@ -146,7 +146,7 @@ Match your depth approach to your design direction. Choose ONE and commit:
 
 **Layered shadows** — Rich, premium, dimensional. Multiple shadow layers create realistic depth. Stripe and Mercury use this approach. Best for cards that need to feel like physical objects.
 
-**Surface color shifts** — Background tints establish hierarchy without any shadows. A card at `#fff` on a `#f8fafc` background already feels elevated.
+**Surface colour shifts** — Background tints establish hierarchy without any shadows. A card at `#fff` on a `#f8fafc` background already feels elevated.
 
 ```css
 /* Borders-only approach */
@@ -173,9 +173,9 @@ Design each card's internal structure for its specific content — but keep the 
 
 ## Isolated Controls
 
-UI controls deserve container treatment. Date pickers, filters, dropdowns — these should feel like crafted objects.
+User interface (UI) controls deserve container treatment. Date pickers, filters, dropdowns — these should feel like crafted objects.
 
-**Never use native form elements for styled UI.** Native `<select>`, `<input type="date">`, and similar elements render OS-native dropdowns that cannot be styled. Build custom components instead:
+**Never use native form elements for styled UI.** Native `<select>`, `<input type="date">`, and similar elements render operating system (OS)-native dropdowns that cannot be styled. Build custom components instead:
 
 - Custom select: trigger button + positioned dropdown menu
 - Custom date picker: input + calendar popover
@@ -192,7 +192,7 @@ Build distinct levels that are visually distinguishable at a glance:
 - **Labels/UI** — medium weight, works at smaller sizes
 - **Data** — often monospace, needs `tabular-nums` for alignment
 
-Don't rely on size alone. Combine size, weight, and letter-spacing to create clear hierarchy. If you squint and can't tell headline from body, the hierarchy is too weak.
+Don't rely on size alone. Combine size, weight, and letter-spacing to create clear hierarchy. If the headline and body cannot be distinguished while squinting, the hierarchy is too weak.
 
 ## Monospace for Data
 
@@ -214,19 +214,19 @@ Use smooth deceleration easing (ease-out variants). Avoid spring/bounce effects 
 
 Build a four-level system: foreground (primary) → secondary → muted → faint. Use all four consistently.
 
-## Color Carries Meaning
+## Colour Carries Meaning
 
-Gray builds structure. Color communicates — status, action, emphasis, identity. Unmotivated color is noise. Color that reinforces the product's world is character.
+Grey builds structure. Colour communicates — status, action, emphasis, identity. Unmotivated colour is noise. Colour that reinforces the product's world is character.
 
 ## Navigation Context
 
 Screens need grounding. A data table floating in space feels like a component demo, not a product. Consider including:
 
-- **Navigation** — sidebar or top nav showing where you are in the app
+- **Navigation** — sidebar or top nav showing current location in the app
 - **Location indicator** — breadcrumbs, page title, or active nav state
 - **User context** — who's logged in, what workspace/org
 
-When building sidebars, consider using the same background as the main content area. Rely on a subtle border for separation rather than different background colors.
+When building sidebars, consider using the same background as the main content area. Rely on a subtle border for separation rather than different background colours.
 
 ## Dark Mode
 
@@ -234,6 +234,6 @@ Dark interfaces have different needs:
 
 **Borders over shadows** — Shadows are less visible on dark backgrounds. Lean more on borders for definition.
 
-**Adjust semantic colors** — Status colors (success, warning, error) often need to be slightly desaturated for dark backgrounds.
+**Adjust semantic colours** — Status colours (success, warning, error) often need to be slightly desaturated for dark backgrounds.
 
 **Same structure, different values** — The hierarchy system still applies, just with inverted values.

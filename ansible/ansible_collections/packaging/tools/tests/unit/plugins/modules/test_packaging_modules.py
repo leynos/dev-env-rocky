@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from ansible_collections.agentic.agent_configs.plugins.module_utils import bun_paths
 from ansible_collections.packaging.tools.plugins.modules import (
     bun_global,
     cargo_binstall,
@@ -37,6 +38,46 @@ def test_bun_read_installed_version(tmp_path: Path) -> None:
     package_json.write_text(json.dumps({"version": "1.2.3"}))
 
     assert bun_global.read_installed_version(str(package_json)) == "1.2.3"
+
+
+def test_bun_expand_home_uses_home_for_tilde(monkeypatch: pytest.MonkeyPatch) -> None:
+    home = "/tmp/test-home"
+    monkeypatch.setenv("HOME", home)
+
+    assert bun_paths.expand_home("~") == home
+    assert bun_paths.expand_home("~/projects") == str(Path(home) / "projects")
+
+
+def test_bun_resolve_global_dir_env_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    home = "/tmp/test-home"
+    monkeypatch.setenv("HOME", home)
+    monkeypatch.setenv("BUN_INSTALL_GLOBAL_DIR", "~/bun-global")
+
+    assert bun_paths.resolve_global_dir(None) == str(Path(home) / "bun-global")
+
+
+def test_bun_resolve_global_dir_explicit_param_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+    home = "/tmp/test-home"
+    monkeypatch.setenv("HOME", home)
+    monkeypatch.setenv("BUN_INSTALL_GLOBAL_DIR", "~/ignored-global")
+
+    assert bun_paths.resolve_global_dir("~/explicit-global") == str(Path(home) / "explicit-global")
+
+
+def test_bun_resolve_global_bin_dir_env_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    home = "/tmp/test-home"
+    monkeypatch.setenv("HOME", home)
+    monkeypatch.setenv("BUN_INSTALL_BIN", "~/bun-bin")
+
+    assert bun_paths.resolve_global_bin_dir(None) == str(Path(home) / "bun-bin")
+
+
+def test_bun_resolve_global_bin_dir_explicit_param_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+    home = "/tmp/test-home"
+    monkeypatch.setenv("HOME", home)
+    monkeypatch.setenv("BUN_INSTALL_BIN", "~/ignored-bin")
+
+    assert bun_paths.resolve_global_bin_dir("~/explicit-bin") == str(Path(home) / "explicit-bin")
 
 
 def test_bun_global_check_mode_installs_missing_package(
@@ -238,6 +279,45 @@ def test_uv_tool_check_mode_installs_with_options(monkeypatch: pytest.MonkeyPatc
         "pytest",
         "ruff==0.14.0",
     ]
+
+
+def test_uv_tool_check_mode_uninstalls_existing_tool(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
+    monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {"ruff": "0.14.0"})
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: pytest.fail("check mode must not run uv"))
+
+    result = run_module(
+        uv_tool,
+        {
+            "_ansible_check_mode": True,
+            "name": "ruff",
+            "state": "absent",
+        },
+    )
+
+    assert result["changed"] is True
+    assert result["cmd"] == ["/usr/bin/uv", "tool", "uninstall", "ruff"]
+
+
+def test_uv_tool_absent_is_idempotent_when_tool_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
+    monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: pytest.fail("missing tool must be idempotent"))
+
+    result = run_module(
+        uv_tool,
+        {
+            "_ansible_check_mode": True,
+            "name": "ruff",
+            "state": "absent",
+        },
+    )
+
+    assert result == {
+        "changed": False,
+        "name": "ruff",
+        "state": "absent",
+    }
 
 
 def test_uv_tool_uses_spec_over_version(monkeypatch: pytest.MonkeyPatch) -> None:

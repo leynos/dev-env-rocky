@@ -222,7 +222,7 @@ def main() -> None:
             "env_vars": {"type": "list", "elements": "str"},
             "cwd": {"type": "path"},
             "url": {"type": "str"},
-            "bearer_token_env_var": {"type": "str", "no_log": False},
+            "bearer_token_env_var": {"type": "str", "no_log": True},
             "http_headers": {"type": "dict", "default": {}},
             "env_http_headers": {"type": "dict", "default": {}},
             "startup_timeout_sec": {"type": "int"},
