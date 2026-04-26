@@ -1,0 +1,6 @@
+---
+rust_cleanup_install_root: "{{ ansible_env.HOME }}/.local/share/rust-cleanup"
+rust_cleanup_source_dir: "{{ ansible_env.HOME }}/.local/src/rust-cleanup"
+rust_cleanup_venv: "{{ rust_cleanup_install_root }}/venv"
+rust_cleanup_entrypoint: "{{ ansible_env.HOME }}/.local/bin/rust-cleanup"
+rust_cleanup_timer_interval: 15min

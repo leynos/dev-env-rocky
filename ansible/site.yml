@@ -26,4 +26,5 @@
     - paths
     - agent_tools
     - sccache_user
+    - rust_cleanup
     - weave

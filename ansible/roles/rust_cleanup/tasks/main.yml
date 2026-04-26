@@ -1,0 +1,93 @@
+---
+- name: Ensure rust-cleanup install directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ ansible_env.HOME }}/.local/bin"
+    - "{{ ansible_env.HOME }}/.local/src"
+    - "{{ rust_cleanup_install_root }}"
+    - "{{ ansible_env.HOME }}/.config/systemd/user"
+
+- name: Copy rust-cleanup package source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../python/rust_cleanup/"
+    dest: "{{ rust_cleanup_source_dir }}/"
+    mode: preserve
+  register: rust_cleanup_package_source
+
+- name: Create rust-cleanup virtual environment
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -m
+      - venv
+      - "{{ rust_cleanup_venv }}"
+  args:
+    creates: "{{ rust_cleanup_venv }}/bin/python"
+  register: rust_cleanup_venv_create
+
+- name: Check rust-cleanup virtual environment entrypoint
+  ansible.builtin.stat:
+    path: "{{ rust_cleanup_venv }}/bin/rust-cleanup"
+  register: rust_cleanup_venv_entrypoint
+
+- name: Install rust-cleanup package into virtual environment
+  ansible.builtin.command:
+    argv:
+      - "{{ rust_cleanup_venv }}/bin/python"
+      - -m
+      - pip
+      - install
+      - --upgrade
+      - "{{ rust_cleanup_source_dir }}"
+  when: rust_cleanup_package_source.changed or rust_cleanup_venv_create.changed or not rust_cleanup_venv_entrypoint.stat.exists
+  register: rust_cleanup_pip_install
+  changed_when: rust_cleanup_pip_install.rc == 0
+
+- name: Link rust-cleanup entrypoint into local bin
+  ansible.builtin.file:
+    src: "{{ rust_cleanup_venv }}/bin/rust-cleanup"
+    dest: "{{ rust_cleanup_entrypoint }}"
+    state: link
+    force: true
+
+- name: Get user id for rust-cleanup systemd commands
+  ansible.builtin.command:
+    argv:
+      - id
+      - -u
+  register: rust_cleanup_user_id
+  changed_when: false
+
+- name: Install rust-cleanup systemd user service
+  ansible.builtin.template:
+    src: rust-cleanup.service.j2
+    dest: "{{ ansible_env.HOME }}/.config/systemd/user/rust-cleanup.service"
+    mode: '0644'
+  register: rust_cleanup_service
+
+- name: Install rust-cleanup systemd user timer
+  ansible.builtin.template:
+    src: rust-cleanup.timer.j2
+    dest: "{{ ansible_env.HOME }}/.config/systemd/user/rust-cleanup.timer"
+    mode: '0644'
+  register: rust_cleanup_timer
+
+- name: Reload user systemd for rust-cleanup units
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ rust_cleanup_user_id.stdout }}"
+  when: rust_cleanup_service.changed or rust_cleanup_timer.changed
+
+- name: Enable and start rust-cleanup timer
+  ansible.builtin.systemd_service:
+    name: rust-cleanup.timer
+    enabled: true
+    state: started
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ rust_cleanup_user_id.stdout }}"

@@ -1,0 +1,8 @@
+[Unit]
+Description=Clean stale Rust target directories under lody worktrees
+
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+ExecStart=/bin/sh -lc 'for worktree in %h/.lody/repos/*/worktrees/*; do [ -d "$worktree" ] || continue; %h/.local/bin/rust-cleanup "$worktree"; done'
