@@ -10,8 +10,29 @@
     - user
     - user_linger
 
-- name: Configure user environment for leynos
+- name: Select hosts with an existing leynos user
   hosts: servers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Check whether leynos exists
+      ansible.builtin.command:
+        argv:
+          - getent
+          - passwd
+          - leynos
+      register: leynos_user
+      check_mode: false
+      changed_when: false
+      failed_when: false
+
+    - name: Add hosts with leynos to the user environment group
+      ansible.builtin.group_by:
+        key: user_environment_hosts
+      when: leynos_user.rc == 0
+
+- name: Configure user environment for leynos
+  hosts: user_environment_hosts
   become: true
   become_user: leynos
   vars:
