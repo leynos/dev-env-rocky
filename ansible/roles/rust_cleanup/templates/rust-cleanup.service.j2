@@ -5,4 +5,4 @@ Description=Clean stale Rust target directories under lody worktrees
 Type=oneshot
 Nice=10
 IOSchedulingClass=idle
-ExecStart=/bin/sh -lc '[ -d "%h/.lody/repos" ] || exit 0; find "%h/.lody/repos" -mindepth 3 -maxdepth 3 -type d -path "*/worktrees/*" -print0 | xargs -0 -r -n 1 "%h/.local/bin/rust-cleanup"'
+ExecStart=/bin/sh -lc '[ -d "%h/.lody/repos" ] || exit 0; find "%h/.lody/repos" -mindepth 3 -maxdepth 3 -type d -path "*/worktrees/*" -print0 | xargs -0 -r -n 1 "{{ rust_cleanup_entrypoint }}"'

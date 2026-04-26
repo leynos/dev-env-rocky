@@ -1,6 +1,6 @@
-<!-- markdownlint-disable MD025 -->
-
 # Memory Management
+
+<!-- markdownlint-disable MD025 -->
 
 When and how to update `.interface-design/system.md`.
 
@@ -39,7 +39,7 @@ Memory compounds: each pattern saved makes future work faster and more consisten
 
 ---
 
-# Validation Checks
+## Validation Checks
 
 If system.md defines specific values, check consistency:
 

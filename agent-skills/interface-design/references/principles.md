@@ -83,7 +83,7 @@ Form controls (inputs, checkboxes, selects) have specific needs. Don't just reus
 - **Control border** — needs to feel interactive
 - **Control focus** — clear focus indication
 
-This separation lets designers tune controls independently from layout surfaces.
+This separation lets designers adjust controls independently from layout surfaces.
 
 ### Context-Aware Bases
 

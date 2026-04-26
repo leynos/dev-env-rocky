@@ -1,6 +1,6 @@
-<!-- markdownlint-disable MD013 -->
-
 # Craft in Action
+
+<!-- markdownlint-disable MD013 -->
 
 This shows how the subtle layering principle translates to real decisions. Learn the thinking, not the code. The values will differ — the approach won't.
 
@@ -81,8 +81,8 @@ The product might need:
 
 Apply the squint test to the work:
 
-1. Blur the view or step back
-2. Can the structure still be perceived hierarchy?
+1. Blur the view or step back from the work.
+2. Is the hierarchical structure still apparent?
 3. Is anything jumping out?
 4. Can the reviewer tell where regions begin and end?
 

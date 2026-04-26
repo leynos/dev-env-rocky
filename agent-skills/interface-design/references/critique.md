@@ -1,6 +1,6 @@
-<!-- markdownlint-disable MD013 -->
-
 # Critique
+
+<!-- markdownlint-disable MD013 -->
 
 The first build shipped the structure. Now look at it the way a design lead reviews a junior's work — not asking "does this work?" but "would a design lead endorse this?"
 
@@ -22,7 +22,7 @@ Does the layout have rhythm? Great interfaces breathe unevenly — dense tooling
 
 Are proportions doing work? A 280px sidebar next to full-width content says "navigation serves content." A 360px sidebar says "these are peers." The specific number declares what matters. If the rationale cannot articulate what the proportions are saying, they're not saying anything.
 
-Is there a clear focal point? Every screen has one thing the user came here to do. That thing should dominate — through size, position, contrast, or the space around it. When everything competes equally, nothing wins and the interface feels like a featureless expanse.
+Is there a clear focal point? Every screen has one thing the user came here to do. That thing should dominate — through size, position, contrast, or the space around it. When everything competes equally, nothing wins and the interface feels cluttered.
 
 ---
 

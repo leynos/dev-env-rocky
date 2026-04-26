@@ -1,3 +1,13 @@
+"""Test shared agent configuration module utilities.
+
+These unit tests validate TOML and JSON rendering, change tracking, and file
+management helpers used by the agent configuration Ansible modules. Run them
+with:
+
+    PYTHONPATH=ansible pytest \
+        ansible/ansible_collections/agentic/agent_configs/tests/unit/plugins/module_utils/test_agent_config_common.py
+"""
+
 from __future__ import annotations
 
 import json
@@ -25,6 +35,24 @@ class FakeModule:
         raise ModuleFailure(kwargs)
 
 
+@pytest.fixture
+def fake_module() -> FakeModule:
+    return FakeModule()
+
+
+@pytest.fixture
+def settings_path(tmp_path: Path) -> Path:
+    return tmp_path / "settings.json"
+
+
+def assert_equal(actual: Any, expected: Any, context: str) -> None:
+    assert actual == expected, f"{context}: expected {expected!r}, got {actual!r}"
+
+
+def assert_is(actual: Any, expected: Any, context: str) -> None:
+    assert actual is expected, f"{context}: expected {expected!r}, got {actual!r}"
+
+
 def test_change_set_tracks_unique_changed_paths_and_details() -> None:
     changes = common.ChangeSet()
 
@@ -33,13 +61,15 @@ def test_change_set_tracks_unique_changed_paths_and_details() -> None:
     changes.note(True, path="/tmp/a")
     changes.note(True, path="/tmp/b", reason="updated")
 
-    assert changes.changed is True, f"expected changes.changed to be True but was {changes.changed}"
+    assert changes.changed is True, (
+        f"changes.changed expected True, got {changes.changed}"
+    )
     assert changes.paths == ["/tmp/a", "/tmp/b"], (
-        f'expected changes.paths to be ["/tmp/a", "/tmp/b"] but was {changes.paths}'
+        f"changes.paths expected ['/tmp/a', '/tmp/b'], got {changes.paths}"
     )
     assert changes.details == {"ignored": True, "reason": "updated"}, (
-        'expected changes.details to be {"ignored": True, "reason": "updated"} '
-        f"but was {changes.details}"
+        "changes.details expected {'ignored': True, 'reason': 'updated'}, "
+        f"got {changes.details}"
     )
 
 
@@ -52,7 +82,7 @@ def test_change_set_tracks_unique_changed_paths_and_details() -> None:
     ],
 )
 def test_slugify_normalizes_resource_names(raw: str, expected: str) -> None:
-    assert common.slugify(raw) == expected
+    assert_equal(common.slugify(raw), expected, "common.slugify should normalize resource name")
 
 
 def test_dump_toml_handles_nested_tables_and_arrays() -> None:
@@ -73,14 +103,17 @@ def test_dump_toml_handles_nested_tables_and_arrays() -> None:
         }
     )
 
-    assert "[features]\ncodex_hooks = true" in rendered
-    assert "[mcp_servers.repo-tools]" in rendered
-    assert 'command = "mcp-context-pack"' in rendered
-    assert 'args = ["--stdio"]' in rendered
-    assert "[mcp_servers.repo-tools.env]" in rendered
-    assert 'LOG_LEVEL = "info"' in rendered
-    assert "[[profiles]]" in rendered
-    assert "[profiles.settings]" in rendered
+    for expected in (
+        "[features]\ncodex_hooks = true",
+        "[mcp_servers.repo-tools]",
+        'command = "mcp-context-pack"',
+        'args = ["--stdio"]',
+        "[mcp_servers.repo-tools.env]",
+        'LOG_LEVEL = "info"',
+        "[[profiles]]",
+        "[profiles.settings]",
+    ):
+        assert expected in rendered, f"common.dump_toml missing {expected!r}"
 
 
 @pytest.mark.parametrize(
@@ -103,93 +136,96 @@ def test_render_markdown_normalizes_body_and_frontmatter() -> None:
         "Body\r\n",
     )
 
-    assert rendered == ('---\nname: "Release"\nenabled: true\ntools:\n  - "Bash"\n  - "Read"\n---\n\nBody\n')
+    assert_equal(
+        rendered,
+        '---\nname: "Release"\nenabled: true\ntools:\n  - "Bash"\n  - "Read"\n---\n\nBody\n',
+        "common.render_markdown should normalize frontmatter and body",
+    )
 
 
-def test_manage_named_json_entry_creates_updates_and_removes(tmp_path: Path) -> None:
-    module = FakeModule()
-    path = tmp_path / "settings.json"
-
+def test_manage_named_json_entry_creates_updates_and_removes(
+    fake_module: FakeModule,
+    settings_path: Path,
+) -> None:
     changed, data = common.manage_named_json_entry(
-        module,
-        str(path),
+        fake_module,
+        str(settings_path),
         root_key="mcpServers",
         name="repo",
         desired={"command": "old"},
         state="present",
     )
 
-    assert changed is True
-    assert data == {"mcpServers": {"repo": {"command": "old"}}}
-    assert json.loads(path.read_text()) == data
+    assert_is(changed, True, "manage_named_json_entry should create missing entry")
+    assert_equal(data, {"mcpServers": {"repo": {"command": "old"}}}, "manage_named_json_entry should return created data")
+    assert_equal(json.loads(settings_path.read_text()), data, "manage_named_json_entry should write created data")
 
     changed, data = common.manage_named_json_entry(
-        module,
-        str(path),
+        fake_module,
+        str(settings_path),
         root_key="mcpServers",
         name="repo",
         desired={"command": "old"},
         state="present",
     )
 
-    assert changed is False
-    assert data == {"mcpServers": {"repo": {"command": "old"}}}
+    assert_is(changed, False, "manage_named_json_entry should be idempotent")
+    assert_equal(data, {"mcpServers": {"repo": {"command": "old"}}}, "manage_named_json_entry should keep data unchanged")
 
     changed, data = common.manage_named_json_entry(
-        module,
-        str(path),
+        fake_module,
+        str(settings_path),
         root_key="mcpServers",
         name="repo",
         desired=None,
         state="absent",
     )
 
-    assert changed is True
-    assert data == {}
-    assert json.loads(path.read_text()) == {}
+    assert_is(changed, True, "manage_named_json_entry should remove existing entry")
+    assert_equal(data, {}, "manage_named_json_entry should return empty data after removal")
+    assert_equal(json.loads(settings_path.read_text()), {}, "manage_named_json_entry should write removal")
 
 
-def test_manage_named_json_entry_check_mode_does_not_write(tmp_path: Path) -> None:
-    path = tmp_path / "settings.json"
-
+def test_manage_named_json_entry_check_mode_does_not_write(settings_path: Path) -> None:
     changed, data = common.manage_named_json_entry(
         FakeModule(check_mode=True),
-        str(path),
+        str(settings_path),
         root_key="mcpServers",
         name="repo",
         desired={"command": "mcp"},
         state="present",
     )
 
-    assert changed is True
-    assert data == {"mcpServers": {"repo": {"command": "mcp"}}}
-    assert not path.exists()
+    assert_is(changed, True, "manage_named_json_entry check mode should report change")
+    assert_equal(data, {"mcpServers": {"repo": {"command": "mcp"}}}, "manage_named_json_entry check mode should return desired data")
+    assert not settings_path.exists(), "manage_named_json_entry check mode should not write file"
 
 
-def test_manage_named_json_entry_rejects_bad_roots(tmp_path: Path) -> None:
-    path = tmp_path / "settings.json"
-    path.write_text(json.dumps({"mcpServers": []}))
+def test_manage_named_json_entry_rejects_bad_roots(settings_path: Path) -> None:
+    settings_path.write_text(json.dumps({"mcpServers": []}))
 
     with pytest.raises(ModuleFailure) as exc:
         common.manage_named_json_entry(
             FakeModule(),
-            str(path),
+            str(settings_path),
             root_key="mcpServers",
             name="repo",
             desired={},
             state="present",
         )
 
-    assert "Expected 'mcpServers' to be a JSON object" in exc.value.args[0]["msg"]
+    assert "Expected 'mcpServers' to be a JSON object" in exc.value.args[0]["msg"], (
+        "manage_named_json_entry should reject non-object roots"
+    )
 
 
-def test_manage_hook_json_adds_updates_and_removes_hook(tmp_path: Path) -> None:
-    module = FakeModule()
-    path = tmp_path / "settings.json"
-
+def test_manage_hook_json_adds_updates_and_removes_hook(
+    fake_module: FakeModule,
+    settings_path: Path,
+) -> None:
     changed, data = common.manage_hook_json(
-        module,
-        str(path),
+        fake_module,
+        str(settings_path),
         event="Stop",
         matcher="Bash",
         desired_hook={"type": "command", "command": "lint", "timeout": 30},
@@ -197,13 +233,17 @@ def test_manage_hook_json_adds_updates_and_removes_hook(tmp_path: Path) -> None:
         identity_keys=("type", "command"),
     )
 
-    assert changed is True
-    assert data["hooks"]["Stop"][0]["matcher"] == "Bash"
-    assert data["hooks"]["Stop"][0]["hooks"] == [{"type": "command", "command": "lint", "timeout": 30}]
+    assert_is(changed, True, "manage_hook_json should create hook")
+    assert_equal(data["hooks"]["Stop"][0]["matcher"], "Bash", "manage_hook_json should set matcher")
+    assert_equal(
+        data["hooks"]["Stop"][0]["hooks"],
+        [{"type": "command", "command": "lint", "timeout": 30}],
+        "manage_hook_json should add desired hook",
+    )
 
     changed, data = common.manage_hook_json(
-        module,
-        str(path),
+        fake_module,
+        str(settings_path),
         event="Stop",
         matcher="Bash",
         desired_hook={"type": "command", "command": "lint", "timeout": 60},
@@ -211,12 +251,12 @@ def test_manage_hook_json_adds_updates_and_removes_hook(tmp_path: Path) -> None:
         identity_keys=("type", "command"),
     )
 
-    assert changed is True
-    assert data["hooks"]["Stop"][0]["hooks"][0]["timeout"] == 60
+    assert_is(changed, True, "manage_hook_json should update existing hook")
+    assert_equal(data["hooks"]["Stop"][0]["hooks"][0]["timeout"], 60, "manage_hook_json should update timeout")
 
     changed, data = common.manage_hook_json(
-        module,
-        str(path),
+        fake_module,
+        str(settings_path),
         event="Stop",
         matcher="Bash",
         desired_hook={"type": "command", "command": "lint"},
@@ -224,8 +264,8 @@ def test_manage_hook_json_adds_updates_and_removes_hook(tmp_path: Path) -> None:
         identity_keys=("type", "command"),
     )
 
-    assert changed is True
-    assert data == {}
+    assert_is(changed, True, "manage_hook_json should remove existing hook")
+    assert_equal(data, {}, "manage_hook_json should prune empty hook roots")
 
 
 def test_manage_directory_markdown_resource_handles_extra_files_and_absent(
@@ -244,9 +284,17 @@ def test_manage_directory_markdown_resource_handles_extra_files_and_absent(
         extra_files={"references/detail.md": "Details\n"},
     )
 
-    assert changes.changed is True
-    assert (directory / "SKILL.md").read_text() == ('---\nname: "Skill"\n---\n\nUse this skill.\n')
-    assert (directory / "references/detail.md").read_text() == "Details\n"
+    assert_is(changes.changed, True, "manage_directory_markdown_resource should report writes")
+    assert_equal(
+        (directory / "SKILL.md").read_text(),
+        '---\nname: "Skill"\n---\n\nUse this skill.\n',
+        "manage_directory_markdown_resource should write primary file",
+    )
+    assert_equal(
+        (directory / "references/detail.md").read_text(),
+        "Details\n",
+        "manage_directory_markdown_resource should write extra file",
+    )
 
     changes = common.manage_directory_markdown_resource(
         module,
@@ -257,7 +305,7 @@ def test_manage_directory_markdown_resource_handles_extra_files_and_absent(
         state="present",
     )
 
-    assert changes.changed is False
+    assert_is(changes.changed, False, "manage_directory_markdown_resource should be idempotent")
 
     changes = common.manage_directory_markdown_resource(
         module,
@@ -268,8 +316,8 @@ def test_manage_directory_markdown_resource_handles_extra_files_and_absent(
         state="absent",
     )
 
-    assert changes.changed is True
-    assert not directory.exists()
+    assert_is(changes.changed, True, "manage_directory_markdown_resource should remove directory")
+    assert not directory.exists(), "manage_directory_markdown_resource should delete directory"
 
 
 def test_check_mode_directory_resource_reports_without_writing(tmp_path: Path) -> None:
@@ -284,8 +332,8 @@ def test_check_mode_directory_resource_reports_without_writing(tmp_path: Path) -
         state="present",
     )
 
-    assert changes.changed is True
-    assert not directory.exists()
+    assert_is(changes.changed, True, "manage_directory_markdown_resource check mode should report change")
+    assert not directory.exists(), "manage_directory_markdown_resource check mode should not write"
 
 
 def test_resolve_scoped_config_path_requires_project_dir_for_project_scope() -> None:
@@ -307,7 +355,9 @@ def test_maybe_validate_executable_checks_path(tmp_path: Path) -> None:
     with pytest.raises(ModuleFailure) as exc:
         common.maybe_validate_executable(FakeModule(), str(executable), validate=True)
 
-    assert "Path is not executable" in exc.value.args[0]["msg"]
+    assert "Path is not executable" in exc.value.args[0]["msg"], (
+        "maybe_validate_executable should reject non-executable paths"
+    )
 
     executable.chmod(0o755)
     common.maybe_validate_executable(FakeModule(), str(executable), validate=True)

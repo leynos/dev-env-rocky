@@ -1,11 +1,11 @@
+# Interface Design
+
 ---
 name: interface-design
 description: This skill is for interface design — dashboards, admin panels, apps, tools, and interactive products. NOT for marketing design (landing pages, marketing sites, campaigns).
 ---
 
 <!-- markdownlint-disable MD013 MD025 -->
-
-# Interface Design
 
 Build interface design with craft and consistency.
 
@@ -156,11 +156,11 @@ If any check fails, iterate before showing.
 
 ## Subtle Layering
 
-This is the backbone of craft. Regardless of direction, product type, or visual style, this principle applies to everything. The system should be barely noticeable while it works. When looking at Vercel's dashboard, the viewer does not think "nice borders." The structure is understood immediately. The craft is invisible; that is how craft signals that it is working.
+This is the backbone of craft. Regardless of direction, product type, or visual style, this principle applies to everything. The system should be barely noticeable when it is working. When looking at Vercel's dashboard, the viewer does not think "nice borders." The structure is understood. The craft is invisible; that is how craft signals that it is working.
 
 ### Surface Elevation
 
-Surfaces stack. A dropdown sits above a card which sits above the page. Build a numbered system — base, then increasing elevation levels. In dark mode, higher elevation = slightly lighter. In light mode, higher elevation = slightly lighter or uses shadow.
+Surfaces stack. A dropdown sits above a card which sits above the page. Build a numbered system — base, then increasing elevation levels. In dark mode, higher elevation = slightly lighter. In light mode, higher elevation is slightly lighter or uses shadow.
 
 Each jump should be only a few percentage points of lightness. The difference is barely visible in isolation. But when surfaces stack, the hierarchy emerges. Whisper-quiet shifts are felt rather than seen.
 

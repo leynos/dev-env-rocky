@@ -1,20 +1,22 @@
+"""Manage Bun global packages for packaging tools playbooks.
+
+The bun_global Ansible module installs, updates, and removes Bun global
+packages while preserving idempotence through installed package metadata. Use
+``name``, ``version``, ``state``, ``global_dir``, and ``global_bin_dir`` to
+control the requested package and the Bun installation paths.
+
+Example task::
+
+    - name: Install Biome with Bun
+      packaging.tools.bun_global:
+        name: '@biomejs/biome'
+        version: 2.3.8
+        state: present
+"""
+
 #!/usr/bin/python
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
-"""Manage Bun global packages from Ansible playbooks.
-
-The bun_global.py module installs, updates, and removes packages with
-``bun add --global`` and ``bun remove --global`` while preserving idempotence
-through package metadata in the configured Bun global directory. Use it when a
-playbook needs repeatable user-level JavaScript tooling without shell tasks.
-
-Example usage::
-
-    result = run_module(
-        bun_global,
-        {"name": "@biomejs/biome", "version": "2.3.8", "state": "present"},
-    )
-"""
 
 from __future__ import annotations
 

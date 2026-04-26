@@ -1,3 +1,19 @@
+"""Manage Bun global packages for agent configuration playbooks.
+
+The bun_global Ansible module installs, updates, and removes Bun global
+packages while preserving idempotence through installed package metadata. Use
+``name``, ``version``, ``state``, ``global_dir``, and ``global_bin_dir`` to
+control the requested package and the Bun installation paths.
+
+Example task::
+
+    - name: Install Biome with Bun
+      agentic.agent_configs.bun_global:
+        name: '@biomejs/biome'
+        version: 2.3.8
+        state: present
+"""
+
 #!/usr/bin/python
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)

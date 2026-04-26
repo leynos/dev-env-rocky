@@ -1,7 +1,7 @@
 # rust-cleanup
 
 `rust-cleanup` removes stale Rust `target` directories that contain a
-`CACHEDIR.TAG` cache directory tag marker, a file recognised by backup tools
+`CACHEDIR.TAG` cache directory tag marker, a file recognized by backup tools
 as identifying disposable cache contents. It skips noisy directories such as
 `.git`, `node_modules`, `__pycache__`, and `.pytest_cache`, and preserves
 target trees that contain files modified within the last 24 hours.

@@ -1,9 +1,19 @@
+"""Test agentic packaging Ansible modules.
+
+This module exercises the agentic Bun, cargo-binstall, and uv modules through
+an in-process Ansible harness. Run it with:
+
+    PYTHONPATH=ansible pytest \
+        ansible/ansible_collections/agentic/agent_configs/tests/unit/plugins/modules/test_packaging_modules.py
+"""
+
 from __future__ import annotations
 
 import getpass
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -21,86 +31,134 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 )
 
 
-def run_module(module, args: dict):
+def run_module(module: Any, args: dict[str, object]) -> dict[str, Any]:
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
         module.main()
     return exc.value.args[0]
 
 
+def assert_equal(actual: Any, expected: Any, context: str) -> None:
+    assert actual == expected, f"{context}: expected {expected!r}, got {actual!r}"
+
+
+def assert_is(actual: Any, expected: Any, context: str) -> None:
+    assert actual is expected, f"{context}: expected {expected!r}, got {actual!r}"
+
+
 def test_bun_package_json_path_handles_scoped_packages() -> None:
-    assert bun_global.package_json_path("/global", "@scope/tool") == ("/global/node_modules/@scope/tool/package.json")
+    assert_equal(
+        bun_global.package_json_path("/global", "@scope/tool"),
+        "/global/node_modules/@scope/tool/package.json",
+        "bun_global.package_json_path should handle scoped package paths",
+    )
 
 
 def test_bun_read_installed_version(tmp_path: Path) -> None:
     package_json = tmp_path / "package.json"
 
-    assert bun_global.read_installed_version(str(package_json)) is None
+    assert_is(
+        bun_global.read_installed_version(str(package_json)),
+        None,
+        "bun_global.read_installed_version should return None for missing metadata",
+    )
 
     package_json.write_text(json.dumps({"version": "1.2.3"}))
 
-    assert bun_global.read_installed_version(str(package_json)) == "1.2.3"
+    assert_equal(
+        bun_global.read_installed_version(str(package_json)),
+        "1.2.3",
+        "bun_global.read_installed_version should read package version",
+    )
 
 
 def test_bun_expand_home_uses_home_for_tilde(monkeypatch: pytest.MonkeyPatch) -> None:
     home = "/tmp/test-home"
     monkeypatch.setenv("HOME", home)
 
-    assert bun_paths.expand_home("~") == home
-    assert bun_paths.expand_home("~/projects") == str(Path(home) / "projects")
+    assert_equal(bun_paths.expand_home("~"), home, "bun_paths.expand_home should expand bare tilde")
+    assert_equal(
+        bun_paths.expand_home("~/projects"),
+        str(Path(home) / "projects"),
+        "bun_paths.expand_home should expand tilde-prefixed paths",
+    )
 
 
 def test_bun_expand_home_uses_system_home_when_home_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("HOME", raising=False)
     system_home = Path.home()
 
-    assert bun_paths.expand_home("~") == str(system_home)
-    assert bun_paths.expand_home("~/projects") == str(system_home / "projects")
+    assert_equal(
+        bun_paths.expand_home("~"),
+        str(system_home),
+        "bun_paths.expand_home should use system home when HOME is missing",
+    )
+    assert_equal(
+        bun_paths.expand_home("~/projects"),
+        str(system_home / "projects"),
+        "bun_paths.expand_home should expand child path without HOME",
+    )
 
 
 def test_bun_expand_home_preserves_expanduser_user_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HOME", "/tmp/test-home")
     user_path = f"~{getpass.getuser()}/projects"
 
-    assert bun_paths.expand_home(user_path) == os.path.expanduser(user_path)
+    assert_equal(
+        bun_paths.expand_home(user_path),
+        os.path.expanduser(user_path),
+        "bun_paths.expand_home should preserve expanduser user lookup",
+    )
 
 
 def test_bun_expand_home_returns_original_unknown_user_path() -> None:
     user_path = "~definitely-no-such-user-xyz/projects"
 
-    assert bun_paths.expand_home(user_path) == user_path
+    assert_equal(
+        bun_paths.expand_home(user_path),
+        user_path,
+        "bun_paths.expand_home should preserve unknown user paths",
+    )
 
 
-def test_bun_resolve_global_dir_env_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    ("resolver", "env_var_name", "env_value", "explicit_param", "expected_suffix"),
+    [
+        (bun_paths.resolve_global_dir, "BUN_INSTALL_GLOBAL_DIR", "~/bun-global", None, "bun-global"),
+        (
+            bun_paths.resolve_global_dir,
+            "BUN_INSTALL_GLOBAL_DIR",
+            "~/ignored-global",
+            "~/explicit-global",
+            "explicit-global",
+        ),
+        (bun_paths.resolve_global_bin_dir, "BUN_INSTALL_BIN", "~/bun-bin", None, "bun-bin"),
+        (
+            bun_paths.resolve_global_bin_dir,
+            "BUN_INSTALL_BIN",
+            "~/ignored-bin",
+            "~/explicit-bin",
+            "explicit-bin",
+        ),
+    ],
+)
+def test_bun_path_resolvers_follow_precedence(
+    monkeypatch: pytest.MonkeyPatch,
+    resolver,
+    env_var_name: str,
+    env_value: str,
+    explicit_param: str | None,
+    expected_suffix: str,
+) -> None:
     home = "/tmp/test-home"
     monkeypatch.setenv("HOME", home)
-    monkeypatch.setenv("BUN_INSTALL_GLOBAL_DIR", "~/bun-global")
+    monkeypatch.setenv(env_var_name, env_value)
 
-    assert bun_paths.resolve_global_dir(None) == str(Path(home) / "bun-global")
-
-
-def test_bun_resolve_global_dir_explicit_param_wins(monkeypatch: pytest.MonkeyPatch) -> None:
-    home = "/tmp/test-home"
-    monkeypatch.setenv("HOME", home)
-    monkeypatch.setenv("BUN_INSTALL_GLOBAL_DIR", "~/ignored-global")
-
-    assert bun_paths.resolve_global_dir("~/explicit-global") == str(Path(home) / "explicit-global")
-
-
-def test_bun_resolve_global_bin_dir_env_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    home = "/tmp/test-home"
-    monkeypatch.setenv("HOME", home)
-    monkeypatch.setenv("BUN_INSTALL_BIN", "~/bun-bin")
-
-    assert bun_paths.resolve_global_bin_dir(None) == str(Path(home) / "bun-bin")
-
-
-def test_bun_resolve_global_bin_dir_explicit_param_wins(monkeypatch: pytest.MonkeyPatch) -> None:
-    home = "/tmp/test-home"
-    monkeypatch.setenv("HOME", home)
-    monkeypatch.setenv("BUN_INSTALL_BIN", "~/ignored-bin")
-
-    assert bun_paths.resolve_global_bin_dir("~/explicit-bin") == str(Path(home) / "explicit-bin")
+    assert_equal(
+        resolver(explicit_param),
+        str(Path(home) / expected_suffix),
+        f"{resolver.__name__} should prefer explicit value, then {env_var_name}",
+    )
 
 
 def test_bun_global_check_mode_installs_missing_package(
@@ -127,9 +185,13 @@ def test_bun_global_check_mode_installs_missing_package(
         },
     )
 
-    assert result["changed"] is True
-    assert result["target"] == "@scope/tool@1.2.3"
-    assert result["cmd"] == ["/usr/bin/bun", "install", "-g", "--ignore-scripts", "@scope/tool@1.2.3"]
+    assert_is(result["changed"], True, "bun_global should report changed in check mode")
+    assert_equal(result["target"], "@scope/tool@1.2.3", "bun_global should build versioned target")
+    assert_equal(
+        result["cmd"],
+        ["/usr/bin/bun", "install", "-g", "--ignore-scripts", "@scope/tool@1.2.3"],
+        "bun_global should build install command with ignore scripts",
+    )
 
 
 def test_bun_global_reports_present_package_without_running_install(
@@ -154,14 +216,14 @@ def test_bun_global_reports_present_package_without_running_install(
         },
     )
 
-    assert result == {
+    assert_equal(result, {
         "changed": False,
         "name": "tool",
         "state": "present",
         "installed_version": "1.2.3",
         "global_dir": str(tmp_path / "global"),
         "global_bin_dir": str(tmp_path / "bin"),
-    }
+    }, "bun_global should be idempotent for installed package")
 
 
 def test_cargo_binstall_parses_installed_version(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -170,8 +232,16 @@ def test_cargo_binstall_parses_installed_version(monkeypatch: pytest.MonkeyPatch
 
     monkeypatch.setattr(cargo_binstall, "run", fake_run)
 
-    assert cargo_binstall.read_installed_version(object(), "/usr/bin/cargo", "cargo-nextest", {}) == "0.9.100"
-    assert cargo_binstall.read_installed_version(object(), "/usr/bin/cargo", "missing", {}) is None
+    assert_equal(
+        cargo_binstall.read_installed_version(object(), "/usr/bin/cargo", "cargo-nextest", {}),
+        "0.9.100",
+        "cargo_binstall should parse installed version",
+    )
+    assert_is(
+        cargo_binstall.read_installed_version(object(), "/usr/bin/cargo", "missing", {}),
+        None,
+        "cargo_binstall should return None for missing package",
+    )
 
 
 def test_cargo_binstall_fails_when_install_list_fails(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -185,8 +255,12 @@ def test_cargo_binstall_fails_when_install_list_fails(monkeypatch: pytest.Monkey
     with pytest.raises(AnsibleFailJson) as exc:
         cargo_binstall.read_installed_version(FakeModule(), "/usr/bin/cargo", "tool", {})
 
-    assert exc.value.args[0]["cmd"] == ["/usr/bin/cargo", "install", "--list"]
-    assert exc.value.args[0]["stderr"] == "boom"
+    assert_equal(
+        exc.value.args[0]["cmd"],
+        ["/usr/bin/cargo", "install", "--list"],
+        "cargo_binstall should report failed install-list command",
+    )
+    assert_equal(exc.value.args[0]["stderr"], "boom", "cargo_binstall should surface stderr")
 
 
 def test_cargo_binstall_check_mode_installs_requested_version(
@@ -211,15 +285,15 @@ def test_cargo_binstall_check_mode_installs_requested_version(
         },
     )
 
-    assert result["changed"] is True
-    assert result["target"] == "cargo-nextest@0.9.100"
-    assert result["cmd"] == [
+    assert_is(result["changed"], True, "cargo_binstall should report install change")
+    assert_equal(result["target"], "cargo-nextest@0.9.100", "cargo_binstall should build target")
+    assert_equal(result["cmd"], [
         "/usr/bin/cargo",
         "binstall",
         "--no-confirm",
         "--force",
         "cargo-nextest@0.9.100",
-    ]
+    ], "cargo_binstall should build install command")
 
 
 def test_cargo_binstall_check_mode_uninstalls_existing_package(
@@ -243,15 +317,15 @@ def test_cargo_binstall_check_mode_uninstalls_existing_package(
         },
     )
 
-    assert result["changed"] is True
-    assert result["cmd"] == [
+    assert_is(result["changed"], True, "cargo_binstall should report uninstall change")
+    assert_equal(result["cmd"], [
         "/usr/bin/cargo",
         "uninstall",
         "--package",
         "cargo-nextest",
         "--root",
         "/opt/cargo-tools",
-    ]
+    ], "cargo_binstall should build uninstall command")
 
 
 def test_uv_tool_parses_tool_list(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -266,10 +340,10 @@ def test_uv_tool_parses_tool_list(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda module, cmd: (0, "ruff v0.14.0\nbad line\nnixie v0.1.0 (from git)\n", ""),
     )
 
-    assert uv_tool.read_installed_tools(FakeModule(), "/usr/bin/uv") == {
+    assert_equal(uv_tool.read_installed_tools(FakeModule(), "/usr/bin/uv"), {
         "ruff": "0.14.0",
         "nixie": "0.1.0",
-    }
+    }, "uv_tool should parse installed tool list")
 
 
 def test_uv_tool_check_mode_installs_with_options(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -289,9 +363,9 @@ def test_uv_tool_check_mode_installs_with_options(monkeypatch: pytest.MonkeyPatc
         },
     )
 
-    assert result["changed"] is True
-    assert result["target"] == "ruff==0.14.0"
-    assert result["cmd"] == [
+    assert_is(result["changed"], True, "uv_tool should report install change")
+    assert_equal(result["target"], "ruff==0.14.0", "uv_tool should build versioned target")
+    assert_equal(result["cmd"], [
         "/usr/bin/uv",
         "tool",
         "install",
@@ -301,7 +375,7 @@ def test_uv_tool_check_mode_installs_with_options(monkeypatch: pytest.MonkeyPatc
         "--with",
         "pytest",
         "ruff==0.14.0",
-    ]
+    ], "uv_tool should build install command with options")
 
 
 def test_uv_tool_check_mode_uninstalls_existing_tool(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -318,8 +392,12 @@ def test_uv_tool_check_mode_uninstalls_existing_tool(monkeypatch: pytest.MonkeyP
         },
     )
 
-    assert result["changed"] is True
-    assert result["cmd"] == ["/usr/bin/uv", "tool", "uninstall", "ruff"]
+    assert_is(result["changed"], True, "uv_tool should report uninstall change")
+    assert_equal(
+        result["cmd"],
+        ["/usr/bin/uv", "tool", "uninstall", "ruff"],
+        "uv_tool should build uninstall command",
+    )
 
 
 def test_uv_tool_absent_is_idempotent_when_tool_missing(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -336,11 +414,11 @@ def test_uv_tool_absent_is_idempotent_when_tool_missing(monkeypatch: pytest.Monk
         },
     )
 
-    assert result == {
+    assert_equal(result, {
         "changed": False,
         "name": "ruff",
         "state": "absent",
-    }
+    }, "uv_tool should be idempotent when tool is already absent")
 
 
 def test_uv_tool_uses_spec_over_version(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -357,5 +435,13 @@ def test_uv_tool_uses_spec_over_version(monkeypatch: pytest.MonkeyPatch) -> None
         },
     )
 
-    assert result["target"] == "git+https://example.test/nixie"
-    assert result["cmd"][-1] == "git+https://example.test/nixie"
+    assert_equal(
+        result["target"],
+        "git+https://example.test/nixie",
+        "uv_tool should prefer spec over version in target",
+    )
+    assert_equal(
+        result["cmd"][-1],
+        "git+https://example.test/nixie",
+        "uv_tool should use spec as final install argument",
+    )
