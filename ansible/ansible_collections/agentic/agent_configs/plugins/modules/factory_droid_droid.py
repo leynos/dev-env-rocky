@@ -1,3 +1,31 @@
+"""Manage Factory Droid custom droid Markdown files.
+
+The factory_droid_droid.py Ansible module creates, updates, or removes custom
+Factory Droid droids in user-scoped ``~/.factory/droids`` directories or
+project-scoped ``.factory/droids`` directories. Use it to provision repeatable
+droid prompts with front matter such as ``name``, ``description``, ``model``,
+``reasoning_effort``, ``tools``, and additional ``metadata``. The module builds
+front matter with ``build_frontmatter``, resolves the managed file path with
+``resolve_path``, and writes the requested Markdown body from ``main``.
+
+Example playbook task::
+
+    - name: Create a project Factory Droid reviewer
+      agentic.agent_configs.factory_droid_droid:
+        name: Reviewer
+        scope: project
+        project_dir: /srv/my-repo
+        description: Review changes and identify concrete risks.
+        model: inherit
+        reasoning_effort: high
+        tools:
+          - Read
+          - Edit
+          - Execute
+        body: |
+          Review the supplied changes and highlight correctness issues.
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
