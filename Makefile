@@ -62,7 +62,7 @@ markdownlint: $(MDLINT) ## Lint Markdown files
 	$(MDLINT) $(MARKDOWN_PATHS)
 
 nixie: ## Validate Mermaid diagrams
-	$(call ensure_tool,nixie)
+	$(call ensure_tool,$(NIXIE))
 	$(NIXIE) --no-sandbox
 
 test: uv ## Run Python tests
