@@ -1,3 +1,16 @@
+"""Test generated agent configuration Ansible modules.
+
+This module verifies that the agent configuration modules render expected
+files, report idempotent changes, validate required arguments, and reject
+invalid inputs. It is useful when changing module behaviour because the tests
+exercise modules through their Ansible-style entrypoints rather than direct
+helper calls.
+
+Run these tests from the repository root with the collection on ``PYTHONPATH``::
+
+    PYTHONPATH=ansible pytest ansible/ansible_collections/agentic/agent_configs/tests/unit/plugins/modules/test_agent_config_modules.py
+"""
+
 from __future__ import annotations
 
 import json
