@@ -380,11 +380,38 @@ def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> 
         "type": "command",
         "command": "run-checks",
         "timeout": 60,
+        "async": False,
         "statusMessage": "Checking",
     }
     assert json.loads(hooks_path.read_text())["hooks"]["PostToolUse"][0]["hooks"] == [result["hook"]]
     assert "[features]\ncodex_hooks = true" in config_path.read_text()
 
+    assert run_module(codex_cli_hook, args)["changed"] is False
+
+
+def test_codex_cli_hook_writes_session_start_hook(tmp_path: Path) -> None:
+    hooks_path = tmp_path / "hooks.json"
+    config_path = tmp_path / "config.toml"
+    args = {
+        "agent_executable": "/bin/sh",
+        "path": str(hooks_path),
+        "config_path": str(config_path),
+        "event": "SessionStart",
+        "command": "session-start",
+        "timeout": 30,
+        "async_hook": True,
+    }
+
+    result = run_module(codex_cli_hook, args)
+
+    assert result["changed"] is True
+    assert result["hook"] == {
+        "type": "command",
+        "command": "session-start",
+        "timeout": 30,
+        "async": True,
+    }
+    assert json.loads(hooks_path.read_text())["hooks"]["SessionStart"][0]["hooks"] == [result["hook"]]
     assert run_module(codex_cli_hook, args)["changed"] is False
 
 

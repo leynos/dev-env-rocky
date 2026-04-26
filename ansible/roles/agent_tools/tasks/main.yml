@@ -356,6 +356,54 @@
         mv "{{ ansible_env.HOME }}/.claude/settings.json.tmp" "{{ ansible_env.HOME }}/.claude/settings.json"
   when: hook_installed.stdout != "true"
 
+# Install Codex hooks
+- name: Check Codex hooks directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.codex/hooks"
+  register: codex_hooks_directory
+
+- name: Ensure Codex hooks directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.codex/hooks"
+    state: directory
+    mode: '0755'
+
+- name: Copy post-turn-quality-stop-hook.py for Codex
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/hooks/post-turn-quality-stop-hook.py"
+    dest: "{{ ansible_env.HOME }}/.codex/hooks/post-turn-quality-stop-hook.py"
+    mode: '0755'
+    remote_src: true
+  when: not ansible_check_mode or (codex_hooks_directory.stat.isdir | default(false))
+
+- name: Install Codex session-start hook wrapper
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/.codex/hooks/session-start-hook.sh"
+    mode: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      test -x "$HOME/.codex/hooks/post-turn-quality-stop-hook.py"
+  when: not ansible_check_mode or (codex_hooks_directory.stat.isdir | default(false))
+
+- name: Configure Codex Stop and SessionStart hooks
+  agentic.agent_configs.codex_cli_hook:
+    agent_executable: "{{ ansible_env.HOME }}/.local/bin/codex"
+    state: present
+    scope: user
+    event: "{{ item.event }}"
+    command: "{{ item.command }}"
+    timeout: "{{ item.timeout }}"
+    status_message: "{{ item.status_message | default(omit) }}"
+  loop:
+    - event: Stop
+      command: "python3 {{ ansible_env.HOME }}/.codex/hooks/post-turn-quality-stop-hook.py"
+      timeout: 600
+      status_message: Running post-turn quality gate
+    - event: SessionStart
+      command: "{{ ansible_env.HOME }}/.codex/hooks/session-start-hook.sh"
+      timeout: 30
+
 # Configure Claude MCP servers using collection module
 - name: Configure Claude Code MCP servers
   agentic.agent_configs.claude_code_mcp:

@@ -75,6 +75,12 @@ options:
     description:
       - Optional status message displayed by Codex while the hook runs.
     type: str
+  async_hook:
+    description:
+      - Whether Codex should treat the command hook as asynchronous.
+      - Codex currently skips asynchronous command hooks, so leave this disabled for blocking quality gates.
+    type: bool
+    default: false
   extra:
     description:
       - Additional raw keys to merge into the hook definition.
@@ -94,6 +100,14 @@ EXAMPLES = r"""
     matcher: Bash
     command: /srv/my-repo/.codex/hooks/post-bash.sh
     status_message: Running repository checks
+
+- name: Add a Codex SessionStart hook
+  agentic.agent_configs.codex_cli_hook:
+    agent_executable: /home/payton/.local/bin/codex
+    scope: user
+    event: SessionStart
+    command: /home/payton/.codex/hooks/session-start.sh
+    timeout: 30
 
 - name: Remove a Codex hook
   agentic.agent_configs.codex_cli_hook:
@@ -138,6 +152,7 @@ def build_hook_definition(module: AnsibleModule) -> dict:
         "type": "command",
         "command": params["command"],
         "timeout": params.get("timeout"),
+        "async": params.get("async_hook"),
         "statusMessage": params.get("status_message"),
     }
     desired.update(params.get("extra") or {})
@@ -175,6 +190,7 @@ def main() -> None:
             "command": {"type": "str", "required": True},
             "timeout": {"type": "int"},
             "status_message": {"type": "str"},
+            "async_hook": {"type": "bool", "default": False},
             "extra": {"type": "dict", "default": {}},
         },
         supports_check_mode=True,
