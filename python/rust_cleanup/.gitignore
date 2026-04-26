@@ -1,0 +1,5 @@
+.venv/
+.pip-test-venv/
+dist/
+__pycache__/
+*.py[cod]

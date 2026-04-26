@@ -1,0 +1,3 @@
+---
+owner_user: leynos
+owner_home: "/home/{{ owner_user }}"

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run rust-cleanup every {{ rust_cleanup_timer_interval }}
+
+[Timer]
+OnBootSec={{ rust_cleanup_timer_interval }}
+OnUnitActiveSec={{ rust_cleanup_timer_interval }}
+Persistent=true
+Unit=rust-cleanup.service
+
+[Install]
+WantedBy=timers.target

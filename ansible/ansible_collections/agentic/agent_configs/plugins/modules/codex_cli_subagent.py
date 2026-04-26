@@ -1,9 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: codex_cli_subagent
 short_description: Manage Codex CLI custom subagents
@@ -78,10 +80,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Create a project Codex reviewer subagent
   agentic.agent_configs.codex_cli_subagent:
     name: Reviewer
@@ -103,9 +105,9 @@ EXAMPLES = r'''
     name: Reviewer
     scope: user
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed subagent file path.
   returned: always
@@ -114,7 +116,7 @@ subagent:
   description: Effective TOML content.
   returned: when state == 'present'
   type: dict
-'''
+"""
 
 import os
 
@@ -126,7 +128,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
     write_toml_if_changed,
     remove_path,
 )
-
 
 
 def build_subagent_definition(module: AnsibleModule) -> dict:
@@ -149,7 +150,6 @@ def build_subagent_definition(module: AnsibleModule) -> dict:
     return clean_dict(desired)
 
 
-
 def resolve_path(module: AnsibleModule) -> str:
     if module.params.get("path"):
         return module.params["path"]
@@ -164,7 +164,6 @@ def resolve_path(module: AnsibleModule) -> str:
         )
     except ValueError as exc:
         module.fail_json(msg=str(exc))
-
 
 
 def main() -> None:

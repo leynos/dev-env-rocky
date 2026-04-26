@@ -44,6 +44,53 @@
     path: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
   register: ssh_key_stat
 
+- name: Ensure SSH directory exists for private repo key
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.ssh"
+    state: directory
+    mode: '0700'
+  when:
+    - not ansible_check_mode
+    - not ssh_key_stat.stat.exists
+
+- name: Generate SSH key for private repos
+  ansible.builtin.command:
+    argv:
+      - ssh-keygen
+      - -t
+      - ed25519
+      - -f
+      - "{{ ansible_env.HOME }}/.ssh/id_ed25519"
+      - -N
+      - ""
+      - -C
+      - "{{ owner_user }}@{{ inventory_hostname }}"
+    creates: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
+  when:
+    - not ansible_check_mode
+    - not ssh_key_stat.stat.exists
+
+- name: Fetch private repo public key for GitHub access
+  ansible.builtin.fetch:
+    src: "{{ ansible_env.HOME }}/.ssh/id_ed25519.pub"
+    dest: "{{ playbook_dir }}/../ssh-public-keys/{{ inventory_hostname }}-{{ owner_user }}-id_ed25519.pub"
+    flat: true
+  when:
+    - not ansible_check_mode
+    - not ssh_key_stat.stat.exists
+
+- name: Stop until the private repo public key is added to GitHub
+  ansible.builtin.fail:
+    msg: >-
+      Generated an SSH key for {{ owner_user }} on {{ inventory_hostname }} and
+      fetched the public key to
+      {{ playbook_dir }}/../ssh-public-keys/{{ inventory_hostname }}-{{ owner_user }}-id_ed25519.pub.
+      Add that public key to GitHub, then rerun this playbook so private
+      repositories can be cloned.
+  when:
+    - not ansible_check_mode
+    - not ssh_key_stat.stat.exists
+
 - name: Clone df12-readme-skill repository via SSH
   ansible.builtin.git:
     repo: git@github.com:leynos/df12-readme-skill.git
@@ -53,6 +100,23 @@
     single_branch: true
     key_file: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
     accept_hostkey: true
+  when: ssh_key_stat.stat.exists
+
+- name: Clone df12-documentation-skills repository via SSH
+  ansible.builtin.git:
+    repo: git@github.com:leynos/df12-documentation-skills.git
+    dest: "{{ ansible_env.HOME }}/git/df12-documentation-skills"
+    version: HEAD
+    depth: 1
+    single_branch: true
+    key_file: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
+    accept_hostkey: true
+  when: ssh_key_stat.stat.exists
+
+- name: Check df12-documentation-skills skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/git/df12-documentation-skills/skills"
+  register: df12_documentation_skills_dir
   when: ssh_key_stat.stat.exists
 
 - name: Ensure Codex skills directory exists
@@ -67,6 +131,18 @@
     state: directory
     mode: '0755'
 
+- name: Install Codex agent instructions
+  ansible.builtin.copy:
+    src: AGENTS.md
+    dest: "{{ ansible_env.HOME }}/.codex/AGENTS.md"
+    mode: '0644'
+
+- name: Install Claude agent instructions
+  ansible.builtin.copy:
+    src: AGENTS.md
+    dest: "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
+    mode: '0644'
+
 - name: Find skills in agent-helper-scripts
   ansible.builtin.find:
     paths: "{{ ansible_env.HOME }}/git/agent-helper-scripts/skills"
@@ -76,7 +152,7 @@
 
 - name: Install agent-helper-scripts skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -84,7 +160,7 @@
 
 - name: Install agent-helper-scripts skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -99,7 +175,7 @@
 
 - name: Install nextest-skill skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -107,7 +183,7 @@
 
 - name: Install nextest-skill skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -122,7 +198,7 @@
 
 - name: Install vidai-mock-skill skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -130,7 +206,7 @@
 
 - name: Install vidai-mock-skill skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -145,7 +221,7 @@
 
 - name: Install rust-skill skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -153,7 +229,7 @@
 
 - name: Install rust-skill skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -169,7 +245,7 @@
 
 - name: Install df12-readme-skill skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -178,12 +254,44 @@
 
 - name: Install df12-readme-skill skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
   loop: "{{ df12_readme_skills.files }}"
   when: ssh_key_stat.stat.exists
+
+- name: Find skills in df12-documentation-skills
+  ansible.builtin.find:
+    paths: "{{ ansible_env.HOME }}/git/df12-documentation-skills/skills"
+    file_type: directory
+    depth: 1
+  register: df12_documentation_skills
+  when:
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
+
+- name: Install df12-documentation-skills to Codex
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_documentation_skills.files | default([]) }}"
+  when:
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
+
+- name: Install df12-documentation-skills to Claude
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_documentation_skills.files | default([]) }}"
+  when:
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
 
 # Install context_pack tool for agent communication
 - name: Install context_pack tool
@@ -262,7 +370,7 @@
     scope: user
     description: "{{ item.description }}"
     model: "{{ item.model }}"
-    reasoning_effort: "{{ item.reasoning_effort | default('medium') }}"
+    model_reasoning_effort: "{{ item.reasoning_effort | default('medium') }}"
     sandbox_mode: "{{ item.sandbox_mode | default('workspace-write') }}"
     developer_instructions: "{{ item.developer_instructions }}"
   loop:
@@ -356,6 +464,54 @@
         mv "{{ ansible_env.HOME }}/.claude/settings.json.tmp" "{{ ansible_env.HOME }}/.claude/settings.json"
   when: hook_installed.stdout != "true"
 
+# Install Codex hooks
+- name: Check Codex hooks directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.codex/hooks"
+  register: codex_hooks_directory
+
+- name: Ensure Codex hooks directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.codex/hooks"
+    state: directory
+    mode: '0755'
+
+- name: Copy post-turn-quality-stop-hook.py for Codex
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/hooks/post-turn-quality-stop-hook.py"
+    dest: "{{ ansible_env.HOME }}/.codex/hooks/post-turn-quality-stop-hook.py"
+    mode: '0755'
+    remote_src: true
+  when: not ansible_check_mode or (codex_hooks_directory.stat.isdir | default(false))
+
+- name: Install Codex session-start hook wrapper
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/.codex/hooks/session-start-hook.sh"
+    mode: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      exec python3 "$HOME/.codex/hooks/post-turn-quality-stop-hook.py"
+  when: not ansible_check_mode or (codex_hooks_directory.stat.isdir | default(false))
+
+- name: Configure Codex Stop and SessionStart hooks
+  agentic.agent_configs.codex_cli_hook:
+    agent_executable: "{{ ansible_env.HOME }}/.local/bin/codex"
+    state: present
+    scope: user
+    event: "{{ item.event }}"
+    command: "{{ item.command }}"
+    timeout: "{{ item.timeout }}"
+    status_message: "{{ item.status_message | default(omit) }}"
+  loop:
+    - event: Stop
+      command: "python3 {{ ansible_env.HOME }}/.codex/hooks/post-turn-quality-stop-hook.py"
+      timeout: 600
+      status_message: Running post-turn quality gate
+    - event: SessionStart
+      command: "{{ ansible_env.HOME }}/.codex/hooks/session-start-hook.sh"
+      timeout: 30
+
 # Configure Claude MCP servers using collection module
 - name: Configure Claude Code MCP servers
   agentic.agent_configs.claude_code_mcp:
@@ -438,75 +594,106 @@
     path: "{{ ansible_env.HOME }}/.factory"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
 
 - name: Ensure Factory Droid skills directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.factory/skills"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
 
 - name: Ensure Factory Droid hooks directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.factory/hooks"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
 
 - name: Ensure Factory Droid droids directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.factory/droids"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
+
+- name: Install Factory Droid agent instructions
+  ansible.builtin.copy:
+    src: AGENTS.md
+    dest: "{{ ansible_env.HOME }}/.factory/AGENTS.md"
+    mode: '0644'
+  when: dev_env_enable_droid | bool
 
 - name: Install skills to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
   loop: "{{ agent_helper_skills.files }}"
+  when: dev_env_enable_droid | bool
 
 - name: Install nextest-skill to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
   loop: "{{ nextest_skills.files }}"
+  when: dev_env_enable_droid | bool
 
 - name: Install vidai-mock-skill to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
   loop: "{{ vidai_skills.files }}"
+  when: dev_env_enable_droid | bool
 
 - name: Install rust-skill to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
   loop: "{{ rust_skills.files }}"
+  when: dev_env_enable_droid | bool
 
 - name: Install df12-readme-skill to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
   loop: "{{ df12_readme_skills.files }}"
-  when: ssh_key_stat.stat.exists
+  when:
+    - dev_env_enable_droid | bool
+    - ssh_key_stat.stat.exists
+
+- name: Install df12-documentation-skills to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_documentation_skills.files | default([]) }}"
+  when:
+    - dev_env_enable_droid | bool
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
 
 # Configure Factory Droid hooks using collection module
 - name: Configure Factory Droid hooks
   agentic.agent_configs.factory_droid_hook:
-    name: claude_import
+    agent_executable: "{{ ansible_env.HOME }}/.local/bin/droid"
     state: present
     scope: user
-    hook_type: Stop
+    event: Stop
     command: python3 {{ ansible_env.HOME }}/.claude/hooks/post-turn-quality-stop-hook.py
-    timeout: 600
+    extra:
+      timeout: 600
+  when: dev_env_enable_droid | bool
 
 # Configure Factory Droid MCP servers using collection module
 - name: Configure Factory Droid MCP servers
@@ -558,6 +745,7 @@
         - bash
         - -lc
         - npx @playwright/mcp@latest --no-sandbox
+  when: dev_env_enable_droid | bool
 
 # Droid daemon systemd user service
 - name: Ensure systemd user directory exists
@@ -565,6 +753,7 @@
     path: "{{ ansible_env.HOME }}/.config/systemd/user"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid_server | bool or dev_env_enable_lody | bool
 
 - name: Install droid daemon systemd user service
   ansible.builtin.copy:
@@ -583,6 +772,7 @@
       [Install]
       WantedBy=default.target
     mode: '0644'
+  when: dev_env_enable_droid_server | bool
 
 - name: Enable droid daemon service
   ansible.builtin.systemd:
@@ -590,3 +780,105 @@
     scope: user
     enabled: true
     daemon_reload: true
+  when:
+    - dev_env_enable_droid_server | bool
+    - not ansible_check_mode
+
+- name: Check droid daemon service file
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.config/systemd/user/droid-daemon.service"
+  register: droid_daemon_service
+  when: not (dev_env_enable_droid_server | bool)
+
+- name: Disable droid daemon service
+  ansible.builtin.systemd:
+    name: droid-daemon.service
+    scope: user
+    enabled: false
+    state: stopped
+    daemon_reload: true
+  when:
+    - not (dev_env_enable_droid_server | bool)
+    - droid_daemon_service.stat.exists
+    - not ansible_check_mode
+
+# Lody daemon systemd user service
+- name: Install Lody daemon systemd user service
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/.config/systemd/user/lody-daemon.service"
+    content: |
+      [Unit]
+      Description=Lody Daemon (Remote Access)
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=%h/.bun/bin/lody start
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=default.target
+    mode: '0644'
+  when:
+    - dev_env_enable_lody | bool
+    - lody_auth_tokens is defined
+    - lody_auth_tokens[hostname] is defined
+  vars:
+    hostname: "{{ inventory_hostname }}"
+
+- name: Login to Lody before starting service
+  ansible.builtin.command:
+    cmd: "{{ ansible_env.HOME }}/.bun/bin/lody login --auth {{ lody_auth_tokens[hostname] }}"
+  no_log: true
+  changed_when: false
+  when:
+    - dev_env_enable_lody | bool
+    - lody_auth_tokens is defined
+    - lody_auth_tokens[hostname] is defined
+    - not ansible_check_mode
+  vars:
+    hostname: "{{ inventory_hostname }}"
+
+- name: Enable and start Lody daemon service
+  ansible.builtin.systemd:
+    name: lody-daemon.service
+    scope: user
+    enabled: true
+    state: started
+    daemon_reload: true
+  when:
+    - dev_env_enable_lody | bool
+    - lody_auth_tokens is defined
+    - lody_auth_tokens[hostname] is defined
+    - not ansible_check_mode
+  vars:
+    hostname: "{{ inventory_hostname }}"
+
+- name: Check Lody daemon service file
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.config/systemd/user/lody-daemon.service"
+  register: lody_daemon_service
+  when: >-
+    not (dev_env_enable_lody | bool) or
+    lody_auth_tokens is not defined or
+    lody_auth_tokens[inventory_hostname] is not defined
+  vars:
+    hostname: "{{ inventory_hostname }}"
+
+- name: Disable Lody daemon service
+  ansible.builtin.systemd:
+    name: lody-daemon.service
+    scope: user
+    enabled: false
+    state: stopped
+    daemon_reload: true
+  when:
+    - >-
+      not (dev_env_enable_lody | bool) or
+      lody_auth_tokens is not defined or
+      lody_auth_tokens[inventory_hostname] is not defined
+    - lody_daemon_service.stat.exists
+    - not ansible_check_mode
+  vars:
+    hostname: "{{ inventory_hostname }}"

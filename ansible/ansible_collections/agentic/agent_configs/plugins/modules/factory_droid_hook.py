@@ -1,9 +1,33 @@
+"""Manage Factory Droid command hooks in scoped settings files.
+
+The factory_droid_hook.py Ansible module creates, updates, or removes Factory
+Droid command hook entries in user, project, or local JSON settings files. Use
+it to provision repeatable hook configuration for events such as ``PostToolUse``
+or ``Stop`` by supplying a Factory Droid executable, an event, an optional
+matcher, and the command that should run. The module builds the hook definition
+with ``build_hook_definition`` and applies it through ``main`` using the shared
+settings-file helpers.
+
+Example playbook task::
+
+    - name: Add a project Factory Droid edit hook
+      agentic.agent_configs.factory_droid_hook:
+        agent_executable: /usr/local/bin/droid
+        scope: project
+        project_dir: /srv/my-repo
+        event: PostToolUse
+        matcher: Edit|Write
+        command: /srv/my-repo/.factory/hooks/post-edit.sh
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: factory_droid_hook
 short_description: Manage Factory Droid command hooks
@@ -24,6 +48,8 @@ options:
     type: bool
     default: false
   state:
+    description:
+      - Whether the managed resource should exist.
     type: str
     choices: [present, absent]
     default: present
@@ -64,10 +90,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Add a Factory Droid PostToolUse hook
   agentic.agent_configs.factory_droid_hook:
     agent_executable: /usr/local/bin/droid
@@ -84,9 +110,9 @@ EXAMPLES = r'''
     event: Stop
     command: /usr/local/bin/notify-droid-stop
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed settings path.
   returned: always
@@ -95,7 +121,7 @@ hook:
   description: Effective hook entry.
   returned: when state == 'present'
   type: dict
-'''
+"""
 
 import os
 
@@ -108,7 +134,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 )
 
 
-
 def build_hook_definition(module: AnsibleModule) -> dict:
     desired = {
         "type": "command",
@@ -116,7 +141,6 @@ def build_hook_definition(module: AnsibleModule) -> dict:
     }
     desired.update(module.params.get("extra") or {})
     return clean_dict(desired)
-
 
 
 def main() -> None:

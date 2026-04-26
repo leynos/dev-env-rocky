@@ -1,9 +1,49 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""Manage Factory Droid custom droid Markdown files.
+
+The factory_droid_droid.py Ansible module creates, updates, or removes custom
+Factory Droid droids in user-scoped ``~/.factory/droids`` directories or
+project-scoped ``.factory/droids`` directories. Use it to provision repeatable
+droid prompts with front matter such as ``name``, ``description``, ``model``,
+``reasoning_effort``, ``tools``, and additional ``metadata``. The module builds
+front matter with ``build_frontmatter``, resolves the managed file path with
+``resolve_path``, and writes the requested Markdown body from ``main``.
+
+Example playbook task::
+
+    - name: Create a project Factory Droid reviewer
+      agentic.agent_configs.factory_droid_droid:
+        name: Reviewer
+        scope: project
+        project_dir: /srv/my-repo
+        description: Review changes and identify concrete risks.
+        model: inherit
+        reasoning_effort: high
+        tools:
+          - Read
+          - Edit
+          - Execute
+        body: |
+          Review the supplied changes and highlight correctness issues.
+"""
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+import os
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    manage_markdown_file,
+    merge_dicts,
+    normalize_mapping_order,
+    resolve_scoped_config_path,
+    slugify,
+)
+
+DOCUMENTATION = r"""
 ---
 module: factory_droid_droid
 short_description: Manage Factory Droid custom droids
@@ -70,10 +110,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Create a project Factory Droid reviewer
   agentic.agent_configs.factory_droid_droid:
     name: Reviewer
@@ -94,27 +134,14 @@ EXAMPLES = r'''
     name: Reviewer
     scope: user
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed droid file path.
   returned: always
   type: str
-'''
-
-import os
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
-    manage_markdown_file,
-    merge_dicts,
-    normalize_mapping_order,
-    resolve_scoped_config_path,
-    slugify,
-)
-
-
+"""
 
 def build_frontmatter(module: AnsibleModule) -> dict:
     params = module.params
@@ -133,7 +160,6 @@ def build_frontmatter(module: AnsibleModule) -> dict:
     )
 
 
-
 def resolve_path(module: AnsibleModule) -> str:
     if module.params.get("path"):
         return module.params["path"]
@@ -148,7 +174,6 @@ def resolve_path(module: AnsibleModule) -> str:
         )
     except ValueError as exc:
         module.fail_json(msg=str(exc))
-
 
 
 def main() -> None:

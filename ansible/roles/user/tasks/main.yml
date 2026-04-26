@@ -1,27 +1,41 @@
 ---
-- name: Create user leynos
+- name: Create owner user
   ansible.builtin.user:
-    name: leynos
+    name: "{{ owner_user }}"
     state: present
     shell: /bin/bash
     create_home: true
+    home: "{{ owner_home }}"
 
-- name: Ensure .ssh directory exists
+- name: Ensure SSH directories exist
   ansible.builtin.file:
-    path: /home/leynos/.ssh
+    path: "{{ item.home }}/.ssh"
     state: directory
-    owner: leynos
-    group: leynos
+    owner: "{{ item.name }}"
+    group: "{{ item.group }}"
     mode: '0700'
-
-- name: Add authorized keys for leynos
-  ansible.builtin.lineinfile:
-    path: /home/leynos/.ssh/authorized_keys
-    create: true
-    owner: leynos
-    group: leynos
-    mode: '0600'
-    line: "{{ item }}"
   loop:
-    - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJwPHz4woB7Ijlh0vuURsccOn4dUAKIh3dxYjkbl4YFV payton@DESKTOP-PG5N0BL"
-    - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8YI8fWC7Lo1ZUDf34OrnBP2VWzqJnWBP1pXMH8M/Y6 leynos@DESKTOP-PG5N0BL"
+    - name: root
+      group: root
+      home: /root
+    - name: "{{ owner_user }}"
+      group: "{{ owner_user }}"
+      home: "{{ owner_home }}"
+
+- name: Add authorized keys for root and owner user
+  ansible.builtin.lineinfile:
+    path: "{{ item.0.home }}/.ssh/authorized_keys"
+    create: true
+    owner: "{{ item.0.name }}"
+    group: "{{ item.0.group }}"
+    mode: '0600'
+    line: "{{ item.1 }}"
+  loop: "{{ dev_env_authorized_key_users | product(dev_env_authorized_ssh_keys) }}"
+  vars:
+    dev_env_authorized_key_users:
+      - name: root
+        group: root
+        home: /root
+      - name: "{{ owner_user }}"
+        group: "{{ owner_user }}"
+        home: "{{ owner_home }}"

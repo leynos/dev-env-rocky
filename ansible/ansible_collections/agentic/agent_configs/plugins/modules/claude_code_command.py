@@ -1,9 +1,36 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+"""Manage Claude Code slash command Markdown files.
+
+This Ansible module creates, updates, or removes Claude Code command files in
+user or project scopes while preserving predictable front matter and command
+body content. It is useful for provisioning shared slash commands across
+developer machines and repositories. Expected inputs include ``name``,
+``description``, ``body``, ``scope``, optional ``project_dir`` or ``path``, and
+``state``; outputs include the managed command ``path`` and normal Ansible
+change status.
+
+Example playbook task::
+
+    - name: Create a project command
+      agentic.agent_configs.claude_code_command:
+        name: Deploy
+        scope: project
+        project_dir: /srv/my-repo
+        description: Run the deployment workflow.
+        body: Deploy this service using scripts/deploy.
+
+Example ad-hoc call::
+
+    ansible localhost -m agentic.agent_configs.claude_code_command \\
+      -a "name=Deploy description='Run deployment' body='Deploy this service'"
+"""
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: claude_code_command
 short_description: Manage Claude Code slash commands
@@ -22,10 +49,14 @@ options:
       - Defaults to a slug derived from C(name).
     type: str
   state:
+    description:
+      - Whether the managed resource should exist.
     type: str
     choices: [present, absent]
     default: present
   scope:
+    description:
+      - Configuration scope.
     type: str
     choices: [user, project]
     default: user
@@ -62,10 +93,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Create a project slash command
   agentic.agent_configs.claude_code_command:
     name: Deploy
@@ -80,14 +111,14 @@ EXAMPLES = r'''
     name: Deploy
     scope: user
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed command path.
   returned: always
   type: str
-'''
+"""
 
 import os
 
@@ -99,7 +130,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
     resolve_scoped_config_path,
     slugify,
 )
-
 
 
 def build_frontmatter(module: AnsibleModule) -> dict:
@@ -118,7 +148,6 @@ def build_frontmatter(module: AnsibleModule) -> dict:
     )
 
 
-
 def resolve_path(module: AnsibleModule) -> str:
     if module.params.get("path"):
         return module.params["path"]
@@ -134,7 +163,6 @@ def resolve_path(module: AnsibleModule) -> str:
     except ValueError as exc:
         module.fail_json(msg=str(exc))
     return path
-
 
 
 def main() -> None:

@@ -1,9 +1,33 @@
+"""Manage Codex CLI Model Context Protocol server definitions.
+
+This Ansible module creates, updates, or removes Codex CLI MCP server
+configuration in user-scoped ``~/.codex/config.toml`` files or project-scoped
+``.codex/config.toml`` files. Use it to provision repeatable stdio or HTTP MCP
+integrations with parameters such as ``name``, ``scope``, ``transport``,
+``command``, ``args``, ``env``, ``env_vars``, ``cwd``, ``url``,
+``bearer_token_env_var``, ``http_headers``, ``enabled_tools``, and ``extra``.
+
+Example playbook task::
+
+    - name: Configure a project Codex stdio MCP server
+      agentic.agent_configs.codex_cli_mcp:
+        name: repo-tools
+        scope: project
+        project_dir: /srv/my-repo
+        transport: stdio
+        command: /usr/local/bin/repo-tools-mcp
+        args:
+          - --stdio
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: codex_cli_mcp
 short_description: Manage Codex CLI MCP server definitions
@@ -116,10 +140,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Configure a project Codex stdio MCP server
   agentic.agent_configs.codex_cli_mcp:
     name: repo-tools
@@ -138,9 +162,9 @@ EXAMPLES = r'''
     transport: http
     url: https://mcp.internal.example/v1
     bearer_token_env_var: INTERNAL_MCP_TOKEN
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed Codex config path.
   returned: always
@@ -149,7 +173,7 @@ server:
   description: Effective server definition.
   returned: when state == 'present'
   type: dict
-'''
+"""
 
 import os
 
@@ -159,7 +183,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
     manage_named_toml_entry,
     resolve_scoped_config_path,
 )
-
 
 
 def build_server_definition(module: AnsibleModule) -> dict:
@@ -206,7 +229,6 @@ def build_server_definition(module: AnsibleModule) -> dict:
     return clean_dict(desired)
 
 
-
 def main() -> None:
     module = AnsibleModule(
         argument_spec={
@@ -222,7 +244,7 @@ def main() -> None:
             "env_vars": {"type": "list", "elements": "str"},
             "cwd": {"type": "path"},
             "url": {"type": "str"},
-            "bearer_token_env_var": {"type": "str"},
+            "bearer_token_env_var": {"type": "str", "no_log": True},
             "http_headers": {"type": "dict", "default": {}},
             "env_http_headers": {"type": "dict", "default": {}},
             "startup_timeout_sec": {"type": "int"},

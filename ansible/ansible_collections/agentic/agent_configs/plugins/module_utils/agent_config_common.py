@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 import re
 import shutil
@@ -19,7 +20,6 @@ except Exception:  # pragma: no cover - older Python
         import tomli as tomllib  # type: ignore
     except Exception:  # pragma: no cover - optional dependency
         tomllib = None  # type: ignore
-
 
 TRUE_STRINGS = {"1", "true", "yes", "on"}
 
@@ -51,7 +51,6 @@ class ChangeSet:
             self.details.update(details)
 
 
-
 def coerce_bool(value: Any, default: bool = False) -> bool:
     if value is None:
         return default
@@ -62,7 +61,6 @@ def coerce_bool(value: Any, default: bool = False) -> bool:
     return bool(value)
 
 
-
 def ensure_directory(path: str) -> bool:
     path = expand_path(path)
     if os.path.isdir(path):
@@ -71,14 +69,12 @@ def ensure_directory(path: str) -> bool:
     return True
 
 
-
 def read_text(path: str) -> Optional[str]:
     path = expand_path(path)
     if not os.path.exists(path):
         return None
     with open(path, "r", encoding="utf-8") as handle:
         return handle.read()
-
 
 
 def atomic_write_text(path: str, content: str) -> None:
@@ -96,7 +92,6 @@ def atomic_write_text(path: str, content: str) -> None:
             os.unlink(tmp_path)
 
 
-
 def write_text_if_changed(module, path: str, content: str) -> bool:
     path = expand_path(path)
     current = read_text(path)
@@ -106,7 +101,6 @@ def write_text_if_changed(module, path: str, content: str) -> bool:
         return True
     atomic_write_text(path, content)
     return True
-
 
 
 def remove_path(module, path: str, recursive: bool = False) -> bool:
@@ -122,7 +116,6 @@ def remove_path(module, path: str, recursive: bool = False) -> bool:
     return True
 
 
-
 def load_json_file(path: str, default: Optional[Any] = None) -> Any:
     path = expand_path(path)
     if default is None:
@@ -133,15 +126,12 @@ def load_json_file(path: str, default: Optional[Any] = None) -> Any:
         return json.load(handle)
 
 
-
 def dump_json(data: Any) -> str:
     return json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
-
 def write_json_if_changed(module, path: str, data: Any) -> bool:
     return write_text_if_changed(module, path, dump_json(data))
-
 
 
 def load_toml_file(module, path: str, default: Optional[Any] = None) -> Any:
@@ -156,12 +146,10 @@ def load_toml_file(module, path: str, default: Optional[Any] = None) -> Any:
         return tomllib.load(handle)
 
 
-
 def _toml_key(key: str) -> str:
     if re.match(r"^[A-Za-z0-9_-]+$", key):
         return key
     return json.dumps(key, ensure_ascii=False)
-
 
 
 def _toml_scalar(value: Any) -> str:
@@ -170,7 +158,7 @@ def _toml_scalar(value: Any) -> str:
     if isinstance(value, int) and not isinstance(value, bool):
         return str(value)
     if isinstance(value, float):
-        if value == float("inf") or value == float("-inf") or value != value:
+        if math.isinf(value) or math.isnan(value):
             raise TypeError("TOML does not support NaN or infinity")
         return repr(value)
     if isinstance(value, str):
@@ -184,10 +172,8 @@ def _toml_scalar(value: Any) -> str:
     raise TypeError("Unsupported TOML scalar type: %s" % type(value).__name__)
 
 
-
 def _is_list_of_dicts(value: Any) -> bool:
     return isinstance(value, list) and bool(value) and all(isinstance(item, dict) for item in value)
-
 
 
 def _toml_value(value: Any) -> str:
@@ -196,7 +182,6 @@ def _toml_value(value: Any) -> str:
             raise TypeError("List of dicts must be rendered as an array of tables")
         return "[{}]".format(", ".join(_toml_scalar(item) for item in value))
     return _toml_scalar(value)
-
 
 
 def _toml_render_table(lines: List[str], prefix: List[str], mapping: Dict[str, Any]) -> None:
@@ -265,7 +250,6 @@ def _toml_render_table(lines: List[str], prefix: List[str], mapping: Dict[str, A
             lines.append("")
 
 
-
 def dump_toml(data: Dict[str, Any]) -> str:
     if not isinstance(data, dict):
         raise TypeError("TOML root must be a mapping")
@@ -275,10 +259,8 @@ def dump_toml(data: Dict[str, Any]) -> str:
     return rendered
 
 
-
 def write_toml_if_changed(module, path: str, data: Dict[str, Any]) -> bool:
     return write_text_if_changed(module, path, dump_toml(data))
-
 
 
 def slugify(name: str) -> str:
@@ -289,7 +271,6 @@ def slugify(name: str) -> str:
     return text or "resource"
 
 
-
 def yaml_scalar(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -298,7 +279,6 @@ def yaml_scalar(value: Any) -> str:
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return str(value)
     return json.dumps(str(value), ensure_ascii=False)
-
 
 
 def yaml_dump(mapping: Dict[str, Any], indent: int = 0) -> str:
@@ -327,14 +307,12 @@ def yaml_dump(mapping: Dict[str, Any], indent: int = 0) -> str:
     return "\n".join(lines)
 
 
-
 def render_markdown(frontmatter: Dict[str, Any], body: str) -> str:
     normal_body = ensure_unicode_text(body).rstrip()
     fm = yaml_dump(frontmatter)
     if normal_body:
         return "---\n{}\n---\n\n{}\n".format(fm, normal_body)
     return "---\n{}\n---\n".format(fm)
-
 
 
 def normalize_mapping_order(mapping: Dict[str, Any], preferred_keys: Iterable[str]) -> Dict[str, Any]:
@@ -349,7 +327,6 @@ def normalize_mapping_order(mapping: Dict[str, Any], preferred_keys: Iterable[st
     return ordered
 
 
-
 def merge_dicts(base: Optional[Dict[str, Any]], extra: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
     if base:
@@ -359,8 +336,9 @@ def merge_dicts(base: Optional[Dict[str, Any]], extra: Optional[Dict[str, Any]])
     return result
 
 
-
-def resolve_scoped_config_path(path: Optional[str], scope: str, project_dir: Optional[str], user_path: str, project_relative_path: str, local_relative_path: Optional[str] = None) -> str:
+def resolve_scoped_config_path(
+    path: Optional[str], scope: str, project_dir: Optional[str], user_path: str, project_relative_path: str, local_relative_path: Optional[str] = None
+) -> str:
     if path:
         return expand_path(path)
     if scope == "user":
@@ -375,7 +353,6 @@ def resolve_scoped_config_path(path: Optional[str], scope: str, project_dir: Opt
             raise ValueError("This resource type does not support local scope")
         return os.path.join(project_dir, local_relative_path)
     raise ValueError("Unsupported scope: %s" % scope)
-
 
 
 def manage_named_json_entry(module, path: str, root_key: str, name: str, desired: Optional[Dict[str, Any]], state: str) -> Tuple[bool, Dict[str, Any]]:
@@ -434,13 +411,11 @@ def manage_named_toml_entry(module, path: str, root_key: str, name: str, desired
     return changed, data
 
 
-
 def _hook_group_matches(group: Dict[str, Any], matcher: Optional[str]) -> bool:
     group_matcher = group.get("matcher")
     if matcher in (None, ""):
         return group_matcher in (None, "")
     return group_matcher == matcher
-
 
 
 def _hook_identity_matches(existing: Dict[str, Any], desired: Dict[str, Any], identity_keys: Iterable[str]) -> bool:
@@ -450,8 +425,138 @@ def _hook_identity_matches(existing: Dict[str, Any], desired: Dict[str, Any], id
     return True
 
 
+def _find_hook_group_index(groups: List[Any], matcher: Optional[str]) -> Optional[int]:
+    """Find the hook group index for a matcher."""
+    for idx, group in enumerate(groups):
+        if isinstance(group, dict) and _hook_group_matches(group, matcher):
+            return idx
+    return None
 
-def manage_hook_json(module, path: str, event: str, matcher: Optional[str], desired_hook: Dict[str, Any], state: str, identity_keys: Iterable[str]) -> Tuple[bool, Dict[str, Any]]:
+
+def _get_hook_list(
+    module,
+    group: Dict[str, Any],
+    event: str,
+    path: str,
+    *,
+    create: bool,
+) -> List[Any]:
+    """Get the hook list for a hook group."""
+    hook_list = group.setdefault("hooks", []) if create else group.get("hooks", [])
+    if not isinstance(hook_list, list):
+        module.fail_json(msg="Expected hooks list under event %s in %s" % (event, path))
+    return hook_list
+
+
+def _ensure_hook_group(
+    groups: List[Any],
+    matcher: Optional[str],
+    group_index: Optional[int],
+) -> Tuple[bool, Dict[str, Any]]:
+    """Ensure a hook group exists for a matcher."""
+    if group_index is not None:
+        return False, groups[group_index]
+
+    group: Dict[str, Any] = {"hooks": []}
+    if matcher not in (None, ""):
+        group["matcher"] = matcher
+    groups.append(group)
+    return True, group
+
+
+def _find_hook_index(
+    hook_list: List[Any],
+    desired_hook: Dict[str, Any],
+    identity_keys: Iterable[str],
+) -> Optional[int]:
+    """Find the hook index for the desired hook identity."""
+    for idx, hook in enumerate(hook_list):
+        if isinstance(hook, dict) and _hook_identity_matches(
+            hook,
+            desired_hook,
+            identity_keys,
+        ):
+            return idx
+    return None
+
+
+def _upsert_hook_json_group(
+    module,
+    groups: List[Any],
+    matcher: Optional[str],
+    group_index: Optional[int],
+    desired_hook: Dict[str, Any],
+    identity_keys: Iterable[str],
+    event: str,
+    path: str,
+) -> bool:
+    """Upsert the desired hook into a hook group."""
+    changed, group = _ensure_hook_group(groups, matcher, group_index)
+    hook_list = _get_hook_list(module, group, event, path, create=True)
+    existing_index = _find_hook_index(hook_list, desired_hook, identity_keys)
+    if existing_index is None:
+        hook_list.append(desired_hook)
+        return True
+    if hook_list[existing_index] != desired_hook:
+        hook_list[existing_index] = desired_hook
+        return True
+    return changed
+
+
+def _remove_hook_json_group(
+    module,
+    groups: List[Any],
+    group_index: Optional[int],
+    desired_hook: Dict[str, Any],
+    identity_keys: Iterable[str],
+    event: str,
+    path: str,
+) -> bool:
+    """Remove the desired hook from a hook group."""
+    if group_index is None:
+        return False
+
+    group = groups[group_index]
+    hook_list = _get_hook_list(module, group, event, path, create=False)
+    retained = [
+        hook
+        for hook in hook_list
+        if not (
+            isinstance(hook, dict)
+            and _hook_identity_matches(hook, desired_hook, identity_keys)
+        )
+    ]
+    if retained == hook_list:
+        return False
+
+    group["hooks"] = retained
+    if not retained:
+        groups.pop(group_index)
+    return True
+
+
+def _prune_empty_hook_roots(
+    data: Dict[str, Any],
+    hooks_root: Dict[str, Any],
+    event: str,
+    groups: List[Any],
+) -> None:
+    """Prune empty hook roots from the configuration data."""
+    if not groups:
+        hooks_root.pop(event, None)
+    if not hooks_root:
+        data.pop("hooks", None)
+
+
+def manage_hook_json(
+    module,
+    path: str,
+    event: str,
+    matcher: Optional[str],
+    desired_hook: Dict[str, Any],
+    state: str,
+    identity_keys: Iterable[str],
+) -> Tuple[bool, Dict[str, Any]]:
     path = expand_path(path)
     data = load_json_file(path, default={})
     if not isinstance(data, dict):
@@ -463,68 +568,35 @@ def manage_hook_json(module, path: str, event: str, matcher: Optional[str], desi
     if not isinstance(groups, list):
         module.fail_json(msg="Expected hooks['%s'] to be a list in %s" % (event, path))
 
-    group_index = None
-    for idx, group in enumerate(groups):
-        if not isinstance(group, dict):
-            continue
-        if _hook_group_matches(group, matcher):
-            group_index = idx
-            break
-
-    changed = False
+    group_index = _find_hook_group_index(groups, matcher)
     if state == "present":
-        if group_index is None:
-            group: Dict[str, Any] = {"hooks": []}
-            if matcher not in (None, ""):
-                group["matcher"] = matcher
-            groups.append(group)
-            group_index = len(groups) - 1
-            changed = True
-        group = groups[group_index]
-        hook_list = group.setdefault("hooks", [])
-        if not isinstance(hook_list, list):
-            module.fail_json(msg="Expected hooks list under event %s in %s" % (event, path))
-        existing_index = None
-        for idx, hook in enumerate(hook_list):
-            if isinstance(hook, dict) and _hook_identity_matches(hook, desired_hook, identity_keys):
-                existing_index = idx
-                break
-        if existing_index is None:
-            hook_list.append(desired_hook)
-            changed = True
-        elif hook_list[existing_index] != desired_hook:
-            hook_list[existing_index] = desired_hook
-            changed = True
+        changed = _upsert_hook_json_group(
+            module,
+            groups,
+            matcher,
+            group_index,
+            desired_hook,
+            identity_keys,
+            event,
+            path,
+        )
     else:
-        if group_index is not None:
-            group = groups[group_index]
-            hook_list = group.get("hooks", [])
-            if not isinstance(hook_list, list):
-                module.fail_json(msg="Expected hooks list under event %s in %s" % (event, path))
-            retained = []
-            removed = False
-            for hook in hook_list:
-                if isinstance(hook, dict) and _hook_identity_matches(hook, desired_hook, identity_keys):
-                    removed = True
-                    continue
-                retained.append(hook)
-            if removed:
-                group["hooks"] = retained
-                changed = True
-            if group.get("hooks") == []:
-                groups.pop(group_index)
-                changed = True
-            if not groups:
-                hooks_root.pop(event, None)
-            if not hooks_root:
-                data.pop("hooks", None)
+        changed = _remove_hook_json_group(
+            module,
+            groups,
+            group_index,
+            desired_hook,
+            identity_keys,
+            event,
+            path,
+        )
+        _prune_empty_hook_roots(data, hooks_root, event, groups)
 
     if changed:
         if module.check_mode:
             return True, data
         write_json_if_changed(module, path, data)
     return changed, data
-
 
 
 def manage_markdown_file(module, path: str, frontmatter: Dict[str, Any], body: str, state: str) -> bool:
@@ -535,8 +607,9 @@ def manage_markdown_file(module, path: str, frontmatter: Dict[str, Any], body: s
     return write_text_if_changed(module, path, content)
 
 
-
-def manage_directory_markdown_resource(module, directory: str, primary_filename: str, frontmatter: Dict[str, Any], body: str, state: str, extra_files: Optional[Dict[str, str]] = None) -> ChangeSet:
+def manage_directory_markdown_resource(
+    module, directory: str, primary_filename: str, frontmatter: Dict[str, Any], body: str, state: str, extra_files: Optional[Dict[str, str]] = None
+) -> ChangeSet:
     directory = expand_path(directory)
     changes = ChangeSet()
     if state == "absent":
@@ -563,7 +636,6 @@ def manage_directory_markdown_resource(module, directory: str, primary_filename:
     return changes
 
 
-
 def maybe_validate_executable(module, executable: str, validate: bool) -> None:
     if not validate:
         return
@@ -576,10 +648,8 @@ def maybe_validate_executable(module, executable: str, validate: bool) -> None:
         module.fail_json(msg="Path is not executable: %s" % resolved)
 
 
-
 def clean_dict(value: Dict[str, Any]) -> Dict[str, Any]:
     return {key: item for key, item in value.items() if item is not None}
-
 
 
 def ensure_parent_directory_for_file(module, path: str) -> bool:

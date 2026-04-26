@@ -1,9 +1,45 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""Manage Codex CLI command hook configuration.
+
+This Ansible module creates, updates, or removes Codex CLI command hooks in
+user-scoped ``~/.codex/hooks.json`` files or project-scoped
+``.codex/hooks.json`` files. It is useful for provisioning repeatable Codex
+automation such as session start hooks, stop hooks, or tool-use checks, and it
+also enables the matching Codex hooks feature flag in ``config.toml`` when
+hooks are present. Common inputs include ``agent_executable``, ``scope``,
+``project_dir``, ``event``, ``matcher``, ``command``, ``timeout``,
+``status_message``, ``async_hook``, and ``extra``.
+
+Example playbook task::
+
+    - name: Install a project Codex Stop hook
+      agentic.agent_configs.codex_cli_hook:
+        agent_executable: /home/payton/.local/bin/codex
+        scope: project
+        project_dir: /srv/my-repo
+        event: Stop
+        command: /srv/my-repo/.codex/hooks/stop.sh
+        timeout: 30
+"""
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+import os
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    clean_dict,
+    load_toml_file,
+    manage_hook_json,
+    maybe_validate_executable,
+    resolve_scoped_config_path,
+    write_toml_if_changed,
+)
+
+DOCUMENTATION = r"""
 ---
 module: codex_cli_hook
 short_description: Manage Codex CLI command hooks
@@ -25,10 +61,14 @@ options:
     type: bool
     default: false
   state:
+    description:
+      - Whether the managed resource should exist.
     type: str
     choices: [present, absent]
     default: present
   scope:
+    description:
+      - Configuration scope.
     type: str
     choices: [user, project]
     default: user
@@ -69,16 +109,22 @@ options:
     description:
       - Optional status message displayed by Codex while the hook runs.
     type: str
+  async_hook:
+    description:
+      - Whether Codex should treat the command hook as asynchronous.
+      - Codex currently skips asynchronous command hooks, so leave this disabled for blocking quality gates.
+    type: bool
+    default: false
   extra:
     description:
       - Additional raw keys to merge into the hook definition.
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Add a Codex PostToolUse hook
   agentic.agent_configs.codex_cli_hook:
     agent_executable: /home/payton/.local/bin/codex
@@ -89,6 +135,14 @@ EXAMPLES = r'''
     command: /srv/my-repo/.codex/hooks/post-bash.sh
     status_message: Running repository checks
 
+- name: Add a Codex SessionStart hook
+  agentic.agent_configs.codex_cli_hook:
+    agent_executable: /home/payton/.local/bin/codex
+    scope: user
+    event: SessionStart
+    command: /home/payton/.codex/hooks/session-start.sh
+    timeout: 30
+
 - name: Remove a Codex hook
   agentic.agent_configs.codex_cli_hook:
     agent_executable: /home/payton/.local/bin/codex
@@ -96,9 +150,9 @@ EXAMPLES = r'''
     event: Stop
     command: /usr/local/bin/notify-codex-stop
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed hooks.json path.
   returned: always
@@ -111,21 +165,7 @@ hook:
   description: Effective hook entry.
   returned: when state == 'present'
   type: dict
-'''
-
-import os
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
-    clean_dict,
-    load_toml_file,
-    manage_hook_json,
-    maybe_validate_executable,
-    resolve_scoped_config_path,
-    write_toml_if_changed,
-)
-
-
+"""
 
 def build_hook_definition(module: AnsibleModule) -> dict:
     params = module.params
@@ -133,11 +173,11 @@ def build_hook_definition(module: AnsibleModule) -> dict:
         "type": "command",
         "command": params["command"],
         "timeout": params.get("timeout"),
+        "async": params.get("async_hook"),
         "statusMessage": params.get("status_message"),
     }
     desired.update(params.get("extra") or {})
     return clean_dict(desired)
-
 
 
 def ensure_feature_flag(module: AnsibleModule, config_path: str) -> bool:
@@ -156,7 +196,6 @@ def ensure_feature_flag(module: AnsibleModule, config_path: str) -> bool:
     return True
 
 
-
 def main() -> None:
     module = AnsibleModule(
         argument_spec={
@@ -172,6 +211,7 @@ def main() -> None:
             "command": {"type": "str", "required": True},
             "timeout": {"type": "int"},
             "status_message": {"type": "str"},
+            "async_hook": {"type": "bool", "default": False},
             "extra": {"type": "dict", "default": {}},
         },
         supports_check_mode=True,

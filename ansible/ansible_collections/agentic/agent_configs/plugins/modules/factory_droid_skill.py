@@ -1,9 +1,34 @@
+"""Manage Factory Droid skill directories.
+
+The factory_droid_skill.py Ansible module creates, updates, or removes Factory
+Droid skills that contain a ``SKILL.md`` file and optional support files. Use
+it to provision repeatable user-scoped or project-scoped skills with parameters
+such as ``name``, ``scope``, ``project_dir``, ``description``, ``body``,
+``user_invocable``, ``disable_model_invocation``, ``metadata``, and
+``extra_files``. The module builds front matter, resolves the target skill
+directory, and writes the requested Markdown resource from ``main``.
+
+Example playbook task::
+
+    - name: Install a project Factory Droid skill
+      agentic.agent_configs.factory_droid_skill:
+        name: Release helper
+        scope: project
+        project_dir: /srv/my-repo
+        description: Run the release flow and verify artefacts.
+        user_invocable: true
+        body: |
+          Follow docs/release.md and summarise any blockers.
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: factory_droid_skill
 short_description: Manage Factory Droid skills
@@ -22,6 +47,8 @@ options:
       - Defaults to a slug derived from C(name).
     type: str
   state:
+    description:
+      - Whether the managed resource should exist.
     type: str
     choices: [present, absent]
     default: present
@@ -69,10 +96,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Install a project Factory Droid skill
   agentic.agent_configs.factory_droid_skill:
     name: Release helper
@@ -88,9 +115,9 @@ EXAMPLES = r'''
     name: Release helper
     scope: user
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 directory:
   description: Managed skill directory.
   returned: always
@@ -100,7 +127,7 @@ paths:
   returned: when changed
   type: list
   elements: str
-'''
+"""
 
 import os
 
@@ -112,7 +139,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
     resolve_scoped_config_path,
     slugify,
 )
-
 
 
 def build_frontmatter(module: AnsibleModule) -> dict:
@@ -131,7 +157,6 @@ def build_frontmatter(module: AnsibleModule) -> dict:
     )
 
 
-
 def resolve_directory(module: AnsibleModule) -> str:
     if module.params.get("path"):
         return module.params["path"]
@@ -146,7 +171,6 @@ def resolve_directory(module: AnsibleModule) -> str:
         )
     except ValueError as exc:
         module.fail_json(msg=str(exc))
-
 
 
 def main() -> None:

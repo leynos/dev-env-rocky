@@ -13,6 +13,7 @@
     metadata_expire: 300
     state: present
   become: true
+  register: opentofu_repository
 
 - name: Add OpenTofu source repository
   ansible.builtin.yum_repository:
@@ -28,12 +29,19 @@
     metadata_expire: 300
     state: present
   become: true
+  register: opentofu_source_repository
 
 - name: Install OpenTofu
   ansible.builtin.dnf:
     name: tofu
     state: present
   become: true
+  when: >
+    (not ansible_check_mode)
+    or (
+      not opentofu_repository.changed
+      and not opentofu_source_repository.changed
+    )
 
 - name: Check if TFLint is installed
   ansible.builtin.command:

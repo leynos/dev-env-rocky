@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rust-cleanup"
+version = "0.1.0"
+description = "Clean stale Rust target directories that are marked as disposable caches."
+readme = "README.md"
+requires-python = ">=3.12"
+
+[project.scripts]
+rust-cleanup = "rust_cleanup:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

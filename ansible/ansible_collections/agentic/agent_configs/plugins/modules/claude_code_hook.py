@@ -1,9 +1,32 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+"""Manage Claude Code hook entries in settings files.
+
+This Ansible module creates, updates, or removes Claude Code command hooks in
+user, project, or local settings JSON files. It is useful for provisioning
+repeatable hook behaviour such as formatting after file edits, running stop
+checks, or adding notification commands. Expected inputs include
+``agent_executable``, ``event``, ``command``, optional ``matcher`` and hook
+options, plus ``scope`` or an explicit ``path``; outputs include the managed
+settings ``path`` and the effective hook entry when present.
+
+Example playbook task::
+
+    - name: Install a project PostToolUse hook
+      agentic.agent_configs.claude_code_hook:
+        agent_executable: /home/payton/.local/bin/claude
+        scope: project
+        project_dir: /srv/my-repo
+        event: PostToolUse
+        matcher: Edit|Write
+        command: /srv/my-repo/.claude/hooks/format.sh
+"""
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: claude_code_hook
 short_description: Manage Claude Code command hooks
@@ -24,6 +47,8 @@ options:
     type: bool
     default: false
   state:
+    description:
+      - Whether the managed resource should exist.
     type: str
     choices: [present, absent]
     default: present
@@ -80,10 +105,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Run a formatter after Claude edits files
   agentic.agent_configs.claude_code_hook:
     agent_executable: /home/payton/.local/bin/claude
@@ -101,9 +126,9 @@ EXAMPLES = r'''
     event: Stop
     command: /usr/local/bin/notify-stop
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed settings path.
   returned: always
@@ -112,7 +137,7 @@ hook:
   description: Effective hook entry.
   returned: when state == 'present'
   type: dict
-'''
+"""
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
@@ -135,7 +160,6 @@ def build_hook_definition(module: AnsibleModule) -> dict:
     }
     desired.update(params.get("extra") or {})
     return clean_dict(desired)
-
 
 
 def main() -> None:

@@ -14,21 +14,27 @@
 
 - name: Install Node packages globally via bun
   bun_global:
-    name: "{{ item }}"
+    name: "{{ item.name }}"
     bun_path: "{{ ansible_env.HOME }}/.bun/bin/bun"
+    trust_postinstall: "{{ item.trust_postinstall | default(false) }}"
   loop:
-    - "@biomejs/biome"
-    - "markdownlint-cli2"
-    - "@asyncapi/cli"
-    - "@redocly/cli"
-    - "@mermaid-js/mermaid-cli"
-    - "@anthropic-ai/claude-code"
-    - "@openai/codex"
-    - "droid"
-    - "pnpm"
-    - "typescript-language-server"
-    - "@typescript/native-preview"
-    - "lody"
+    - name: "@biomejs/biome"
+    - name: "markdownlint-cli2"
+    - name: "@asyncapi/cli"
+    - name: "@redocly/cli"
+    - name: "@mermaid-js/mermaid-cli"
+    - name: "@anthropic-ai/claude-code"
+    - name: "@openai/codex"
+    - name: "@ataraxy-labs/sem"
+      trust_postinstall: true
+    - name: "droid"
+      enabled: "{{ (dev_env_enable_droid | default(false) | bool) and (dev_env_install_droid_cli | default(false) | bool) }}"
+    - name: "pnpm"
+    - name: "typescript-language-server"
+    - name: "@typescript/native-preview"
+    - name: "lody"
+      enabled: "{{ dev_env_enable_lody }}"
+  when: item.enabled | default(true) | bool
 
 - name: Ensure ~/.local/bin directory exists
   ansible.builtin.file:

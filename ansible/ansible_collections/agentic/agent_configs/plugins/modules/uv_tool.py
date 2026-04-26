@@ -1,10 +1,139 @@
+"""Manage Python command-line tools installed with uv.
+
+The uv_tool.py Ansible module creates, updates, or removes tools managed by
+``uv tool`` while reporting the command it ran or would run in check mode. Use
+it to keep user-level Python tooling repeatable with parameters such as
+``name``, ``version``, ``spec``, ``python``, ``with_packages``, ``force``, and
+``state``. The module resolves the ``uv`` executable, reads installed tool
+versions from ``uv tool list``, and applies installs or removals from ``main``.
+
+Example playbook task::
+
+    - name: Install ruff with uv
+      agentic.agent_configs.uv_tool:
+        name: ruff
+        version: 0.14.0
+        python: "3.12"
+"""
+
 #!/usr/bin/python
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from __future__ import annotations
+
+DOCUMENTATION = r"""
+---
+module: uv_tool
+short_description: Manage uv-installed tools
+version_added: "1.0.0"
+description:
+  - Install and remove tools managed by C(uv tool).
+  - Installed versions are detected from C(uv tool list).
+options:
+  name:
+    description:
+      - Tool name to manage.
+    type: str
+    required: true
+  version:
+    description:
+      - Exact package version to install when C(spec) is omitted.
+      - When omitted, any installed version satisfies C(state=present).
+    type: str
+  spec:
+    description:
+      - Explicit package spec passed to C(uv tool install).
+      - Overrides the spec derived from C(name) and C(version).
+    type: str
+  state:
+    description:
+      - Whether the tool should be installed or absent.
+    type: str
+    choices: [present, absent]
+    default: present
+  uv_path:
+    description:
+      - uv executable path or name to resolve on C(PATH).
+    type: str
+    default: uv
+  python:
+    description:
+      - Python interpreter constraint passed with C(--python).
+    type: str
+  with_packages:
+    description:
+      - Extra packages passed with repeated C(--with) options.
+    type: list
+    elements: str
+    default: []
+  force:
+    description:
+      - Pass C(--force) to C(uv tool install).
+    type: bool
+    default: false
+author:
+  - Leynos Project (@leynos)
+"""
+
+EXAMPLES = r"""
+- name: Install an exact uv tool version
+  agentic.agent_configs.uv_tool:
+    name: ruff
+    version: 0.14.0
+    python: '3.14'
+
+- name: Install a uv tool from an explicit spec
+  agentic.agent_configs.uv_tool:
+    name: my-tool
+    spec: git+https://example.invalid/tools/my-tool
+    with_packages:
+      - requests
+
+- name: Remove a uv tool
+  agentic.agent_configs.uv_tool:
+    name: ruff
+    state: absent
+"""
+
+RETURN = r"""
+name:
+  description: Tool name that was managed.
+  returned: always
+  type: str
+state:
+  description: Final requested tool state.
+  returned: always
+  type: str
+previous_version:
+  description: Version detected before a change was made.
+  returned: when changed and a previous version was installed
+  type: str
+installed_version:
+  description: Version detected after installation, or the already-installed version.
+  returned: when state == 'present'
+  type: str
+target:
+  description: Package spec passed to C(uv tool install).
+  returned: when state == 'present' and a change is needed
+  type: str
+cmd:
+  description: Command executed or that would be executed in check mode.
+  returned: when changed
+  type: list
+  elements: str
+stdout:
+  description: Command standard output.
+  returned: when a command is executed
+  type: str
+stderr:
+  description: Command standard error.
+  returned: when a command is executed
+  type: str
+"""
 
 import re
 
 from ansible.module_utils.basic import AnsibleModule
-
 
 UV_LIST_RE = re.compile(r"^(?P<name>\S+)\s+v(?P<version>\S+)(?:\s|$)")
 
@@ -102,11 +231,7 @@ def main():
 
     install_target = params["spec"]
     if not install_target:
-        install_target = (
-            f"{params['name']}=={params['version']}"
-            if params["version"]
-            else params["name"]
-        )
+        install_target = f"{params['name']}=={params['version']}" if params["version"] else params["name"]
 
     cmd = [uv_bin, "tool", "install"]
     if params["force"]:

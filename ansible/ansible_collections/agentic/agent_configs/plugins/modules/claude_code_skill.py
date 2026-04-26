@@ -1,9 +1,34 @@
+"""Manage Claude Code skill directories.
+
+The claude_code_skill.py Ansible module creates, updates, or removes Claude
+Code skills that contain a ``SKILL.md`` file and optional support files. Use it
+to provision repeatable user-scoped or project-scoped skills with parameters
+such as ``name``, ``scope``, ``project_dir``, ``description``,
+``allowed_tools``, ``metadata``, ``body``, and ``extra_files``.
+
+Example playbook task::
+
+    - name: Install a project Claude Code skill
+      agentic.agent_configs.claude_code_skill:
+        name: Release checklist
+        scope: project
+        project_dir: /srv/my-repo
+        description: Run the release checklist and verify artefacts.
+        allowed_tools:
+          - Bash
+          - Read
+        body: |
+          Follow the release checklist in docs/release.md.
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: claude_code_skill
 short_description: Manage Claude Code skills
@@ -22,6 +47,8 @@ options:
       - Defaults to a slug derived from C(name).
     type: str
   state:
+    description:
+      - Whether the managed resource should exist.
     type: str
     choices: [present, absent]
     default: present
@@ -70,10 +97,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Install a project-scoped Claude skill
   agentic.agent_configs.claude_code_skill:
     name: Release checklist
@@ -94,9 +121,9 @@ EXAMPLES = r'''
     name: Release checklist
     scope: user
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 directory:
   description: Managed skill directory.
   returned: always
@@ -106,7 +133,7 @@ paths:
   returned: when changed
   type: list
   elements: str
-'''
+"""
 
 import os
 
@@ -118,7 +145,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
     resolve_scoped_config_path,
     slugify,
 )
-
 
 
 def build_frontmatter(module: AnsibleModule) -> dict:
@@ -137,7 +163,6 @@ def build_frontmatter(module: AnsibleModule) -> dict:
     )
 
 
-
 def resolve_directory(module: AnsibleModule) -> str:
     if module.params.get("path"):
         return module.params["path"]
@@ -153,7 +178,6 @@ def resolve_directory(module: AnsibleModule) -> str:
     except ValueError as exc:
         module.fail_json(msg=str(exc))
     return base_path
-
 
 
 def main() -> None:

@@ -1,9 +1,32 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""Manage Factory Droid Model Context Protocol server definitions.
+
+This Ansible module creates, updates, or removes Factory Droid MCP server
+entries in user-scoped ``~/.factory/mcp.json`` files or project-scoped
+``.factory/mcp.json`` files. Use it to provision repeatable stdio or HTTP MCP
+integrations with parameters such as ``name``, ``scope``, ``transport``,
+``command``, ``args``, ``env``, ``url``, ``headers``, ``disabled``,
+``disabled_tools``, and ``extra``.
+
+Example playbook task::
+
+    - name: Configure a project Factory Droid stdio MCP server
+      agentic.agent_configs.factory_droid_mcp:
+        name: repo-tools
+        scope: project
+        project_dir: /srv/my-repo
+        transport: stdio
+        command: /usr/local/bin/repo-tools-mcp
+        args:
+          - --stdio
+"""
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: factory_droid_mcp
 short_description: Manage Factory Droid MCP server definitions
@@ -81,10 +104,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Configure a project Factory Droid stdio MCP server
   agentic.agent_configs.factory_droid_mcp:
     name: repo-tools
@@ -100,9 +123,9 @@ EXAMPLES = r'''
     scope: user
     transport: http
     url: https://mcp.internal.example/v1
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed configuration path.
   returned: always
@@ -111,7 +134,7 @@ server:
   description: Effective server definition.
   returned: when state == 'present'
   type: dict
-'''
+"""
 
 import os
 
@@ -121,7 +144,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
     manage_named_json_entry,
     resolve_scoped_config_path,
 )
-
 
 
 def build_server_definition(module: AnsibleModule) -> dict:
@@ -162,7 +184,6 @@ def build_server_definition(module: AnsibleModule) -> dict:
     )
     desired.update(extra)
     return clean_dict(desired)
-
 
 
 def main() -> None:
