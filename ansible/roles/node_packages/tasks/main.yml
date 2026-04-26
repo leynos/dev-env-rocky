@@ -16,6 +16,7 @@
   bun_global:
     name: "{{ item.name }}"
     bun_path: "{{ ansible_env.HOME }}/.bun/bin/bun"
+    trust_postinstall: "{{ item.trust_postinstall | default(false) }}"
   loop:
     - name: "@biomejs/biome"
     - name: "markdownlint-cli2"
@@ -24,6 +25,8 @@
     - name: "@mermaid-js/mermaid-cli"
     - name: "@anthropic-ai/claude-code"
     - name: "@openai/codex"
+    - name: "@ataraxy-labs/sem"
+      trust_postinstall: true
     - name: "droid"
       enabled: "{{ (dev_env_enable_droid | default(false) | bool) and (dev_env_install_droid_cli | default(false) | bool) }}"
     - name: "pnpm"
