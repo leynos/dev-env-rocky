@@ -1,4 +1,6 @@
 ansible/group_vars/all/vault.yml
 .grepai/
 *:Zone.Identifier
+__pycache__/
+*.py[cod]
 ansible/ansible_collections/**/tests/output/
