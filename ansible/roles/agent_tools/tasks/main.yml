@@ -626,7 +626,7 @@
     path: "{{ ansible_env.HOME }}/.config/systemd/user"
     state: directory
     mode: '0755'
-  when: dev_env_enable_droid | bool
+  when: dev_env_enable_droid | bool or dev_env_enable_lody | bool
 
 - name: Install droid daemon systemd user service
   ansible.builtin.copy:
@@ -673,4 +673,75 @@
   when:
     - not (dev_env_enable_droid | bool)
     - droid_daemon_service.stat.exists
+    - not ansible_check_mode
+
+# Lody daemon systemd user service
+- name: Install Lody daemon systemd user service
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/.config/systemd/user/lody-daemon.service"
+    content: |
+      [Unit]
+      Description=Lody Daemon (Remote Access)
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=%h/.bun/bin/lody start
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=default.target
+    mode: '0644'
+  when:
+    - dev_env_enable_lody | bool
+    - lody_auth_tokens is defined
+    - lody_auth_tokens[hostname] is defined
+  vars:
+    hostname: "{{ inventory_hostname }}"
+
+- name: Login to Lody before starting service
+  ansible.builtin.command:
+    cmd: "{{ ansible_env.HOME }}/.bun/bin/lody login --auth {{ lody_auth_tokens[hostname] }}"
+  no_log: true
+  changed_when: true
+  when:
+    - dev_env_enable_lody | bool
+    - lody_auth_tokens is defined
+    - lody_auth_tokens[hostname] is defined
+    - not ansible_check_mode
+  vars:
+    hostname: "{{ inventory_hostname }}"
+
+- name: Enable and start Lody daemon service
+  ansible.builtin.systemd:
+    name: lody-daemon.service
+    scope: user
+    enabled: true
+    state: started
+    daemon_reload: true
+  when:
+    - dev_env_enable_lody | bool
+    - lody_auth_tokens is defined
+    - lody_auth_tokens[hostname] is defined
+    - not ansible_check_mode
+  vars:
+    hostname: "{{ inventory_hostname }}"
+
+- name: Check Lody daemon service file
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.config/systemd/user/lody-daemon.service"
+  register: lody_daemon_service
+  when: not (dev_env_enable_lody | bool)
+
+- name: Disable Lody daemon service
+  ansible.builtin.systemd:
+    name: lody-daemon.service
+    scope: user
+    enabled: false
+    state: stopped
+    daemon_reload: true
+  when:
+    - not (dev_env_enable_lody | bool)
+    - lody_daemon_service.stat.exists
     - not ansible_check_mode
