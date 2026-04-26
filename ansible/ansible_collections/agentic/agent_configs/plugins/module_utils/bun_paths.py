@@ -7,11 +7,7 @@ import os
 
 
 def expand_home(path: str) -> str:
-    if path == "~":
-        return os.environ.get("HOME", path)
-    if path.startswith("~/"):
-        return os.path.join(os.environ.get("HOME", "~"), path[2:])
-    return path
+    return os.path.expanduser(path)
 
 
 def resolve_global_dir(param_value: str | None) -> str:
