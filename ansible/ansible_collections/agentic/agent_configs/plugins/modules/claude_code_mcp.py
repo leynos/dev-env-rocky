@@ -1,3 +1,25 @@
+"""Manage Claude Code Model Context Protocol server definitions.
+
+This Ansible module creates, updates, or removes Claude Code MCP server
+configuration in user-scoped ``~/.claude.json`` files or project-scoped
+``.mcp.json`` files. Use it to provision repeatable integrations for stdio,
+HTTP, or Server-Sent Events transports with parameters such as ``name``,
+``scope``, ``transport``, ``command``, ``args``, ``env``, ``url``, ``headers``,
+and ``headers_helper``.
+
+Example playbook task::
+
+    - name: Configure a project stdio MCP server
+      agentic.agent_configs.claude_code_mcp:
+        name: repo-tools
+        scope: project
+        project_dir: /srv/my-repo
+        transport: stdio
+        command: /usr/local/bin/repo-tools-mcp
+        args:
+          - --stdio
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
