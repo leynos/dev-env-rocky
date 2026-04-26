@@ -1,3 +1,26 @@
+"""Manage Codex CLI command hook configuration.
+
+This Ansible module creates, updates, or removes Codex CLI command hooks in
+user-scoped ``~/.codex/hooks.json`` files or project-scoped
+``.codex/hooks.json`` files. It is useful for provisioning repeatable Codex
+automation such as session start hooks, stop hooks, or tool-use checks, and it
+also enables the matching Codex hooks feature flag in ``config.toml`` when
+hooks are present. Common inputs include ``agent_executable``, ``scope``,
+``project_dir``, ``event``, ``matcher``, ``command``, ``timeout``,
+``status_message``, ``async_hook``, and ``extra``.
+
+Example playbook task::
+
+    - name: Install a project Codex Stop hook
+      agentic.agent_configs.codex_cli_hook:
+        agent_executable: /home/payton/.local/bin/codex
+        scope: project
+        project_dir: /srv/my-repo
+        event: Stop
+        command: /srv/my-repo/.codex/hooks/stop.sh
+        timeout: 30
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
