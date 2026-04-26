@@ -1,3 +1,31 @@
+"""Manage Codex CLI skill directories.
+
+The codex_cli_skill.py Ansible module creates, updates, or removes Codex CLI
+skills that contain a ``SKILL.md`` file and optional support files such as
+``agents/openai.yaml``. Use it to provision repeatable user-scoped or
+project-scoped skills with parameters such as ``name``, ``scope``,
+``project_dir``, ``description``, ``metadata``, ``body``, ``openai_yaml``,
+``openai_yaml_content``, and ``extra_files``. The module exposes helper
+functions such as ``build_frontmatter``, ``resolve_directory``, and
+``build_extra_files`` to assemble the managed skill directory before
+``main`` applies the requested state.
+
+Example playbook task::
+
+    - name: Install a project Codex CLI skill
+      agentic.agent_configs.codex_cli_skill:
+        name: Release helper
+        scope: project
+        project_dir: /srv/my-repo
+        description: Run the release process and verify all checks.
+        body: |
+          Follow docs/release.md and summarise any blockers.
+        openai_yaml:
+          interface:
+            display_name: Release helper
+            short_description: Project release workflow
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
