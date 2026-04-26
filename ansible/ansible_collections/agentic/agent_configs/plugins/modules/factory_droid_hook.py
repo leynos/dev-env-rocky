@@ -1,3 +1,25 @@
+"""Manage Factory Droid command hooks in scoped settings files.
+
+The factory_droid_hook.py Ansible module creates, updates, or removes Factory
+Droid command hook entries in user, project, or local JSON settings files. Use
+it to provision repeatable hook configuration for events such as ``PostToolUse``
+or ``Stop`` by supplying a Factory Droid executable, an event, an optional
+matcher, and the command that should run. The module builds the hook definition
+with ``build_hook_definition`` and applies it through ``main`` using the shared
+settings-file helpers.
+
+Example playbook task::
+
+    - name: Add a project Factory Droid edit hook
+      agentic.agent_configs.factory_droid_hook:
+        agent_executable: /usr/local/bin/droid
+        scope: project
+        project_dir: /srv/my-repo
+        event: PostToolUse
+        matcher: Edit|Write
+        command: /srv/my-repo/.factory/hooks/post-edit.sh
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
