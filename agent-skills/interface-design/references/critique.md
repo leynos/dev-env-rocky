@@ -22,7 +22,7 @@ Does the layout have rhythm? Great interfaces breathe unevenly — dense tooling
 
 Are proportions doing work? A 280px sidebar next to full-width content says "navigation serves content." A 360px sidebar says "these are peers." The specific number declares what matters. If the rationale cannot articulate what the proportions are saying, they're not saying anything.
 
-Is there a clear focal point? Every screen has one thing the user came here to do. That thing should dominate — through size, position, contrast, or the space around it. When everything competes equally, nothing wins and the interface feels like a parking lot.
+Is there a clear focal point? Every screen has one thing the user came here to do. That thing should dominate — through size, position, contrast, or the space around it. When everything competes equally, nothing wins and the interface feels like a featureless expanse.
 
 ---
 
@@ -54,7 +54,7 @@ Content incoherence breaks the illusion faster than any visual flaw. A beautiful
 
 Open the CSS and find the lies — the places that look right but are held together with tape.
 
-Negative margins undoing a parent's padding. Calc() values that exist only as workarounds. Absolute positioning to escape layout flow. Each is a shortcut where a clean solution exists. Cards with full-width dividers use flex column and section-level padding. Centered content uses max-width with auto margins. The correct answer is always simpler than the hack.
+Negative margins undoing a parent's padding. Calc() values that exist only as workarounds. Absolute positioning to escape layout flow. Each is a shortcut where a clean solution exists. Cards with full-width dividers use flex column and section-level padding. Centred content uses max-width with auto margins. The correct answer is always simpler than the hack.
 
 ---
 
