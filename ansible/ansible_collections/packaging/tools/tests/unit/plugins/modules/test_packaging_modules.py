@@ -1,3 +1,15 @@
+"""Test packaging.tools Ansible modules.
+
+This module exercises the Bun, cargo-binstall, and uv module behaviours through
+an in-process Ansible harness. The shared conftest.py fixture patches module
+exit helpers and resets Ansible arguments between tests.
+
+Example invocation::
+
+    PYTHONPATH=ansible pytest \
+        ansible/ansible_collections/packaging/tools/tests/unit/plugins/modules/test_packaging_modules.py
+"""
+
 from __future__ import annotations
 
 import getpass
