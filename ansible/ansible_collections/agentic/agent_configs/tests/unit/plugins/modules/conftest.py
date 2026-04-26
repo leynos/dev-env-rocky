@@ -1,3 +1,17 @@
+"""Provide shared pytest fixtures for Ansible module unit tests.
+
+This conftest.py module patches ``AnsibleModule.exit_json`` and
+``AnsibleModule.fail_json`` for every test in the modules test package so
+custom Ansible modules can be executed in-process. Tests use the helpers from
+``module_test_utils`` to run a module and then assert against the captured
+result instead of allowing Ansible to terminate the interpreter.
+
+Example test usage::
+
+    result = run_module(my_module, {"name": "ruff", "state": "present"})
+    assert result["changed"] is True
+"""
+
 from __future__ import annotations
 
 import pytest
