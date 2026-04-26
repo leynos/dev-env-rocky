@@ -83,8 +83,7 @@ etc.). In PEP 621, you use `[project.optional-dependencies]` for this:
 [project.optional-dependencies]
 dev = [
   "pytest>=7.0",        # Testing framework
-  "black",              # Code formatter
-  "flake8>=4.0"         # Linter
+  "ruff>=0.4"           # Linter and formatter
 ]
 docs = [
   "sphinx>=5.0",        # Documentation builder
@@ -201,8 +200,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=7.0",
-  "black",
-  "flake8>=4.0"
+  "ruff>=0.4"           # Linter and formatter
 ]
 docs = [
   "sphinx>=5.0",
