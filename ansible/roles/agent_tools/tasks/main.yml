@@ -131,6 +131,18 @@
     state: directory
     mode: '0755'
 
+- name: Install Codex agent instructions
+  ansible.builtin.copy:
+    src: AGENTS.md
+    dest: "{{ ansible_env.HOME }}/.codex/AGENTS.md"
+    mode: '0644'
+
+- name: Install Claude agent instructions
+  ansible.builtin.copy:
+    src: AGENTS.md
+    dest: "{{ ansible_env.HOME }}/.claude/CLAUDE.md"
+    mode: '0644'
+
 - name: Find skills in agent-helper-scripts
   ansible.builtin.find:
     paths: "{{ ansible_env.HOME }}/git/agent-helper-scripts/skills"
@@ -603,6 +615,13 @@
     path: "{{ ansible_env.HOME }}/.factory/droids"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
+
+- name: Install Factory Droid agent instructions
+  ansible.builtin.copy:
+    src: AGENTS.md
+    dest: "{{ ansible_env.HOME }}/.factory/AGENTS.md"
+    mode: '0644'
   when: dev_env_enable_droid | bool
 
 - name: Install skills to Factory Droid
