@@ -1,3 +1,21 @@
+"""Manage Python command-line tools installed with uv.
+
+The uv_tool.py Ansible module creates, updates, or removes tools managed by
+``uv tool`` while reporting the command it ran or would run in check mode. Use
+it to keep user-level Python tooling repeatable with parameters such as
+``name``, ``version``, ``spec``, ``python``, ``with_packages``, ``force``, and
+``state``. The module resolves the ``uv`` executable, reads installed tool
+versions from ``uv tool list``, and applies installs or removals from ``main``.
+
+Example playbook task::
+
+    - name: Install ruff with uv
+      agentic.agent_configs.uv_tool:
+        name: ruff
+        version: 0.14.0
+        python: "3.12"
+"""
+
 #!/usr/bin/python
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
