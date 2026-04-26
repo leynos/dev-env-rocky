@@ -45,7 +45,22 @@ def should_skip_dir(dirname: str) -> bool:
 
 
 def has_recent_files(directory: Path, cutoff_time: float) -> bool:
-    """Return true when a file in a directory tree is newer than the cutoff."""
+    """Return true when a file in a directory tree is newer than the cutoff.
+
+    Parameters
+    ----------
+    directory : Path
+        Root of the target tree to inspect.
+    cutoff_time : float
+        POSIX timestamp; files with mtime greater than or equal to this value
+        are treated as recent.
+
+    Returns
+    -------
+    bool
+        True if any non-CACHEDIR.TAG file under ``directory`` has mtime greater
+        than or equal to ``cutoff_time``, False otherwise.
+    """
     for root, dirs, files in os.walk(directory):
         dirs[:] = [dirname for dirname in dirs if not should_skip_dir(dirname)]
 
@@ -64,12 +79,41 @@ def has_recent_files(directory: Path, cutoff_time: float) -> bool:
 
 
 def is_cache_dir(directory: Path) -> bool:
-    """Return true when a directory is marked with CACHEDIR.TAG."""
+    """Return true when a directory is marked with CACHEDIR.TAG.
+
+    Parameters
+    ----------
+    directory : Path
+        Directory to test.
+
+    Returns
+    -------
+    bool
+        True when a ``CACHEDIR.TAG`` file is present directly inside
+        ``directory``.
+    """
     return (directory / CACHEDIR_TAG).is_file()
 
 
 def delete_directory(directory: Path) -> bool:
-    """Delete a directory tree, returning whether deletion succeeded."""
+    """Delete a directory tree.
+
+    Parameters
+    ----------
+    directory : Path
+        Directory tree to remove.
+
+    Returns
+    -------
+    bool
+        True on success, False if an ``OSError`` or ``shutil.Error`` is raised.
+        The error is printed to stderr.
+
+    Raises
+    ------
+    None
+        Errors are caught and reported to stderr.
+    """
     try:
         shutil.rmtree(directory)
     except (OSError, shutil.Error) as error:
@@ -79,7 +123,23 @@ def delete_directory(directory: Path) -> bool:
 
 
 def find_target_dirs(root_path: Path) -> list[Path]:
-    """Find target directories beneath root_path that are marked as caches."""
+    """Find cache-marked target directories.
+
+    Parameters
+    ----------
+    root_path : Path
+        Directory tree to search.
+
+    Returns
+    -------
+    list[Path]
+        All ``target`` directories under ``root_path`` that contain a
+        ``CACHEDIR.TAG`` marker file.
+
+    Notes
+    -----
+    Nested ``target`` trees inside a matched directory are not descended into.
+    """
     target_dirs: list[Path] = []
 
     for root, dirs, _files in os.walk(root_path):
@@ -103,7 +163,28 @@ def cleanup_target_dirs(
     dry_run: bool = False,
     verbose: bool = False,
 ) -> tuple[int, int]:
-    """Find and clean up stale target directories below root_path."""
+    """Find and clean up stale target directories below a root path.
+
+    Parameters
+    ----------
+    root_path : Path
+        Root directory to scan.
+    dry_run : bool, optional
+        If True, report deletions without performing them. Defaults to False.
+    verbose : bool, optional
+        If True, print per-directory status messages. Defaults to False.
+
+    Returns
+    -------
+    tuple[int, int]
+        ``(scanned, deleted)`` where ``scanned`` is the total number of
+        cache-marked target directories found, and ``deleted`` is the number
+        actually removed or that would have been removed in dry-run mode.
+
+    Notes
+    -----
+    Directories containing files newer than the freshness cutoff are preserved.
+    """
     current_time = time.time()
     cutoff_time = current_time - CUTOFF_SECONDS
 
@@ -137,7 +218,19 @@ def cleanup_target_dirs(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the command line parser."""
+    """Build the command-line parser.
+
+    Parameters
+    ----------
+    None
+        This function takes no parameters.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        Configured parser with positional ``path`` argument and ``--dry-run``
+        and ``--verbose`` flags.
+    """
     parser = argparse.ArgumentParser(
         description="Clean up stale Rust target directories.",
     )
@@ -163,7 +256,19 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the rust-cleanup command line interface."""
+    """Run the rust-cleanup command-line interface.
+
+    Parameters
+    ----------
+    argv : Sequence[str] | None, optional
+        Argument list passed to the parser. If None, ``sys.argv[1:]`` is used.
+        Defaults to None.
+
+    Returns
+    -------
+    int
+        0 on success, 1 if the path does not exist or is not a directory.
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
 
