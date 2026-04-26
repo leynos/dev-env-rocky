@@ -7,6 +7,8 @@ import time
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from rust_cleanup import (
     CACHEDIR_TAG,
     CUTOFF_SECONDS,
@@ -24,29 +26,21 @@ from rust_cleanup import (
 class TestShouldSkipDir:
     """Tests for should_skip_dir."""
 
-    def test_skips_git(self) -> None:
-        assert should_skip_dir(".git") is True
-
-    def test_skips_node_modules(self) -> None:
-        assert should_skip_dir("node_modules") is True
-
-    def test_skips_svn(self) -> None:
-        assert should_skip_dir(".svn") is True
-
-    def test_skips_hg(self) -> None:
-        assert should_skip_dir(".hg") is True
-
-    def test_skips_pycache(self) -> None:
-        assert should_skip_dir("__pycache__") is True
-
-    def test_skips_pytest_cache(self) -> None:
-        assert should_skip_dir(".pytest_cache") is True
-
-    def test_does_not_skip_target(self) -> None:
-        assert should_skip_dir("target") is False
-
-    def test_does_not_skip_regular_dir(self) -> None:
-        assert should_skip_dir("src") is False
+    @pytest.mark.parametrize(
+        ("dirname", "expected"),
+        [
+            (".git", True),
+            ("node_modules", True),
+            (".svn", True),
+            (".hg", True),
+            ("__pycache__", True),
+            (".pytest_cache", True),
+            ("target", False),
+            ("src", False),
+        ],
+    )
+    def test_should_skip_dir_parametrized(self, dirname: str, expected: bool) -> None:
+        assert should_skip_dir(dirname) is expected
 
 
 class TestIsCacheDir:
