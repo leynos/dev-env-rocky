@@ -339,5 +339,6 @@ def main(argv: cabc.Sequence[str] | None = None) -> int:
 if __name__ == "__main__":
     sys.exit(main())
 
+
 class CleanupError(Exception):
     """Raised when a stale target directory cannot be deleted."""

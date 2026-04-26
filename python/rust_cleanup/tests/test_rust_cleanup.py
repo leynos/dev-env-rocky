@@ -193,17 +193,23 @@ class TestDeleteDirectory:
         with pytest.raises(CleanupError, match="failed to delete"):
             delete_directory(target)
 
-    def test_raises_without_logging_on_rmtree_error(self, tmp_path: Path, capfd) -> None:
+    def test_raises_without_logging_on_rmtree_error(
+        self, tmp_path: Path, capfd
+    ) -> None:
         target = tmp_path / "to_delete"
         target.mkdir()
         error_message = "permission denied"
 
-        with mock.patch("rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)):
+        with mock.patch(
+            "rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)
+        ):
             with pytest.raises(CleanupError, match="failed to delete"):
                 delete_directory(target)
 
         captured = capfd.readouterr()
-        assert_equal(captured.err, "", "delete_directory should leave stderr logging to callers")
+        assert_equal(
+            captured.err, "", "delete_directory should leave stderr logging to callers"
+        )
 
     def test_cleanup_logs_delete_error_from_caller(self, tmp_path: Path, capfd) -> None:
         target = tmp_path / TARGET_DIR
@@ -211,13 +217,19 @@ class TestDeleteDirectory:
         (target / CACHEDIR_TAG).touch()
         error_message = "permission denied"
 
-        with mock.patch("rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)):
+        with mock.patch(
+            "rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)
+        ):
             scanned, deleted = cleanup_target_dirs(tmp_path, verbose=False)
 
         captured = capfd.readouterr()
-        assert_equal(scanned, 1, "cleanup_target_dirs should scan target with delete error")
+        assert_equal(
+            scanned, 1, "cleanup_target_dirs should scan target with delete error"
+        )
         assert_equal(deleted, 0, "cleanup_target_dirs should not count failed deletion")
-        assert error_message in captured.err, "cleanup_target_dirs should log delete errors to stderr"
+        assert error_message in captured.err, (
+            "cleanup_target_dirs should log delete errors to stderr"
+        )
 
 
 class TestFindTargetDirs:

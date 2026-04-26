@@ -152,7 +152,7 @@
 
 - name: Install agent-helper-scripts skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -160,7 +160,7 @@
 
 - name: Install agent-helper-scripts skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -175,7 +175,7 @@
 
 - name: Install nextest-skill skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -183,7 +183,7 @@
 
 - name: Install nextest-skill skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -198,7 +198,7 @@
 
 - name: Install vidai-mock-skill skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -206,7 +206,7 @@
 
 - name: Install vidai-mock-skill skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -221,7 +221,7 @@
 
 - name: Install rust-skill skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -229,7 +229,7 @@
 
 - name: Install rust-skill skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -245,7 +245,7 @@
 
 - name: Install df12-readme-skill skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -254,7 +254,7 @@
 
 - name: Install df12-readme-skill skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -273,7 +273,7 @@
 
 - name: Install df12-documentation-skills to Codex
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -284,7 +284,7 @@
 
 - name: Install df12-documentation-skills to Claude
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -626,7 +626,7 @@
 
 - name: Install skills to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -635,7 +635,7 @@
 
 - name: Install nextest-skill to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -644,7 +644,7 @@
 
 - name: Install vidai-mock-skill to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -653,7 +653,7 @@
 
 - name: Install rust-skill to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -662,7 +662,7 @@
 
 - name: Install df12-readme-skill to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
@@ -673,7 +673,7 @@
 
 - name: Install df12-documentation-skills to Factory Droid
   ansible.builtin.copy:
-    src: "{{ item.path }}"
+    src: "{{ item.path }}/"
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
