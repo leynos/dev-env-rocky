@@ -48,6 +48,8 @@
       - "{{ rust_cleanup_source_dir }}"
       - --venv
       - "{{ rust_cleanup_venv }}"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   when: >
     rust_cleanup_package_source.changed or
     rust_cleanup_package_metadata.changed or
