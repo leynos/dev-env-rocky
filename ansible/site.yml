@@ -3,38 +3,38 @@
   hosts: servers
   become: true
   vars:
-    systemd_user: leynos
+    systemd_user: "{{ owner_user }}"
   roles:
     - packages
     - infra_tools
     - user
     - user_linger
 
-- name: Select hosts with an existing leynos user
+- name: Select hosts with an existing owner user
   hosts: servers
   become: true
   gather_facts: false
   tasks:
-    - name: Check whether leynos exists
+    - name: Check whether owner user exists
       ansible.builtin.command:
         argv:
           - getent
           - passwd
-          - leynos
-      register: leynos_user
+          - "{{ owner_user }}"
+      register: owner_user_entry
       check_mode: false
       changed_when: false
       failed_when: false
 
-    - name: Add hosts with leynos to the user environment group
+    - name: Add hosts with owner user to the user environment group
       ansible.builtin.group_by:
         key: user_environment_hosts
-      when: leynos_user.rc == 0
+      when: owner_user_entry.rc == 0
 
-- name: Configure user environment for leynos
+- name: Configure user environment for owner user
   hosts: user_environment_hosts
   become: true
-  become_user: leynos
+  become_user: "{{ owner_user }}"
   vars:
     ansible_ssh_private_key_file: "{{ hostvars[inventory_hostname]['ansible_ssh_private_key_file'] | default('~/.ssh/id_ed25519') }}"
   roles:

@@ -6,9 +6,9 @@
       - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8YI8fWC7Lo1ZUDf34OrnBP2VWzqJnWBP1pXMH8M/Y6 leynos@ibara"
       - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEHXrz+781EJp7TXgPPaRUXFSUOBLdkKUjU1aAAOor0Q leyno@espgaluda"
 
-- name: Create user leynos
+- name: Create owner user
   ansible.builtin.user:
-    name: leynos
+    name: "{{ owner_user }}"
     state: present
     shell: /bin/bash
     create_home: true
@@ -24,11 +24,11 @@
     - name: root
       group: root
       home: /root
-    - name: leynos
-      group: leynos
-      home: /home/leynos
+    - name: "{{ owner_user }}"
+      group: "{{ owner_user }}"
+      home: "{{ '/home/' ~ owner_user }}"
 
-- name: Add authorized keys for root and leynos
+- name: Add authorized keys for root and owner user
   ansible.builtin.lineinfile:
     path: "{{ item.0.home }}/.ssh/authorized_keys"
     create: true
@@ -42,6 +42,6 @@
       - name: root
         group: root
         home: /root
-      - name: leynos
-        group: leynos
-        home: /home/leynos
+      - name: "{{ owner_user }}"
+        group: "{{ owner_user }}"
+        home: "{{ '/home/' ~ owner_user }}"
