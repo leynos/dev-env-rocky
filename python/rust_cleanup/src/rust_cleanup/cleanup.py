@@ -1,4 +1,26 @@
-"""Clean stale Rust target directories."""
+"""Clean stale Rust target directories.
+
+This module finds Rust ``target`` directories that are explicitly marked with a
+``CACHEDIR.TAG`` file and removes them once they no longer contain recently
+modified build artefacts. It is intended for developer machines and automated
+sweeps where old Cargo build outputs consume disk space across many worktrees.
+
+Typical command-line usage::
+
+    rust-cleanup ~/src/my-rust-project
+    rust-cleanup --dry-run --verbose ~/.lody/repos/example/worktrees/current
+
+The public helpers can also be called directly by tests or maintenance tools::
+
+    from pathlib import Path
+    from rust_cleanup.cleanup import cleanup_target_dirs
+
+    scanned, removed = cleanup_target_dirs(Path("~/src/my-rust-project").expanduser())
+
+Important side effects: non-dry-run cleanup deletes stale ``target`` directory
+trees with ``shutil.rmtree``. Directories without ``CACHEDIR.TAG`` are ignored,
+and directories containing files modified within the freshness window are kept.
+"""
 
 from __future__ import annotations
 
