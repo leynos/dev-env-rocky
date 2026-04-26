@@ -64,7 +64,6 @@
     rust_cleanup_package_source.changed or
     rust_cleanup_package_metadata.changed or
     rust_cleanup_installer_script.changed or
-    rust_cleanup_venv_create.changed or
     not rust_cleanup_venv_entrypoint.stat.exists
   register: rust_cleanup_uv_install
   changed_when: rust_cleanup_uv_install.rc == 0
