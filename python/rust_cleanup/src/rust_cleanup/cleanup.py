@@ -157,6 +157,56 @@ def find_target_dirs(root_path: Path) -> list[Path]:
     return target_dirs
 
 
+def is_stale(target_path: Path, cutoff_time: float) -> bool:
+    """Return true when a target directory has no recent files.
+
+    Parameters
+    ----------
+    target_path : Path
+        Cache-marked ``target`` directory to inspect.
+    cutoff_time : float
+        POSIX timestamp used as the freshness threshold.
+
+    Returns
+    -------
+    bool
+        True when no non-``CACHEDIR.TAG`` files under ``target_path`` have an
+        mtime greater than or equal to ``cutoff_time``.
+    """
+    return not has_recent_files(target_path, cutoff_time)
+
+
+def handle_stale_target(target_path: Path, dry_run: bool, verbose: bool) -> int:
+    """Handle one stale target directory.
+
+    Parameters
+    ----------
+    target_path : Path
+        Stale cache-marked ``target`` directory to report or remove.
+    dry_run : bool
+        If True, report the deletion without removing the directory.
+    verbose : bool
+        If True, print per-directory status messages.
+
+    Returns
+    -------
+    int
+        1 when the directory was removed or would be removed in dry-run mode;
+        otherwise 0.
+    """
+    if dry_run:
+        print(f"  Would delete (stale): {target_path}")
+        return 1
+
+    if verbose:
+        print(f"  Deleting (stale): {target_path}")
+    if delete_directory(target_path):
+        return 1
+    if verbose:
+        print(f"  Failed to delete: {target_path}")
+    return 0
+
+
 def cleanup_target_dirs(
     root_path: Path,
     *,
@@ -195,24 +245,12 @@ def cleanup_target_dirs(
         if verbose:
             print(f"Scanning: {target_path}")
 
-        has_recent = has_recent_files(target_path, cutoff_time)
-
-        if has_recent:
+        if not is_stale(target_path, cutoff_time):
             if verbose:
                 print(f"  Keeping (has recent files): {target_path}")
             continue
 
-        if dry_run:
-            print(f"  Would delete (stale): {target_path}")
-            deleted_count += 1
-            continue
-
-        if verbose:
-            print(f"  Deleting (stale): {target_path}")
-        if delete_directory(target_path):
-            deleted_count += 1
-        elif verbose:
-            print(f"  Failed to delete: {target_path}")
+        deleted_count += handle_stale_target(target_path, dry_run, verbose)
 
     return len(target_dirs), deleted_count
 

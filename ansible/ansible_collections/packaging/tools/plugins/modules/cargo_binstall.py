@@ -1,8 +1,6 @@
 #!/usr/bin/python
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
-from __future__ import annotations
-
 """Manage Rust command-line tools with cargo-binstall.
 
 This Ansible module installs or removes Cargo packages through
@@ -24,6 +22,12 @@ Example ad-hoc call::
     ansible localhost -m packaging.tools.cargo_binstall \\
       -a "name=cargo-nextest version=0.9.100"
 """
+
+from __future__ import annotations
+
+import re
+
+from ansible.module_utils.basic import AnsibleModule
 
 DOCUMENTATION = r"""
 ---
@@ -123,11 +127,6 @@ stderr:
   type: str
 """
 
-import re
-
-from ansible.module_utils.basic import AnsibleModule
-
-
 def resolve_binary(module: AnsibleModule, value: str) -> str:
     path = module.get_bin_path(value, required=False)
     if path:
@@ -135,7 +134,7 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
     module.fail_json(msg=f"Could not find executable: {value}")
 
 
-def run(module: AnsibleModule, cmd: list[str], env: dict[str, str] | None = None):
+def run(module: AnsibleModule, cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str, str]:
     rc, stdout, stderr = module.run_command(cmd, environ_update=env or {})
     return rc, stdout, stderr
 
@@ -161,7 +160,7 @@ def read_installed_version(
     return match.group("version") if match else None
 
 
-def main():
+def main() -> None:
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

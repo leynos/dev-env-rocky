@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 """Manage Factory Droid custom droid Markdown files.
 
 The factory_droid_droid.py Ansible module creates, updates, or removes custom
@@ -25,13 +27,21 @@ Example playbook task::
         body: |
           Review the supplied changes and highlight correctness issues.
 """
-
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
+
+import os
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    manage_markdown_file,
+    merge_dicts,
+    normalize_mapping_order,
+    resolve_scoped_config_path,
+    slugify,
+)
 
 DOCUMENTATION = r"""
 ---
@@ -132,18 +142,6 @@ path:
   returned: always
   type: str
 """
-
-import os
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
-    manage_markdown_file,
-    merge_dicts,
-    normalize_mapping_order,
-    resolve_scoped_config_path,
-    slugify,
-)
-
 
 def build_frontmatter(module: AnsibleModule) -> dict:
     params = module.params

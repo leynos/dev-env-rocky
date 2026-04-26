@@ -3,6 +3,7 @@
 
 append_block_if_missing() {
     local file marker block begin_sentinel end_sentinel had_content
+    local begin_count end_count
     file="$1"
     marker="$2"
     block="$3"
@@ -11,6 +12,15 @@ append_block_if_missing() {
 
     mkdir -p "$(dirname "${file}")"
     touch "${file}"
+
+    begin_count=$(grep -cF "${begin_sentinel}" "${file}" 2>/dev/null || true)
+    end_count=$(grep -cF "${end_sentinel}" "${file}" 2>/dev/null || true)
+
+    if [[ "${begin_count}" -ne "${end_count}" ]]; then
+        printf 'append_block_if_missing: unbalanced sentinels for %s in %s (%d BEGIN, %d END)\n' \
+            "${marker}" "${file}" "${begin_count}" "${end_count}" >&2
+        return 1
+    fi
 
     if grep -qF "${begin_sentinel}" "${file}"; then
         return 0

@@ -245,7 +245,7 @@ Borders aren't binary. Build a scale that matches intensity to importance — st
 
 ### Control Tokens
 
-Form controls have specific needs. Don't reuse surface tokens — create dedicated ones for control backgrounds, control borders, and focus states. This lets designers tune interactive elements independently from layout surfaces.
+Form controls have specific needs. Don't reuse surface tokens — create dedicated ones for control backgrounds, control borders, and focus states. This lets designers tune interactive elements independently of layout surfaces.
 
 ## Spacing
 

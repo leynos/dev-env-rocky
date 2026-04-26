@@ -13,7 +13,7 @@ import getpass
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 
@@ -144,7 +144,7 @@ def test_bun_expand_home_returns_original_unknown_user_path() -> None:
 )
 def test_bun_path_resolvers_follow_precedence(
     monkeypatch: pytest.MonkeyPatch,
-    resolver,
+    resolver: Callable[[str | None], str],
     env_var_name: str,
     env_value: str,
     explicit_param: str | None,

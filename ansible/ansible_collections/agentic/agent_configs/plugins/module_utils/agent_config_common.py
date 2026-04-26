@@ -426,6 +426,7 @@ def _hook_identity_matches(existing: Dict[str, Any], desired: Dict[str, Any], id
 
 
 def _find_hook_group_index(groups: List[Any], matcher: Optional[str]) -> Optional[int]:
+    """Find the hook group index for a matcher."""
     for idx, group in enumerate(groups):
         if isinstance(group, dict) and _hook_group_matches(group, matcher):
             return idx
@@ -440,6 +441,7 @@ def _get_hook_list(
     *,
     create: bool,
 ) -> List[Any]:
+    """Get the hook list for a hook group."""
     hook_list = group.setdefault("hooks", []) if create else group.get("hooks", [])
     if not isinstance(hook_list, list):
         module.fail_json(msg="Expected hooks list under event %s in %s" % (event, path))
@@ -451,6 +453,7 @@ def _ensure_hook_group(
     matcher: Optional[str],
     group_index: Optional[int],
 ) -> Tuple[bool, Dict[str, Any]]:
+    """Ensure a hook group exists for a matcher."""
     if group_index is not None:
         return False, groups[group_index]
 
@@ -466,6 +469,7 @@ def _find_hook_index(
     desired_hook: Dict[str, Any],
     identity_keys: Iterable[str],
 ) -> Optional[int]:
+    """Find the hook index for the desired hook identity."""
     for idx, hook in enumerate(hook_list):
         if isinstance(hook, dict) and _hook_identity_matches(
             hook,
@@ -486,6 +490,7 @@ def _upsert_hook_json_group(
     event: str,
     path: str,
 ) -> bool:
+    """Upsert the desired hook into a hook group."""
     changed, group = _ensure_hook_group(groups, matcher, group_index)
     hook_list = _get_hook_list(module, group, event, path, create=True)
     existing_index = _find_hook_index(hook_list, desired_hook, identity_keys)
@@ -507,6 +512,7 @@ def _remove_hook_json_group(
     event: str,
     path: str,
 ) -> bool:
+    """Remove the desired hook from a hook group."""
     if group_index is None:
         return False
 
@@ -535,6 +541,7 @@ def _prune_empty_hook_roots(
     event: str,
     groups: List[Any],
 ) -> None:
+    """Prune empty hook roots from the configuration data."""
     if not groups:
         hooks_root.pop(event, None)
     if not hooks_root:

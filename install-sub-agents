@@ -3,15 +3,19 @@
 
 replace_managed_block() {
     local file marker block begin_sentinel end_sentinel tmp begin_count end_count
+    local file_dir
     local first_begin first_end
     file="$1"
     marker="$2"
     block="$3"
     begin_sentinel="### BEGIN ${marker}"
     end_sentinel="### END ${marker}"
-    tmp="$(mktemp)"
+    file_dir="$(dirname "${file}")"
 
-    mkdir -p "$(dirname "${file}")"
+    mkdir -p "${file_dir}"
+    tmp="$(mktemp "${file_dir}/.replace-managed-block.XXXXXX")" || return 1
+    REPLACE_MANAGED_BLOCK_TMP="${tmp}"
+    trap 'rm -f "${REPLACE_MANAGED_BLOCK_TMP:-}"' EXIT ERR
     touch "${file}"
 
     begin_count=$(grep -cF "${begin_sentinel}" "${file}" 2>/dev/null || true)

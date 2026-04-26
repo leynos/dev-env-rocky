@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 """Manage Codex CLI command hook configuration.
 
 This Ansible module creates, updates, or removes Codex CLI command hooks in
@@ -20,13 +22,22 @@ Example playbook task::
         command: /srv/my-repo/.codex/hooks/stop.sh
         timeout: 30
 """
-
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
+
+import os
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    clean_dict,
+    load_toml_file,
+    manage_hook_json,
+    maybe_validate_executable,
+    resolve_scoped_config_path,
+    write_toml_if_changed,
+)
 
 DOCUMENTATION = r"""
 ---
@@ -155,19 +166,6 @@ hook:
   returned: when state == 'present'
   type: dict
 """
-
-import os
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
-    clean_dict,
-    load_toml_file,
-    manage_hook_json,
-    maybe_validate_executable,
-    resolve_scoped_config_path,
-    write_toml_if_changed,
-)
-
 
 def build_hook_definition(module: AnsibleModule) -> dict:
     params = module.params

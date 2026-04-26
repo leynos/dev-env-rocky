@@ -20,6 +20,12 @@ Example task::
 
 from __future__ import annotations
 
+import json
+import os
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.agentic.agent_configs.plugins.module_utils.bun_paths import resolve_global_bin_dir, resolve_global_dir
+
 DOCUMENTATION = r"""
 ---
 module: bun_global
@@ -126,13 +132,6 @@ stderr:
   type: str
 """
 
-import json
-import os
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.agentic.agent_configs.plugins.module_utils.bun_paths import resolve_global_bin_dir, resolve_global_dir
-
-
 def resolve_binary(module: AnsibleModule, value: str) -> str:
     path = module.get_bin_path(value, required=False)
     if path:
@@ -176,6 +175,10 @@ def main():
 
     global_dir = resolve_global_dir(params["global_dir"])
     global_bin_dir = resolve_global_bin_dir(params["global_bin_dir"])
+    bun_env = {
+        "BUN_INSTALL_GLOBAL_DIR": global_dir,
+        "BUN_INSTALL_BIN": global_bin_dir,
+    }
     pkg_json = package_json_path(global_dir, params["name"])
     installed_version = read_installed_version(pkg_json)
 
@@ -201,7 +204,7 @@ def main():
                 cmd=cmd,
             )
 
-        rc, stdout, stderr = run(module, cmd)
+        rc, stdout, stderr = run(module, cmd, env=bun_env)
         if rc != 0:
             module.fail_json(
                 msg=f"Failed to remove Bun global package {params['name']}",
@@ -253,7 +256,7 @@ def main():
             cmd=cmd,
         )
 
-    rc, stdout, stderr = run(module, cmd)
+    rc, stdout, stderr = run(module, cmd, env=bun_env)
     if rc != 0:
         module.fail_json(
             msg=f"Failed to install Bun global package {params['name']}",

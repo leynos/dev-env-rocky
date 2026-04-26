@@ -19,6 +19,29 @@ from pathlib import Path
 
 
 def expand_home(path: str) -> str:
+    """Expand a tilde-prefixed path to the current user's home directory.
+
+    Parameters
+    ----------
+    path : str
+        Path that may begin with ``~`` or ``~user``.
+
+    Returns
+    -------
+    str
+        The expanded path. If ``pathlib.Path.expanduser`` cannot resolve the
+        user portion of the path, the original path is returned unchanged.
+
+    Raises
+    ------
+    None
+        ``RuntimeError`` from ``Path.expanduser`` is caught and not propagated.
+
+    Examples
+    --------
+    >>> expand_home("~/bin")
+    '/home/example/bin'
+    """
     try:
         return str(Path(path).expanduser())
     except RuntimeError:

@@ -25,6 +25,10 @@ Example ad-hoc call::
 
 from __future__ import annotations
 
+import re
+
+from ansible.module_utils.basic import AnsibleModule
+
 DOCUMENTATION = r"""
 ---
 module: cargo_binstall
@@ -123,11 +127,6 @@ stderr:
   type: str
 """
 
-import re
-
-from ansible.module_utils.basic import AnsibleModule
-
-
 def resolve_binary(module: AnsibleModule, value: str) -> str:
     path = module.get_bin_path(value, required=False)
     if path:
@@ -135,7 +134,7 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
     module.fail_json(msg=f"Could not find executable: {value}")
 
 
-def run(module: AnsibleModule, cmd: list[str], env: dict[str, str] | None = None):
+def run(module: AnsibleModule, cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str, str]:
     rc, stdout, stderr = module.run_command(cmd, environ_update=env or {})
     return rc, stdout, stderr
 
@@ -161,7 +160,7 @@ def read_installed_version(
     return match.group("version") if match else None
 
 
-def main():
+def main() -> None:
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

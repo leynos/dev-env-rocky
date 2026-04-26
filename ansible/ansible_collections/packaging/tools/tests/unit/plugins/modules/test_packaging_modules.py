@@ -12,15 +12,12 @@ Example invocation::
 
 from __future__ import annotations
 
-import getpass
 import json
-import os
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from ansible_collections.agentic.agent_configs.plugins.module_utils import bun_paths
 from ansible_collections.packaging.tools.plugins.modules import (
     bun_global,
     cargo_binstall,
@@ -72,103 +69,6 @@ def test_bun_read_installed_version(tmp_path: Path) -> None:
         bun_global.read_installed_version(str(package_json)),
         "1.2.3",
         "bun_global.read_installed_version should read package version",
-    )
-
-
-def test_bun_expand_home_uses_home_for_tilde(monkeypatch: pytest.MonkeyPatch) -> None:
-    home = "/tmp/test-home"
-    monkeypatch.setenv("HOME", home)
-
-    assert_equal(bun_paths.expand_home("~"), home, "bun_paths.expand_home should expand bare tilde")
-    assert_equal(
-        bun_paths.expand_home("~/projects"),
-        str(Path(home) / "projects"),
-        "bun_paths.expand_home should expand tilde-prefixed paths",
-    )
-
-
-def test_bun_expand_home_uses_system_home_when_home_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("HOME", raising=False)
-    system_home = Path.home()
-
-    assert_equal(
-        bun_paths.expand_home("~"),
-        str(system_home),
-        "bun_paths.expand_home should use system home when HOME is missing",
-    )
-    assert_equal(
-        bun_paths.expand_home("~/projects"),
-        str(system_home / "projects"),
-        "bun_paths.expand_home should expand child path without HOME",
-    )
-
-
-def test_bun_expand_home_preserves_expanduser_user_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("HOME", "/tmp/test-home")
-    user_path = f"~{getpass.getuser()}/projects"
-
-    assert_equal(
-        bun_paths.expand_home(user_path),
-        os.path.expanduser(user_path),
-        "bun_paths.expand_home should preserve expanduser user lookup",
-    )
-
-
-def test_bun_expand_home_returns_original_unknown_user_path() -> None:
-    user_path = "~definitely-no-such-user-xyz/projects"
-
-    assert_equal(
-        bun_paths.expand_home(user_path),
-        user_path,
-        "bun_paths.expand_home should preserve unknown user paths",
-    )
-
-
-def test_bun_resolve_global_dir_env_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    home = "/tmp/test-home"
-    monkeypatch.setenv("HOME", home)
-    monkeypatch.setenv("BUN_INSTALL_GLOBAL_DIR", "~/bun-global")
-
-    assert_equal(
-        bun_paths.resolve_global_dir(None),
-        str(Path(home) / "bun-global"),
-        "bun_paths.resolve_global_dir should prefer env over default",
-    )
-
-
-def test_bun_resolve_global_dir_explicit_param_wins(monkeypatch: pytest.MonkeyPatch) -> None:
-    home = "/tmp/test-home"
-    monkeypatch.setenv("HOME", home)
-    monkeypatch.setenv("BUN_INSTALL_GLOBAL_DIR", "~/ignored-global")
-
-    assert_equal(
-        bun_paths.resolve_global_dir("~/explicit-global"),
-        str(Path(home) / "explicit-global"),
-        "bun_paths.resolve_global_dir should prefer explicit parameter",
-    )
-
-
-def test_bun_resolve_global_bin_dir_env_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    home = "/tmp/test-home"
-    monkeypatch.setenv("HOME", home)
-    monkeypatch.setenv("BUN_INSTALL_BIN", "~/bun-bin")
-
-    assert_equal(
-        bun_paths.resolve_global_bin_dir(None),
-        str(Path(home) / "bun-bin"),
-        "bun_paths.resolve_global_bin_dir should prefer env over default",
-    )
-
-
-def test_bun_resolve_global_bin_dir_explicit_param_wins(monkeypatch: pytest.MonkeyPatch) -> None:
-    home = "/tmp/test-home"
-    monkeypatch.setenv("HOME", home)
-    monkeypatch.setenv("BUN_INSTALL_BIN", "~/ignored-bin")
-
-    assert_equal(
-        bun_paths.resolve_global_bin_dir("~/explicit-bin"),
-        str(Path(home) / "explicit-bin"),
-        "bun_paths.resolve_global_bin_dir should prefer explicit parameter",
     )
 
 

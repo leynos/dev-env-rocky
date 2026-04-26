@@ -1,8 +1,3 @@
-#!/usr/bin/python
-# Copyright: (c) 2026, Leynos
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
-from __future__ import annotations
-
 """Manage Python command-line tools installed with uv.
 
 The uv_tool.py Ansible module creates, updates, or removes tools managed by
@@ -20,6 +15,16 @@ Example playbook task::
         version: 0.14.0
         python: "3.12"
 """
+
+from __future__ import annotations
+
+#!/usr/bin/python
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+import re
+
+from ansible.module_utils.basic import AnsibleModule
 
 DOCUMENTATION = r"""
 ---
@@ -131,10 +136,6 @@ stderr:
   type: str
 """
 
-import re
-
-from ansible.module_utils.basic import AnsibleModule
-
 UV_LIST_RE = re.compile(r"^(?P<name>\S+)\s+v(?P<version>\S+)(?:\s|$)")
 
 
@@ -145,7 +146,7 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
     module.fail_json(msg=f"Could not find executable: {value}")
 
 
-def run(module: AnsibleModule, cmd: list[str]):
+def run(module: AnsibleModule, cmd: list[str]) -> tuple[int, str, str]:
     rc, stdout, stderr = module.run_command(cmd)
     return rc, stdout, stderr
 
@@ -170,7 +171,7 @@ def read_installed_tools(module: AnsibleModule, uv_bin: str) -> dict[str, str]:
     return tools
 
 
-def main():
+def main() -> None:
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},
