@@ -33,15 +33,15 @@ If the hard drive or `/tmp` fills up, stop and let the user know.
 
 ## Branches
 
-Check the current Git branch by running `git branch --show`. If the current
-branch is the main branch, alert the user and suggest a branch name for the
-current task.
+Check the current Git branch by running `git branch --show-current`. If the
+current branch is the main branch, alert the user and suggest a branch name for
+the current task.
 
 ## Plans
 
 If and only if asked to formulate a plan, use the execplans skill. Name the
 plan `docs/execplans/${GIT_BRANCH_NAME##*/}.md`. (Obtain
-GIT\_BRANCH\_NAME by running `git branch --show`).
+GIT\_BRANCH\_NAME by running `git branch --show-current`).
 
 Keep the plan up to date. Update living documents such as plans frequently. Do
 not wait until completion of the task. It is important that lessons and
@@ -64,8 +64,8 @@ changes to code prior to committing changes.
 Long command outputs will be truncated by the environment, with only the start
 and end of the output visible. To account for this, run all test, lint and
 format checking suites using `tee`, outputting to a temporary log file for
-review after completion. Recommendation, use the following filename template
-for `tee`: `/tmp/$ACTION-$(get-project)-$(git branch --show).out` (where
+review after completion. Recommendation, use the following filename template for
+`tee`: `/tmp/$ACTION-$(get-project)-$(git branch --show-current).out` (where
 `$ACTION` is the action being performed). This will enable consistent allow
 listing of commands whilst isolating work in each branch.
 
