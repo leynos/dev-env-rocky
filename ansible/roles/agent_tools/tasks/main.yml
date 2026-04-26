@@ -55,6 +55,23 @@
     accept_hostkey: true
   when: ssh_key_stat.stat.exists
 
+- name: Clone df12-documentation-skills repository via SSH
+  ansible.builtin.git:
+    repo: git@github.com:leynos/df12-documentation-skills.git
+    dest: "{{ ansible_env.HOME }}/git/df12-documentation-skills"
+    version: HEAD
+    depth: 1
+    single_branch: true
+    key_file: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
+    accept_hostkey: true
+  when: ssh_key_stat.stat.exists
+
+- name: Check df12-documentation-skills skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/git/df12-documentation-skills/skills"
+  register: df12_documentation_skills_dir
+  when: ssh_key_stat.stat.exists
+
 - name: Ensure Codex skills directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.codex/skills"
@@ -184,6 +201,38 @@
     remote_src: true
   loop: "{{ df12_readme_skills.files }}"
   when: ssh_key_stat.stat.exists
+
+- name: Find skills in df12-documentation-skills
+  ansible.builtin.find:
+    paths: "{{ ansible_env.HOME }}/git/df12-documentation-skills/skills"
+    file_type: directory
+    depth: 1
+  register: df12_documentation_skills
+  when:
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
+
+- name: Install df12-documentation-skills to Codex
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_documentation_skills.files | default([]) }}"
+  when:
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
+
+- name: Install df12-documentation-skills to Claude
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_documentation_skills.files | default([]) }}"
+  when:
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
 
 # Install context_pack tool for agent communication
 - name: Install context_pack tool
@@ -555,6 +604,18 @@
   when:
     - dev_env_enable_droid | bool
     - ssh_key_stat.stat.exists
+
+- name: Install df12-documentation-skills to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_documentation_skills.files | default([]) }}"
+  when:
+    - dev_env_enable_droid | bool
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
 
 # Configure Factory Droid hooks using collection module
 - name: Configure Factory Droid hooks
