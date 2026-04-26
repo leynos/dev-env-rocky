@@ -91,3 +91,9 @@ xdg-utils
 # System locale support
 # Language pack for English locale data.
 glibc-langpack-en
+
+graphviz
+gcc
+gcc-c++
+automake
+autoconf
