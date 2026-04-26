@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Installs TypeScript tooling into the user environment using bun.
+# Installs `@biomejs/biome` and `@typescript/native-preview` globally via bun,
+# and creates a tsgo → tsc symlink under ~/.bin/bin.
+# Requires: bun
+
+set -euo pipefail
+
+bun install -g @biomejs/biome
+bun install -g @typescript/native-preview
+
+mkdir -p "${HOME}/.bin/bin"
+ln -sfn "${HOME}/.bun/bin/tsgo" "${HOME}/.bin/bin/tsc"

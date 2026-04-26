@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Installs Python tooling into the user environment using uv.
+# Installs ruff, pyright (with Node.js backend), ty, pyscn, and
+# basedpyright as uv tools, then ensures ~/.local/bin is on PATH.
+# Requires: uv
+
+set -euo pipefail
+
+uv tool install ruff
+uv tool install pyright --with nodejs-wheel-binaries
+uv tool install ty
+uv tool install pyscn
+uv tool install basedpyright
+
+mkdir -p "${HOME}/.local/bin"
+
+case ":${PATH}:" in
+    *":${HOME}/.local/bin:"*) ;;
+    *) export PATH="${HOME}/.local/bin:${PATH}" ;;
+esac
