@@ -1,3 +1,26 @@
+"""Manage Claude Code skill directories.
+
+The claude_code_skill.py Ansible module creates, updates, or removes Claude
+Code skills that contain a ``SKILL.md`` file and optional support files. Use it
+to provision repeatable user-scoped or project-scoped skills with parameters
+such as ``name``, ``scope``, ``project_dir``, ``description``,
+``allowed_tools``, ``metadata``, ``body``, and ``extra_files``.
+
+Example playbook task::
+
+    - name: Install a project Claude Code skill
+      agentic.agent_configs.claude_code_skill:
+        name: Release checklist
+        scope: project
+        project_dir: /srv/my-repo
+        description: Run the release checklist and verify artefacts.
+        allowed_tools:
+          - Bash
+          - Read
+        body: |
+          Follow the release checklist in docs/release.md.
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
