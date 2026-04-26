@@ -44,6 +44,53 @@
     path: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
   register: ssh_key_stat
 
+- name: Ensure SSH directory exists for private repo key
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.ssh"
+    state: directory
+    mode: '0700'
+  when:
+    - not ansible_check_mode
+    - not ssh_key_stat.stat.exists
+
+- name: Generate SSH key for private repos
+  ansible.builtin.command:
+    argv:
+      - ssh-keygen
+      - -t
+      - ed25519
+      - -f
+      - "{{ ansible_env.HOME }}/.ssh/id_ed25519"
+      - -N
+      - ""
+      - -C
+      - "{{ owner_user }}@{{ inventory_hostname }}"
+    creates: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
+  when:
+    - not ansible_check_mode
+    - not ssh_key_stat.stat.exists
+
+- name: Fetch private repo public key for GitHub access
+  ansible.builtin.fetch:
+    src: "{{ ansible_env.HOME }}/.ssh/id_ed25519.pub"
+    dest: "{{ playbook_dir }}/../ssh-public-keys/{{ inventory_hostname }}-{{ owner_user }}-id_ed25519.pub"
+    flat: true
+  when:
+    - not ansible_check_mode
+    - not ssh_key_stat.stat.exists
+
+- name: Stop until the private repo public key is added to GitHub
+  ansible.builtin.fail:
+    msg: >-
+      Generated an SSH key for {{ owner_user }} on {{ inventory_hostname }} and
+      fetched the public key to
+      {{ playbook_dir }}/../ssh-public-keys/{{ inventory_hostname }}-{{ owner_user }}-id_ed25519.pub.
+      Add that public key to GitHub, then rerun this playbook so private
+      repositories can be cloned.
+  when:
+    - not ansible_check_mode
+    - not ssh_key_stat.stat.exists
+
 - name: Clone df12-readme-skill repository via SSH
   ansible.builtin.git:
     repo: git@github.com:leynos/df12-readme-skill.git
