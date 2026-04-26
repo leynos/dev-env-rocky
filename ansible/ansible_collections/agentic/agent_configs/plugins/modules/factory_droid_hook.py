@@ -1,9 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: factory_droid_hook
 short_description: Manage Factory Droid command hooks
@@ -24,6 +26,8 @@ options:
     type: bool
     default: false
   state:
+    description:
+      - Whether the managed resource should exist.
     type: str
     choices: [present, absent]
     default: present
@@ -64,10 +68,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Add a Factory Droid PostToolUse hook
   agentic.agent_configs.factory_droid_hook:
     agent_executable: /usr/local/bin/droid
@@ -84,9 +88,9 @@ EXAMPLES = r'''
     event: Stop
     command: /usr/local/bin/notify-droid-stop
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed settings path.
   returned: always
@@ -95,7 +99,7 @@ hook:
   description: Effective hook entry.
   returned: when state == 'present'
   type: dict
-'''
+"""
 
 import os
 
@@ -108,7 +112,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 )
 
 
-
 def build_hook_definition(module: AnsibleModule) -> dict:
     desired = {
         "type": "command",
@@ -116,7 +119,6 @@ def build_hook_definition(module: AnsibleModule) -> dict:
     }
     desired.update(module.params.get("extra") or {})
     return clean_dict(desired)
-
 
 
 def main() -> None:

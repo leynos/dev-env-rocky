@@ -1,9 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: claude_code_mcp
 short_description: Manage Claude Code MCP server definitions
@@ -78,10 +80,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Configure a shared Claude Code stdio MCP server
   agentic.agent_configs.claude_code_mcp:
     name: repo-tools
@@ -102,9 +104,9 @@ EXAMPLES = r'''
     url: https://mcp.stripe.com
     headers:
       X-Env: prod
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed configuration path.
   returned: always
@@ -113,7 +115,7 @@ server:
   description: Effective server definition.
   returned: when state == 'present'
   type: dict
-'''
+"""
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
@@ -153,7 +155,6 @@ def build_server_definition(module: AnsibleModule) -> dict:
 
     desired.update(extra)
     return clean_dict(desired)
-
 
 
 def main() -> None:

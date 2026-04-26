@@ -1,5 +1,113 @@
 #!/usr/bin/python
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from __future__ import annotations
+
+DOCUMENTATION = r"""
+---
+module: bun_global
+short_description: Manage Bun global packages
+version_added: "1.0.0"
+description:
+  - Install and remove Bun global packages with idempotence based on the installed package version.
+options:
+  name:
+    description:
+      - Package name to manage.
+      - Scoped package names such as C(@scope/tool) are supported.
+    type: str
+    required: true
+  version:
+    description:
+      - Exact package version to install.
+      - When omitted, any installed version satisfies C(state=present).
+    type: str
+  state:
+    description:
+      - Whether the package should be installed or absent.
+    type: str
+    choices: [present, absent]
+    default: present
+  bun_path:
+    description:
+      - Bun executable path or name to resolve on C(PATH).
+    type: str
+    default: bun
+  global_dir:
+    description:
+      - Bun global install directory.
+      - Defaults to C(BUN_INSTALL_GLOBAL_DIR), then C(~/.bun/install/global).
+    type: path
+  global_bin_dir:
+    description:
+      - Bun global binary directory.
+      - Defaults to C(BUN_INSTALL_BIN), then C(~/.bun/bin).
+    type: path
+  ignore_scripts:
+    description:
+      - Pass C(--ignore-scripts) when installing packages.
+    type: bool
+    default: false
+author:
+  - Leynos Project (@leynos)
+"""
+
+EXAMPLES = r"""
+- name: Install an exact Bun package version
+  agentic.agent_configs.bun_global:
+    name: '@scope/tool'
+    version: 1.2.3
+    ignore_scripts: true
+
+- name: Remove a Bun global package
+  agentic.agent_configs.bun_global:
+    name: '@scope/tool'
+    state: absent
+"""
+
+RETURN = r"""
+name:
+  description: Package name that was managed.
+  returned: always
+  type: str
+state:
+  description: Final requested package state.
+  returned: always
+  type: str
+global_dir:
+  description: Bun global install directory used for version detection.
+  returned: always
+  type: str
+global_bin_dir:
+  description: Bun global binary directory.
+  returned: always
+  type: str
+previous_version:
+  description: Version detected before a change was made.
+  returned: when changed and a previous version was installed
+  type: str
+installed_version:
+  description: Version detected after installation, or the already-installed version.
+  returned: when state == 'present'
+  type: str
+target:
+  description: Package spec passed to C(bun install -g).
+  returned: when state == 'present' and a change is needed
+  type: str
+cmd:
+  description: Command executed or that would be executed in check mode.
+  returned: when changed
+  type: list
+  elements: str
+stdout:
+  description: Command standard output.
+  returned: when a command is executed
+  type: str
+stderr:
+  description: Command standard error.
+  returned: when a command is executed
+  type: str
+"""
 
 import json
 import os
@@ -19,22 +127,30 @@ def run(module: AnsibleModule, cmd: list[str], env: dict[str, str] | None = None
     return rc, stdout, stderr
 
 
+def expand_home(path: str) -> str:
+    if path == "~":
+        return os.environ.get("HOME", path)
+    if path.startswith("~/"):
+        return os.path.join(os.environ.get("HOME", "~"), path[2:])
+    return path
+
+
 def resolve_global_dir(param_value: str | None) -> str:
     if param_value:
-        return os.path.expanduser(param_value)
+        return expand_home(param_value)
     env_value = os.environ.get("BUN_INSTALL_GLOBAL_DIR")
     if env_value:
-        return os.path.expanduser(env_value)
-    return os.path.expanduser("~/.bun/install/global")
+        return expand_home(env_value)
+    return expand_home("~/.bun/install/global")
 
 
 def resolve_global_bin_dir(param_value: str | None) -> str:
     if param_value:
-        return os.path.expanduser(param_value)
+        return expand_home(param_value)
     env_value = os.environ.get("BUN_INSTALL_BIN")
     if env_value:
-        return os.path.expanduser(env_value)
-    return os.path.expanduser("~/.bun/bin")
+        return expand_home(env_value)
+    return expand_home("~/.bun/bin")
 
 
 def package_json_path(global_dir: str, package_name: str) -> str:
@@ -56,8 +172,8 @@ def main():
             "version": {"type": "str", "required": False, "default": None},
             "state": {"type": "str", "choices": ["present", "absent"], "default": "present"},
             "bun_path": {"type": "str", "default": "bun"},
-            "global_dir": {"type": "str", "required": False, "default": None},
-            "global_bin_dir": {"type": "str", "required": False, "default": None},
+            "global_dir": {"type": "path", "required": False, "default": None},
+            "global_bin_dir": {"type": "path", "required": False, "default": None},
             "ignore_scripts": {"type": "bool", "default": False},
         },
         supports_check_mode=True,

@@ -1,9 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import annotations
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: factory_droid_droid
 short_description: Manage Factory Droid custom droids
@@ -70,10 +72,10 @@ options:
     type: dict
     default: {}
 author:
-  - OpenAI
-'''
+  - Leynos Project (@leynos)
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: Create a project Factory Droid reviewer
   agentic.agent_configs.factory_droid_droid:
     name: Reviewer
@@ -94,14 +96,14 @@ EXAMPLES = r'''
     name: Reviewer
     scope: user
     state: absent
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 path:
   description: Managed droid file path.
   returned: always
   type: str
-'''
+"""
 
 import os
 
@@ -113,7 +115,6 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
     resolve_scoped_config_path,
     slugify,
 )
-
 
 
 def build_frontmatter(module: AnsibleModule) -> dict:
@@ -133,7 +134,6 @@ def build_frontmatter(module: AnsibleModule) -> dict:
     )
 
 
-
 def resolve_path(module: AnsibleModule) -> str:
     if module.params.get("path"):
         return module.params["path"]
@@ -148,7 +148,6 @@ def resolve_path(module: AnsibleModule) -> str:
         )
     except ValueError as exc:
         module.fail_json(msg=str(exc))
-
 
 
 def main() -> None:

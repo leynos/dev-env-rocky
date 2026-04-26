@@ -1,5 +1,105 @@
 #!/usr/bin/python
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from __future__ import annotations
+
+DOCUMENTATION = r"""
+---
+module: cargo_binstall
+short_description: Manage Cargo packages with cargo-binstall
+version_added: "1.0.0"
+description:
+  - Install Cargo packages with C(cargo binstall) and remove them with C(cargo uninstall).
+  - Installed versions are detected from C(cargo install --list).
+options:
+  name:
+    description:
+      - Cargo package name to manage.
+    type: str
+    required: true
+  version:
+    description:
+      - Exact package version to install.
+      - When omitted, any installed version satisfies C(state=present).
+    type: str
+  state:
+    description:
+      - Whether the package should be installed or absent.
+    type: str
+    choices: [present, absent]
+    default: present
+  cargo_path:
+    description:
+      - Cargo executable path or name to resolve on C(PATH).
+    type: str
+    default: cargo
+  root:
+    description:
+      - Cargo install root.
+      - Sets C(CARGO_INSTALL_ROOT) and is passed to C(cargo uninstall --root) when removing packages.
+    type: path
+  no_confirm:
+    description:
+      - Pass C(--no-confirm) to C(cargo binstall).
+    type: bool
+    default: true
+  force:
+    description:
+      - Pass C(--force) to C(cargo binstall).
+    type: bool
+    default: false
+author:
+  - Leynos Project (@leynos)
+"""
+
+EXAMPLES = r"""
+- name: Install an exact Cargo tool version
+  packaging.tools.cargo_binstall:
+    name: cargo-nextest
+    version: 0.9.100
+    root: /opt/cargo-tools
+
+- name: Remove a Cargo tool
+  packaging.tools.cargo_binstall:
+    name: cargo-nextest
+    state: absent
+"""
+
+RETURN = r"""
+name:
+  description: Package name that was managed.
+  returned: always
+  type: str
+state:
+  description: Final requested package state.
+  returned: always
+  type: str
+previous_version:
+  description: Version detected before a change was made.
+  returned: when changed and a previous version was installed
+  type: str
+installed_version:
+  description: Version detected after installation, or the already-installed version.
+  returned: when state == 'present'
+  type: str
+target:
+  description: Package spec passed to C(cargo binstall).
+  returned: when state == 'present' and a change is needed
+  type: str
+cmd:
+  description: Command executed or that would be executed in check mode.
+  returned: when changed
+  type: list
+  elements: str
+stdout:
+  description: Command standard output.
+  returned: when a command is executed
+  type: str
+stderr:
+  description: Command standard error.
+  returned: when a command is executed
+  type: str
+"""
 
 import re
 
@@ -46,7 +146,7 @@ def main():
             "version": {"type": "str", "required": False, "default": None},
             "state": {"type": "str", "choices": ["present", "absent"], "default": "present"},
             "cargo_path": {"type": "str", "default": "cargo"},
-            "root": {"type": "str", "required": False, "default": None},
+            "root": {"type": "path", "required": False, "default": None},
             "no_confirm": {"type": "bool", "default": True},
             "force": {"type": "bool", "default": False},
         },
