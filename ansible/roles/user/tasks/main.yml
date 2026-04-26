@@ -1,11 +1,4 @@
 ---
-- name: Define authorized SSH keys
-  ansible.builtin.set_fact:
-    dev_env_authorized_ssh_keys:
-      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJwPHz4woB7Ijlh0vuURsccOn4dUAKIh3dxYjkbl4YFV payton@ibara"
-      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8YI8fWC7Lo1ZUDf34OrnBP2VWzqJnWBP1pXMH8M/Y6 leynos@ibara"
-      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEHXrz+781EJp7TXgPPaRUXFSUOBLdkKUjU1aAAOor0Q leyno@espgaluda"
-
 - name: Create owner user
   ansible.builtin.user:
     name: "{{ owner_user }}"

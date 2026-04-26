@@ -3,7 +3,7 @@ NIXIE ?= nixie
 MDFORMAT_ALL ?= mdformat-all
 PYTHON_PACKAGE_DIR ?= python/rust_cleanup
 PYTHON_PATHS = $(PYTHON_PACKAGE_DIR)/src $(PYTHON_PACKAGE_DIR)/tests tests
-MARKDOWN_PATHS = AGENTS.md .rules/*.md $(PYTHON_PACKAGE_DIR)/README.md
+MARKDOWN_PATHS = AGENTS.md .rules/*.md ansible/roles/agent_tools/files/AGENTS.md $(PYTHON_PACKAGE_DIR)/README.md
 TOOLS = ruff ty $(MDLINT) uv
 UV_ENV = PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 UV_CACHE_DIR=.uv-cache UV_TOOL_DIR=.uv-tools
 PYTEST_XDIST_WORKERS ?= 1

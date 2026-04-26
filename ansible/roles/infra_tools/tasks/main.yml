@@ -37,9 +37,11 @@
     state: present
   become: true
   when: >
-    not ansible_check_mode
-    or not opentofu_repository.changed
-    and not opentofu_source_repository.changed
+    (not ansible_check_mode)
+    or (
+      not opentofu_repository.changed
+      and not opentofu_source_repository.changed
+    )
 
 - name: Check if TFLint is installed
   ansible.builtin.command:

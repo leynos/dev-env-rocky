@@ -61,6 +61,8 @@
     state: present
   become: true
   when: >
-    not ansible_check_mode
-    or not crb_repository.changed
-    and not epel_release.changed
+    (not ansible_check_mode)
+    or (
+      not crb_repository.changed
+      and not epel_release.changed
+    )

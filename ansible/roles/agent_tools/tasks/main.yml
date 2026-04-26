@@ -831,7 +831,7 @@
   ansible.builtin.command:
     cmd: "{{ ansible_env.HOME }}/.bun/bin/lody login --auth {{ lody_auth_tokens[hostname] }}"
   no_log: true
-  changed_when: true
+  changed_when: false
   when:
     - dev_env_enable_lody | bool
     - lody_auth_tokens is defined
