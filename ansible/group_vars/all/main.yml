@@ -1,4 +1,6 @@
 ---
+dev_env_install_droid_cli: true
 dev_env_enable_droid: false
+dev_env_enable_droid_server: false
 dev_env_enable_lody: true
 owner_user: leynos

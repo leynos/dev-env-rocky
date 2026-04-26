@@ -753,7 +753,7 @@
     path: "{{ ansible_env.HOME }}/.config/systemd/user"
     state: directory
     mode: '0755'
-  when: dev_env_enable_droid | bool or dev_env_enable_lody | bool
+  when: dev_env_enable_droid_server | bool or dev_env_enable_lody | bool
 
 - name: Install droid daemon systemd user service
   ansible.builtin.copy:
@@ -772,7 +772,7 @@
       [Install]
       WantedBy=default.target
     mode: '0644'
-  when: dev_env_enable_droid | bool
+  when: dev_env_enable_droid_server | bool
 
 - name: Enable droid daemon service
   ansible.builtin.systemd:
@@ -781,14 +781,14 @@
     enabled: true
     daemon_reload: true
   when:
-    - dev_env_enable_droid | bool
+    - dev_env_enable_droid_server | bool
     - not ansible_check_mode
 
 - name: Check droid daemon service file
   ansible.builtin.stat:
     path: "{{ ansible_env.HOME }}/.config/systemd/user/droid-daemon.service"
   register: droid_daemon_service
-  when: not (dev_env_enable_droid | bool)
+  when: not (dev_env_enable_droid_server | bool)
 
 - name: Disable droid daemon service
   ansible.builtin.systemd:
@@ -798,7 +798,7 @@
     state: stopped
     daemon_reload: true
   when:
-    - not (dev_env_enable_droid | bool)
+    - not (dev_env_enable_droid_server | bool)
     - droid_daemon_service.stat.exists
     - not ansible_check_mode
 
