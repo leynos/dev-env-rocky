@@ -64,7 +64,11 @@ class TestShouldSkipDir:
         ],
     )
     def test_should_skip_dir_parametrized(self, dirname: str, expected: bool) -> None:
-        assert_is(should_skip_dir(dirname), expected, f"should_skip_dir should classify {dirname}")
+        assert_is(
+            should_skip_dir(dirname),
+            expected,
+            f"should_skip_dir should classify {dirname}",
+        )
 
 
 class TestIsCacheDir:
@@ -74,18 +78,26 @@ class TestIsCacheDir:
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
         (cache_dir / CACHEDIR_TAG).touch()
-        assert_is(is_cache_dir(cache_dir), True, "is_cache_dir should accept CACHEDIR.TAG file")
+        assert_is(
+            is_cache_dir(cache_dir),
+            True,
+            "is_cache_dir should accept CACHEDIR.TAG file",
+        )
 
     def test_returns_false_when_cachedir_tag_missing(self, tmp_path: Path) -> None:
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
-        assert_is(is_cache_dir(cache_dir), False, "is_cache_dir should reject missing tag")
+        assert_is(
+            is_cache_dir(cache_dir), False, "is_cache_dir should reject missing tag"
+        )
 
     def test_returns_false_when_cachedir_tag_is_directory(self, tmp_path: Path) -> None:
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir()
         (cache_dir / CACHEDIR_TAG).mkdir()
-        assert_is(is_cache_dir(cache_dir), False, "is_cache_dir should reject tag directory")
+        assert_is(
+            is_cache_dir(cache_dir), False, "is_cache_dir should reject tag directory"
+        )
 
 
 class TestHasRecentFiles:
@@ -96,7 +108,11 @@ class TestHasRecentFiles:
         test_file.write_text("content")
         current_time = time.time()
         cutoff_time = current_time - CUTOFF_SECONDS
-        assert_is(has_recent_files(tmp_path, cutoff_time), True, "has_recent_files should detect recent file")
+        assert_is(
+            has_recent_files(tmp_path, cutoff_time),
+            True,
+            "has_recent_files should detect recent file",
+        )
 
     def test_returns_false_for_old_file(self, tmp_path: Path) -> None:
         test_file = tmp_path / "old.txt"
@@ -104,11 +120,19 @@ class TestHasRecentFiles:
         old_time = time.time() - (CUTOFF_SECONDS + 3600)
         os.utime(test_file, (old_time, old_time))
         cutoff_time = time.time() - CUTOFF_SECONDS
-        assert_is(has_recent_files(tmp_path, cutoff_time), False, "has_recent_files should ignore old file")
+        assert_is(
+            has_recent_files(tmp_path, cutoff_time),
+            False,
+            "has_recent_files should ignore old file",
+        )
 
     def test_returns_false_for_empty_directory(self, tmp_path: Path) -> None:
         cutoff_time = time.time() - CUTOFF_SECONDS
-        assert_is(has_recent_files(tmp_path, cutoff_time), False, "has_recent_files should reject empty directory")
+        assert_is(
+            has_recent_files(tmp_path, cutoff_time),
+            False,
+            "has_recent_files should reject empty directory",
+        )
 
     def test_checks_nested_files(self, tmp_path: Path) -> None:
         nested = tmp_path / "a" / "b" / "c"
@@ -116,7 +140,11 @@ class TestHasRecentFiles:
         test_file = nested / "deep.txt"
         test_file.write_text("content")
         cutoff_time = time.time() - CUTOFF_SECONDS
-        assert_is(has_recent_files(tmp_path, cutoff_time), True, "has_recent_files should check nested files")
+        assert_is(
+            has_recent_files(tmp_path, cutoff_time),
+            True,
+            "has_recent_files should check nested files",
+        )
 
     def test_skips_noisy_directories(self, tmp_path: Path) -> None:
         git_dir = tmp_path / ".git"
@@ -124,14 +152,22 @@ class TestHasRecentFiles:
         test_file = git_dir / "recent.txt"
         test_file.write_text("content")
         cutoff_time = time.time() - CUTOFF_SECONDS
-        assert_is(has_recent_files(tmp_path, cutoff_time), False, "has_recent_files should skip noisy directories")
+        assert_is(
+            has_recent_files(tmp_path, cutoff_time),
+            False,
+            "has_recent_files should skip noisy directories",
+        )
 
     def test_handles_missing_file_gracefully(self, tmp_path: Path) -> None:
         test_file = tmp_path / "temp.txt"
         test_file.write_text("content")
         cutoff_time = time.time() - CUTOFF_SECONDS
         test_file.unlink()
-        assert_is(has_recent_files(tmp_path, cutoff_time), False, "has_recent_files should tolerate missing files")
+        assert_is(
+            has_recent_files(tmp_path, cutoff_time),
+            False,
+            "has_recent_files should tolerate missing files",
+        )
 
 
 class TestDeleteDirectory:
@@ -144,23 +180,41 @@ class TestDeleteDirectory:
         (target / "subdir").mkdir()
         (target / "subdir" / "another.txt").write_text("more content")
 
-        assert_is(delete_directory(target), True, "delete_directory should delete existing directory")
+        assert_is(
+            delete_directory(target),
+            True,
+            "delete_directory should delete existing directory",
+        )
         assert not target.exists(), "delete_directory should remove directory contents"
 
     def test_returns_false_for_nonexistent_directory(self, tmp_path: Path) -> None:
         target = tmp_path / "does_not_exist"
-        assert_is(delete_directory(target), False, "delete_directory should reject nonexistent directory")
+        assert_is(
+            delete_directory(target),
+            False,
+            "delete_directory should reject nonexistent directory",
+        )
 
-    def test_returns_false_and_logs_on_rmtree_error(self, tmp_path: Path, capfd) -> None:
+    def test_returns_false_and_logs_on_rmtree_error(
+        self, tmp_path: Path, capfd
+    ) -> None:
         target = tmp_path / "to_delete"
         target.mkdir()
         error_message = "permission denied"
 
-        with mock.patch("rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)):
-            assert_is(delete_directory(target), False, "delete_directory should return False on rmtree error")
+        with mock.patch(
+            "rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)
+        ):
+            assert_is(
+                delete_directory(target),
+                False,
+                "delete_directory should return False on rmtree error",
+            )
 
         captured = capfd.readouterr()
-        assert error_message in captured.err, "delete_directory should log rmtree error to stderr"
+        assert error_message in captured.err, (
+            "delete_directory should log rmtree error to stderr"
+        )
 
 
 class TestFindTargetDirs:
@@ -173,7 +227,9 @@ class TestFindTargetDirs:
 
         results = find_target_dirs(tmp_path)
         assert_equal(len(results), 1, "find_target_dirs should find one tagged target")
-        assert_equal(results[0], target, "find_target_dirs should return tagged target path")
+        assert_equal(
+            results[0], target, "find_target_dirs should return tagged target path"
+        )
 
     def test_ignores_target_without_cachedir_tag(self, tmp_path: Path) -> None:
         target = tmp_path / TARGET_DIR
@@ -222,8 +278,12 @@ class TestFindTargetDirs:
         (inner_target / CACHEDIR_TAG).touch()
 
         results = find_target_dirs(tmp_path)
-        assert_equal(len(results), 1, "find_target_dirs should not traverse nested target dirs")
-        assert_equal(results[0], outer_target, "find_target_dirs should return outer target")
+        assert_equal(
+            len(results), 1, "find_target_dirs should not traverse nested target dirs"
+        )
+        assert_equal(
+            results[0], outer_target, "find_target_dirs should return outer target"
+        )
 
 
 class TestCleanupTargetDirs:
@@ -315,7 +375,9 @@ class TestMain:
         assert_equal(result, 0, "main should return success for dry run")
         assert target.exists(), "main dry run should preserve target"
 
-    def test_main_default_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_main_default_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_path)
         result = main([])
         assert_equal(result, 0, "main should return success for default path")
@@ -363,9 +425,25 @@ class TestIntegration:
 
         scanned, deleted = cleanup_target_dirs(tmp_path, verbose=False)
 
-        assert_equal(scanned, 2, "cleanup_target_dirs integration should scan tagged targets only")
-        assert_equal(deleted, 1, "cleanup_target_dirs integration should delete stale tagged target")
-        assert not target1.exists(), "cleanup_target_dirs integration should delete stale target"
-        assert target2.exists(), "cleanup_target_dirs integration should preserve recent target"
-        assert target3.exists(), "cleanup_target_dirs integration should ignore untagged target"
-        assert target4.exists(), "cleanup_target_dirs integration should skip node_modules target"
+        assert_equal(
+            scanned,
+            2,
+            "cleanup_target_dirs integration should scan tagged targets only",
+        )
+        assert_equal(
+            deleted,
+            1,
+            "cleanup_target_dirs integration should delete stale tagged target",
+        )
+        assert not target1.exists(), (
+            "cleanup_target_dirs integration should delete stale target"
+        )
+        assert target2.exists(), (
+            "cleanup_target_dirs integration should preserve recent target"
+        )
+        assert target3.exists(), (
+            "cleanup_target_dirs integration should ignore untagged target"
+        )
+        assert target4.exists(), (
+            "cleanup_target_dirs integration should skip node_modules target"
+        )

@@ -7,7 +7,6 @@
   loop:
     - "{{ rust_cleanup_home }}/.local/bin"
     - "{{ rust_cleanup_home }}/.local/src"
-    - "{{ rust_cleanup_install_root }}"
     - "{{ rust_cleanup_home }}/.config/systemd/user"
 
 - name: Copy rust-cleanup package source
@@ -28,40 +27,39 @@
     - uv.lock
   register: rust_cleanup_package_metadata
 
-- name: Copy rust-cleanup installer script
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../python/rust_cleanup/scripts/install-rust-cleanup.py"
-    dest: "{{ rust_cleanup_source_dir }}/install-rust-cleanup.py"
-    mode: '0755'
-  register: rust_cleanup_installer_script
-
-- name: Check rust-cleanup virtual environment entrypoint
+- name: Check rust-cleanup entrypoint
   ansible.builtin.stat:
-    path: "{{ rust_cleanup_venv }}/bin/rust-cleanup"
-  register: rust_cleanup_venv_entrypoint
+    path: "{{ rust_cleanup_entrypoint }}"
+  register: rust_cleanup_entrypoint_stat
 
-- name: Install rust-cleanup package into virtual environment
+- name: Remove legacy rust-cleanup virtualenv symlink
+  ansible.builtin.file:
+    path: "{{ rust_cleanup_entrypoint }}"
+    state: absent
+  when: rust_cleanup_entrypoint_stat.stat.islnk | default(false)
+
+- name: Install rust-cleanup as a uv tool
   ansible.builtin.command:
     argv:
-      - "{{ rust_cleanup_source_dir }}/install-rust-cleanup.py"
-      - --source-dir
+      - "{{ rust_cleanup_home }}/.local/bin/uv"
+      - tool
+      - install
+      - --reinstall
+      - --python
+      - ">=3.12"
       - "{{ rust_cleanup_source_dir }}"
-      - --venv
-      - "{{ rust_cleanup_venv }}"
+  environment:
+    PATH: "{{ rust_cleanup_home }}/.local/bin:{{ ansible_env.PATH }}"
   when: >
-    rust_cleanup_package_source.changed or
-    rust_cleanup_package_metadata.changed or
-    rust_cleanup_installer_script.changed or
-    not rust_cleanup_venv_entrypoint.stat.exists
+    not ansible_check_mode and
+    (
+      rust_cleanup_package_source.changed or
+      rust_cleanup_package_metadata.changed or
+      rust_cleanup_entrypoint_stat.stat.islnk | default(false) or
+      not rust_cleanup_entrypoint_stat.stat.exists
+    )
   register: rust_cleanup_uv_install
   changed_when: rust_cleanup_uv_install.rc == 0
-
-- name: Link rust-cleanup entrypoint into local bin
-  ansible.builtin.file:
-    src: "{{ rust_cleanup_venv }}/bin/rust-cleanup"
-    dest: "{{ rust_cleanup_entrypoint }}"
-    state: link
-    force: true
 
 - name: Get user id for rust-cleanup systemd commands
   ansible.builtin.command:

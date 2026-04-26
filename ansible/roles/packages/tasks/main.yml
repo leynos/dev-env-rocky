@@ -3,6 +3,7 @@
   community.general.dnf_config_manager:
     name: crb
   become: true
+  register: crb_repository
 
 - name: Install EPEL release
   ansible.builtin.dnf:
@@ -10,6 +11,7 @@
       - epel-release
     state: present
   become: true
+  register: epel_release
 
 - name: Install system packages (RPM)
   ansible.builtin.dnf:
@@ -58,3 +60,9 @@
       - mold
     state: present
   become: true
+  when: >
+    (not ansible_check_mode)
+    or (
+      not crb_repository.changed
+      and not epel_release.changed
+    )

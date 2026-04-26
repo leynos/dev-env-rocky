@@ -33,7 +33,9 @@ from pathlib import Path
 from typing import Sequence
 
 
-SKIP_DIRS = frozenset({".git", "node_modules", ".svn", ".hg", "__pycache__", ".pytest_cache"})
+SKIP_DIRS = frozenset(
+    {".git", "node_modules", ".svn", ".hg", "__pycache__", ".pytest_cache"}
+)
 CACHEDIR_TAG = "CACHEDIR.TAG"
 TARGET_DIR = "target"
 CUTOFF_SECONDS = 24 * 60 * 60

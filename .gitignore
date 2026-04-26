@@ -1,5 +1,6 @@
 ansible/group_vars/all/vault.yml
 .grepai/
+ssh-public-keys/
 *:Zone.Identifier
 __pycache__/
 *.py[cod]
