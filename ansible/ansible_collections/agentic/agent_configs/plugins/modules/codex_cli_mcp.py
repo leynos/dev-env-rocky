@@ -1,3 +1,25 @@
+"""Manage Codex CLI Model Context Protocol server definitions.
+
+This Ansible module creates, updates, or removes Codex CLI MCP server
+configuration in user-scoped ``~/.codex/config.toml`` files or project-scoped
+``.codex/config.toml`` files. Use it to provision repeatable stdio or HTTP MCP
+integrations with parameters such as ``name``, ``scope``, ``transport``,
+``command``, ``args``, ``env``, ``env_vars``, ``cwd``, ``url``,
+``bearer_token_env_var``, ``http_headers``, ``enabled_tools``, and ``extra``.
+
+Example playbook task::
+
+    - name: Configure a project Codex stdio MCP server
+      agentic.agent_configs.codex_cli_mcp:
+        name: repo-tools
+        scope: project
+        project_dir: /srv/my-repo
+        transport: stdio
+        command: /usr/local/bin/repo-tools-mcp
+        args:
+          - --stdio
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
