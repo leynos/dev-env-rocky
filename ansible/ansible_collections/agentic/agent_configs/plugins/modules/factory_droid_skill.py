@@ -1,3 +1,26 @@
+"""Manage Factory Droid skill directories.
+
+The factory_droid_skill.py Ansible module creates, updates, or removes Factory
+Droid skills that contain a ``SKILL.md`` file and optional support files. Use
+it to provision repeatable user-scoped or project-scoped skills with parameters
+such as ``name``, ``scope``, ``project_dir``, ``description``, ``body``,
+``user_invocable``, ``disable_model_invocation``, ``metadata``, and
+``extra_files``. The module builds front matter, resolves the target skill
+directory, and writes the requested Markdown resource from ``main``.
+
+Example playbook task::
+
+    - name: Install a project Factory Droid skill
+      agentic.agent_configs.factory_droid_skill:
+        name: Release helper
+        scope: project
+        project_dir: /srv/my-repo
+        description: Run the release flow and verify artefacts.
+        user_invocable: true
+        body: |
+          Follow docs/release.md and summarise any blockers.
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
