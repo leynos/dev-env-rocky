@@ -5,6 +5,7 @@
   vars:
     systemd_user: "{{ owner_user }}"
   roles:
+    - system
     - packages
     - infra_tools
     - user
