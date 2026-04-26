@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Common bootstrap helper functions.
+
+append_block_if_missing() {
+    local file marker block begin_sentinel end_sentinel had_content
+    file="$1"
+    marker="$2"
+    block="$3"
+    begin_sentinel="### BEGIN ${marker}"
+    end_sentinel="### END ${marker}"
+
+    mkdir -p "$(dirname "${file}")"
+    touch "${file}"
+
+    if grep -qF "${begin_sentinel}" "${file}"; then
+        return 0
+    fi
+
+    had_content=0
+    if [[ -s "${file}" ]]; then
+        had_content=1
+    fi
+
+    {
+        if [[ "${had_content}" -eq 1 ]]; then
+            printf '\n'
+        fi
+        printf '%s\n' "${begin_sentinel}"
+        printf '%s\n' "${block}"
+        printf '%s\n' "${end_sentinel}"
+    } >>"${file}"
+}
+
+ensure_profile_path() {
+    local path_entry profile line
+    path_entry="$1"
+    profile="${HOME}/.bashrc"
+    line="export PATH=\"${path_entry}:\${PATH}\""
+
+    mkdir -p "$(dirname "${profile}")"
+    touch "${profile}"
+
+    if ! grep -qxF "${line}" "${profile}"; then
+        printf '%s\n' "${line}" >>"${profile}"
+    fi
+}
+
+ensure_profile_sources_bashrc() {
+    local profile line
+    profile="${HOME}/.profile"
+    line="[ -f \"\$HOME/.bashrc\" ] && . \"\$HOME/.bashrc\""
+
+    mkdir -p "$(dirname "${profile}")"
+    touch "${profile}"
+
+    if ! grep -qxF "${line}" "${profile}"; then
+        printf '%s\n' "${line}" >>"${profile}"
+    fi
+}
+
+ensure_runtime_path() {
+    local path_entry
+    path_entry="$1"
+
+    case ":${PATH}:" in
+        *":${path_entry}:"*) ;;
+        *) export PATH="${path_entry}:${PATH}" ;;
+    esac
+}
