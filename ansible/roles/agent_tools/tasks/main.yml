@@ -859,7 +859,12 @@
   ansible.builtin.stat:
     path: "{{ ansible_env.HOME }}/.config/systemd/user/lody-daemon.service"
   register: lody_daemon_service
-  when: not (dev_env_enable_lody | bool)
+  when: >-
+    not (dev_env_enable_lody | bool) or
+    lody_auth_tokens is not defined or
+    lody_auth_tokens[inventory_hostname] is not defined
+  vars:
+    hostname: "{{ inventory_hostname }}"
 
 - name: Disable Lody daemon service
   ansible.builtin.systemd:
@@ -869,6 +874,11 @@
     state: stopped
     daemon_reload: true
   when:
-    - not (dev_env_enable_lody | bool)
+    - >-
+      not (dev_env_enable_lody | bool) or
+      lody_auth_tokens is not defined or
+      lody_auth_tokens[inventory_hostname] is not defined
     - lody_daemon_service.stat.exists
     - not ansible_check_mode
+  vars:
+    hostname: "{{ inventory_hostname }}"
