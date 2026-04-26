@@ -1,6 +1,28 @@
 #!/usr/bin/python
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+"""Manage Rust command-line tools with cargo-binstall.
+
+This Ansible module installs or removes Cargo packages through
+``cargo binstall`` while preserving idempotence by reading
+``cargo install --list``. Common options include ``name`` for the crate,
+``version`` for an exact release, ``root`` for a custom install root, and
+``state=absent`` to uninstall an existing tool.
+
+Example playbook task::
+
+    - name: Install cargo-nextest
+      agentic.agent_configs.cargo_binstall:
+        name: cargo-nextest
+        version: 0.9.100
+        root: /opt/cargo-tools
+
+Example ad-hoc call::
+
+    ansible localhost -m agentic.agent_configs.cargo_binstall \\
+      -a "name=cargo-nextest version=0.9.100"
+"""
+
 from __future__ import annotations
 
 DOCUMENTATION = r"""
