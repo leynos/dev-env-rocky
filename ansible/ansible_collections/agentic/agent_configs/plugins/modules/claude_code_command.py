@@ -2,6 +2,31 @@
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+"""Manage Claude Code slash command Markdown files.
+
+This Ansible module creates, updates, or removes Claude Code command files in
+user or project scopes while preserving predictable front matter and command
+body content. It is useful for provisioning shared slash commands across
+developer machines and repositories. Expected inputs include ``name``,
+``description``, ``body``, ``scope``, optional ``project_dir`` or ``path``, and
+``state``; outputs include the managed command ``path`` and normal Ansible
+change status.
+
+Example playbook task::
+
+    - name: Create a project command
+      agentic.agent_configs.claude_code_command:
+        name: Deploy
+        scope: project
+        project_dir: /srv/my-repo
+        description: Run the deployment workflow.
+        body: Deploy this service using scripts/deploy.
+
+Example ad-hoc call::
+
+    ansible localhost -m agentic.agent_configs.claude_code_command \\
+      -a "name=Deploy description='Run deployment' body='Deploy this service'"
+"""
 
 from __future__ import annotations
 
