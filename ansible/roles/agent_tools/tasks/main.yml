@@ -383,7 +383,7 @@
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
-      test -x "$HOME/.codex/hooks/post-turn-quality-stop-hook.py"
+      exec python3 "$HOME/.codex/hooks/post-turn-quality-stop-hook.py"
   when: not ansible_check_mode or (codex_hooks_directory.stat.isdir | default(false))
 
 - name: Configure Codex Stop and SessionStart hooks
