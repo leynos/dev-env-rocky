@@ -33,9 +33,14 @@ def test_change_set_tracks_unique_changed_paths_and_details() -> None:
     changes.note(True, path="/tmp/a")
     changes.note(True, path="/tmp/b", reason="updated")
 
-    assert changes.changed is True
-    assert changes.paths == ["/tmp/a", "/tmp/b"]
-    assert changes.details == {"ignored": True, "reason": "updated"}
+    assert changes.changed is True, f"expected changes.changed to be True but was {changes.changed}"
+    assert changes.paths == ["/tmp/a", "/tmp/b"], (
+        f'expected changes.paths to be ["/tmp/a", "/tmp/b"] but was {changes.paths}'
+    )
+    assert changes.details == {"ignored": True, "reason": "updated"}, (
+        'expected changes.details to be {"ignored": True, "reason": "updated"} '
+        f"but was {changes.details}"
+    )
 
 
 @pytest.mark.parametrize(
