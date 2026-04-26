@@ -12,10 +12,21 @@
 
 - name: Copy rust-cleanup package source
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../python/rust_cleanup/"
-    dest: "{{ rust_cleanup_source_dir }}/"
+    src: "{{ playbook_dir }}/../python/rust_cleanup/src/"
+    dest: "{{ rust_cleanup_source_dir }}/src/"
     mode: preserve
   register: rust_cleanup_package_source
+
+- name: Copy rust-cleanup package metadata
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../python/rust_cleanup/{{ item }}"
+    dest: "{{ rust_cleanup_source_dir }}/{{ item }}"
+    mode: '0644'
+  loop:
+    - README.md
+    - pyproject.toml
+    - uv.lock
+  register: rust_cleanup_package_metadata
 
 - name: Create rust-cleanup virtual environment
   ansible.builtin.command:
@@ -42,7 +53,7 @@
       - install
       - --upgrade
       - "{{ rust_cleanup_source_dir }}"
-  when: rust_cleanup_package_source.changed or rust_cleanup_venv_create.changed or not rust_cleanup_venv_entrypoint.stat.exists
+  when: rust_cleanup_package_source.changed or rust_cleanup_package_metadata.changed or rust_cleanup_venv_create.changed or not rust_cleanup_venv_entrypoint.stat.exists
   register: rust_cleanup_pip_install
   changed_when: rust_cleanup_pip_install.rc == 0
 
@@ -81,7 +92,9 @@
     scope: user
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ rust_cleanup_user_id.stdout }}"
-  when: rust_cleanup_service.changed or rust_cleanup_timer.changed
+  when:
+    - rust_cleanup_service.changed or rust_cleanup_timer.changed
+    - not ansible_check_mode
 
 - name: Enable and start rust-cleanup timer
   ansible.builtin.systemd_service:
@@ -91,3 +104,4 @@
     scope: user
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ rust_cleanup_user_id.stdout }}"
+  when: not ansible_check_mode

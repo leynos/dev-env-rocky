@@ -262,7 +262,7 @@
     scope: user
     description: "{{ item.description }}"
     model: "{{ item.model }}"
-    reasoning_effort: "{{ item.reasoning_effort | default('medium') }}"
+    model_reasoning_effort: "{{ item.reasoning_effort | default('medium') }}"
     sandbox_mode: "{{ item.sandbox_mode | default('workspace-write') }}"
     developer_instructions: "{{ item.developer_instructions }}"
   loop:
@@ -438,24 +438,28 @@
     path: "{{ ansible_env.HOME }}/.factory"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
 
 - name: Ensure Factory Droid skills directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.factory/skills"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
 
 - name: Ensure Factory Droid hooks directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.factory/hooks"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
 
 - name: Ensure Factory Droid droids directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.factory/droids"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
 
 - name: Install skills to Factory Droid
   ansible.builtin.copy:
@@ -464,6 +468,7 @@
     mode: 'preserve'
     remote_src: true
   loop: "{{ agent_helper_skills.files }}"
+  when: dev_env_enable_droid | bool
 
 - name: Install nextest-skill to Factory Droid
   ansible.builtin.copy:
@@ -472,6 +477,7 @@
     mode: 'preserve'
     remote_src: true
   loop: "{{ nextest_skills.files }}"
+  when: dev_env_enable_droid | bool
 
 - name: Install vidai-mock-skill to Factory Droid
   ansible.builtin.copy:
@@ -480,6 +486,7 @@
     mode: 'preserve'
     remote_src: true
   loop: "{{ vidai_skills.files }}"
+  when: dev_env_enable_droid | bool
 
 - name: Install rust-skill to Factory Droid
   ansible.builtin.copy:
@@ -488,6 +495,7 @@
     mode: 'preserve'
     remote_src: true
   loop: "{{ rust_skills.files }}"
+  when: dev_env_enable_droid | bool
 
 - name: Install df12-readme-skill to Factory Droid
   ansible.builtin.copy:
@@ -496,17 +504,21 @@
     mode: 'preserve'
     remote_src: true
   loop: "{{ df12_readme_skills.files }}"
-  when: ssh_key_stat.stat.exists
+  when:
+    - dev_env_enable_droid | bool
+    - ssh_key_stat.stat.exists
 
 # Configure Factory Droid hooks using collection module
 - name: Configure Factory Droid hooks
   agentic.agent_configs.factory_droid_hook:
-    name: claude_import
+    agent_executable: "{{ ansible_env.HOME }}/.local/bin/droid"
     state: present
     scope: user
-    hook_type: Stop
+    event: Stop
     command: python3 {{ ansible_env.HOME }}/.claude/hooks/post-turn-quality-stop-hook.py
-    timeout: 600
+    extra:
+      timeout: 600
+  when: dev_env_enable_droid | bool
 
 # Configure Factory Droid MCP servers using collection module
 - name: Configure Factory Droid MCP servers
@@ -558,6 +570,7 @@
         - bash
         - -lc
         - npx @playwright/mcp@latest --no-sandbox
+  when: dev_env_enable_droid | bool
 
 # Droid daemon systemd user service
 - name: Ensure systemd user directory exists
@@ -565,6 +578,7 @@
     path: "{{ ansible_env.HOME }}/.config/systemd/user"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
 
 - name: Install droid daemon systemd user service
   ansible.builtin.copy:
@@ -583,6 +597,7 @@
       [Install]
       WantedBy=default.target
     mode: '0644'
+  when: dev_env_enable_droid | bool
 
 - name: Enable droid daemon service
   ansible.builtin.systemd:
@@ -590,3 +605,24 @@
     scope: user
     enabled: true
     daemon_reload: true
+  when:
+    - dev_env_enable_droid | bool
+    - not ansible_check_mode
+
+- name: Check droid daemon service file
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.config/systemd/user/droid-daemon.service"
+  register: droid_daemon_service
+  when: not (dev_env_enable_droid | bool)
+
+- name: Disable droid daemon service
+  ansible.builtin.systemd:
+    name: droid-daemon.service
+    scope: user
+    enabled: false
+    state: stopped
+    daemon_reload: true
+  when:
+    - not (dev_env_enable_droid | bool)
+    - droid_daemon_service.stat.exists
+    - not ansible_check_mode
