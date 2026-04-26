@@ -1,5 +1,26 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+"""Manage Factory Droid Model Context Protocol server definitions.
+
+This Ansible module creates, updates, or removes Factory Droid MCP server
+entries in user-scoped ``~/.factory/mcp.json`` files or project-scoped
+``.factory/mcp.json`` files. Use it to provision repeatable stdio or HTTP MCP
+integrations with parameters such as ``name``, ``scope``, ``transport``,
+``command``, ``args``, ``env``, ``url``, ``headers``, ``disabled``,
+``disabled_tools``, and ``extra``.
+
+Example playbook task::
+
+    - name: Configure a project Factory Droid stdio MCP server
+      agentic.agent_configs.factory_droid_mcp:
+        name: repo-tools
+        scope: project
+        project_dir: /srv/my-repo
+        transport: stdio
+        command: /usr/local/bin/repo-tools-mcp
+        args:
+          - --stdio
+"""
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
