@@ -5,6 +5,7 @@
     state: present
     shell: /bin/bash
     create_home: true
+    home: "{{ owner_home }}"
 
 - name: Ensure SSH directories exist
   ansible.builtin.file:
@@ -19,7 +20,7 @@
       home: /root
     - name: "{{ owner_user }}"
       group: "{{ owner_user }}"
-      home: "{{ '/home/' ~ owner_user }}"
+      home: "{{ owner_home }}"
 
 - name: Add authorized keys for root and owner user
   ansible.builtin.lineinfile:
@@ -37,4 +38,4 @@
         home: /root
       - name: "{{ owner_user }}"
         group: "{{ owner_user }}"
-        home: "{{ '/home/' ~ owner_user }}"
+        home: "{{ owner_home }}"

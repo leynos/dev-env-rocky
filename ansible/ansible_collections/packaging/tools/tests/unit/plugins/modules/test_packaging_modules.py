@@ -319,7 +319,6 @@ def test_uv_tool_absent_is_idempotent_when_tool_missing(monkeypatch: pytest.Monk
     result = run_module(
         uv_tool,
         {
-            "_ansible_check_mode": True,
             "name": "ruff",
             "state": "absent",
         },

@@ -22,15 +22,13 @@ trees with ``shutil.rmtree``. Directories without ``CACHEDIR.TAG`` are ignored,
 and directories containing files modified within the freshness window are kept.
 """
 
-from __future__ import annotations
-
 import argparse
+import collections.abc as cabc
 import os
 import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Sequence
 
 
 SKIP_DIRS = frozenset(
@@ -108,19 +106,18 @@ def delete_directory(directory: Path) -> bool:
     Returns
     -------
     bool
-        True on success, False if an ``OSError`` or ``shutil.Error`` is raised.
-        The error is printed to stderr.
+        True on success.
 
     Raises
     ------
-    None
-        Errors are caught and reported to stderr.
+    CleanupError
+        Raised when ``shutil.rmtree`` fails with ``OSError`` or
+        ``shutil.Error``. Callers are responsible for stderr logging.
     """
     try:
         shutil.rmtree(directory)
     except (OSError, shutil.Error) as error:
-        print(f"Error deleting {directory}: {error}", file=sys.stderr)
-        return False
+        raise CleanupError(f"failed to delete {directory}: {error}") from error
     return True
 
 
@@ -202,11 +199,15 @@ def handle_stale_target(target_path: Path, dry_run: bool, verbose: bool) -> int:
 
     if verbose:
         print(f"  Deleting (stale): {target_path}")
-    if delete_directory(target_path):
+    try:
+        delete_directory(target_path)
+    except CleanupError as error:
+        print(f"Error deleting {target_path}: {error}", file=sys.stderr)
+        if verbose:
+            print(f"  Failed to delete: {target_path}")
+        return 0
+    else:
         return 1
-    if verbose:
-        print(f"  Failed to delete: {target_path}")
-    return 0
 
 
 def cleanup_target_dirs(
@@ -295,7 +296,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: cabc.Sequence[str] | None = None) -> int:
     """Run the rust-cleanup command-line interface.
 
     Parameters
@@ -337,3 +338,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+class CleanupError(Exception):
+    """Raised when a stale target directory cannot be deleted."""

@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 """Manage Python command-line tools installed with uv.
 
 The uv_tool.py Ansible module creates, updates, or removes tools managed by
@@ -17,11 +20,6 @@ Example playbook task::
 """
 
 from __future__ import annotations
-
-#!/usr/bin/python
-# Copyright: (c) 2026, Leynos
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
-
 import re
 
 from ansible.module_utils.basic import AnsibleModule

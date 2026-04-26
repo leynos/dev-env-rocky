@@ -25,7 +25,7 @@
     - name: "@anthropic-ai/claude-code"
     - name: "@openai/codex"
     - name: "droid"
-      enabled: "{{ dev_env_install_droid_cli }}"
+      enabled: "{{ (dev_env_enable_droid | default(false) | bool) and (dev_env_install_droid_cli | default(false) | bool) }}"
     - name: "pnpm"
     - name: "typescript-language-server"
     - name: "@typescript/native-preview"

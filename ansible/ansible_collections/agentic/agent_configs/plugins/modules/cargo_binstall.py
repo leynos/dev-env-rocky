@@ -132,6 +132,7 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
     if path:
         return path
     module.fail_json(msg=f"Could not find executable: {value}")
+    raise SystemExit(1)
 
 
 def run(module: AnsibleModule, cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str, str]:

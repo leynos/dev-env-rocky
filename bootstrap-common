@@ -51,6 +51,9 @@ ensure_profile_path() {
     touch "${profile}"
 
     if ! grep -qxF "${line}" "${profile}"; then
+        if [[ -s "${profile}" ]] && [[ -n "$(tail -c 1 "${profile}")" ]]; then
+            printf '\n' >>"${profile}"
+        fi
         printf '%s\n' "${line}" >>"${profile}"
     fi
 }
@@ -64,6 +67,9 @@ ensure_profile_sources_bashrc() {
     touch "${profile}"
 
     if ! grep -qxF "${line}" "${profile}"; then
+        if [[ -s "${profile}" ]] && [[ -n "$(tail -c 1 "${profile}")" ]]; then
+            printf '\n' >>"${profile}"
+        fi
         printf '%s\n' "${line}" >>"${profile}"
     fi
 }

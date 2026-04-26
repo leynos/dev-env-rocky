@@ -12,11 +12,12 @@ replace_managed_block() {
     end_sentinel="### END ${marker}"
     file_dir="$(dirname "${file}")"
 
-    mkdir -p "${file_dir}"
+    mkdir -p "${file_dir}" || return 1
     tmp="$(mktemp "${file_dir}/.replace-managed-block.XXXXXX")" || return 1
-    REPLACE_MANAGED_BLOCK_TMP="${tmp}"
-    trap 'rm -f "${REPLACE_MANAGED_BLOCK_TMP:-}"' EXIT ERR
-    touch "${file}"
+    if ! touch "${file}"; then
+        rm -f "${tmp}"
+        return 1
+    fi
 
     begin_count=$(grep -cF "${begin_sentinel}" "${file}" 2>/dev/null || true)
     end_count=$(grep -cF "${end_sentinel}" "${file}" 2>/dev/null || true)
@@ -47,7 +48,7 @@ replace_managed_block() {
     fi
 
     if [[ "${begin_count}" -eq 0 ]]; then
-        {
+        if ! {
             cat "${file}"
             if [[ -s "${file}" ]]; then
                 printf '\n'
@@ -55,9 +56,12 @@ replace_managed_block() {
             printf '%s\n' "${begin_sentinel}"
             printf '%s\n' "${block}"
             printf '%s\n' "${end_sentinel}"
-        } >"${tmp}"
+        } >"${tmp}"; then
+            rm -f "${tmp}"
+            return 1
+        fi
     else
-        awk \
+        if ! awk \
             -v begin="${begin_sentinel}" \
             -v end="${end_sentinel}" \
             -v replacement="${block}" '
@@ -73,8 +77,14 @@ replace_managed_block() {
                 next
             }
             !replacing { print }
-        ' "${file}" >"${tmp}"
+        ' "${file}" >"${tmp}"; then
+            rm -f "${tmp}"
+            return 1
+        fi
     fi
 
-    mv "${tmp}" "${file}"
+    if ! mv "${tmp}" "${file}"; then
+        rm -f "${tmp}"
+        return 1
+    fi
 }

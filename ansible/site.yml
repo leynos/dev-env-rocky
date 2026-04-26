@@ -48,5 +48,6 @@
     - paths
     - agent_tools
     - sccache_user
-    - rust_cleanup
+    - role: rust_cleanup
+      when: dev_env_enable_lody | default(false) | bool
     - weave

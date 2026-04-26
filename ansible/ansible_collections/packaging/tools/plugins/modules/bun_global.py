@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 """Manage Bun global packages for packaging tools playbooks.
 
 The bun_global Ansible module installs, updates, and removes Bun global
@@ -13,11 +16,6 @@ Example task::
         version: 2.3.8
         state: present
 """
-
-#!/usr/bin/python
-# Copyright: (c) 2026, Leynos
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
-
 from __future__ import annotations
 
 import json

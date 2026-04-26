@@ -27,6 +27,7 @@ import pytest
 
 from rust_cleanup import (
     CACHEDIR_TAG,
+    CleanupError,
     CUTOFF_SECONDS,
     TARGET_DIR,
     cleanup_target_dirs,
@@ -187,34 +188,36 @@ class TestDeleteDirectory:
         )
         assert not target.exists(), "delete_directory should remove directory contents"
 
-    def test_returns_false_for_nonexistent_directory(self, tmp_path: Path) -> None:
+    def test_raises_for_nonexistent_directory(self, tmp_path: Path) -> None:
         target = tmp_path / "does_not_exist"
-        assert_is(
-            delete_directory(target),
-            False,
-            "delete_directory should reject nonexistent directory",
-        )
+        with pytest.raises(CleanupError, match="failed to delete"):
+            delete_directory(target)
 
-    def test_returns_false_and_logs_on_rmtree_error(
-        self, tmp_path: Path, capfd
-    ) -> None:
+    def test_raises_without_logging_on_rmtree_error(self, tmp_path: Path, capfd) -> None:
         target = tmp_path / "to_delete"
         target.mkdir()
         error_message = "permission denied"
 
-        with mock.patch(
-            "rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)
-        ):
-            assert_is(
-                delete_directory(target),
-                False,
-                "delete_directory should return False on rmtree error",
-            )
+        with mock.patch("rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)):
+            with pytest.raises(CleanupError, match="failed to delete"):
+                delete_directory(target)
 
         captured = capfd.readouterr()
-        assert error_message in captured.err, (
-            "delete_directory should log rmtree error to stderr"
-        )
+        assert_equal(captured.err, "", "delete_directory should leave stderr logging to callers")
+
+    def test_cleanup_logs_delete_error_from_caller(self, tmp_path: Path, capfd) -> None:
+        target = tmp_path / TARGET_DIR
+        target.mkdir()
+        (target / CACHEDIR_TAG).touch()
+        error_message = "permission denied"
+
+        with mock.patch("rust_cleanup.cleanup.shutil.rmtree", side_effect=OSError(error_message)):
+            scanned, deleted = cleanup_target_dirs(tmp_path, verbose=False)
+
+        captured = capfd.readouterr()
+        assert_equal(scanned, 1, "cleanup_target_dirs should scan target with delete error")
+        assert_equal(deleted, 0, "cleanup_target_dirs should not count failed deletion")
+        assert error_message in captured.err, "cleanup_target_dirs should log delete errors to stderr"
 
 
 class TestFindTargetDirs:

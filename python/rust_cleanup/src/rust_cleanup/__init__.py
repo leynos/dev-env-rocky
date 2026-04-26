@@ -2,6 +2,7 @@
 
 from rust_cleanup.cleanup import (
     CACHEDIR_TAG,
+    CleanupError,
     CUTOFF_SECONDS,
     SKIP_DIRS,
     TARGET_DIR,
@@ -16,6 +17,7 @@ from rust_cleanup.cleanup import (
 
 __all__ = [
     "CACHEDIR_TAG",
+    "CleanupError",
     "CUTOFF_SECONDS",
     "SKIP_DIRS",
     "TARGET_DIR",
