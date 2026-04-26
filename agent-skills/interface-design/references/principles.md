@@ -1,6 +1,6 @@
-<!-- markdownlint-disable MD013 -->
-
 # Core Craft Principles
+
+<!-- markdownlint-disable MD013 -->
 
 These apply regardless of design direction. This is the quality floor.
 
