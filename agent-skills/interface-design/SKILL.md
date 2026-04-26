@@ -21,7 +21,7 @@ Build interface design with craft and consistency.
 
 The model will generate generic output. Model training has seen thousands of dashboards. The patterns are strong.
 
-The entire process below can be followed — explore the domain, name a signature, state the intent — and still produce a template. Warm colours on cold structures. Friendly fonts on generic layouts. "Kitchen feel" that looks like every other app.
+The entire process below can be followed: explore the domain, name a signature, state the intent, and still produce a template. Warm colours on cold structures. Friendly fonts on generic layouts. A kitchen feel can still look like every other app.
 
 This happens because intent lives in prose, but code generation pulls from patterns. The gap between them is where defaults win.
 
@@ -50,7 +50,7 @@ The trap is thinking some decisions are creative and others are structural. Ther
 Before touching code, answer these explicitly for the requester.
 
 **Who is this human?**
-Not "users." The actual person. Where are they when they open this? What's on their mind? What did they do 5 minutes ago, what action follows 5 minutes after? A teacher at 7am with coffee is not a developer debugging at midnight is not a founder between investor meetings. Their world shapes the interface.
+Not "users." The actual person. Where are they when the interface opens? What is on their mind? What happened 5 minutes ago, and what action follows 5 minutes after? A teacher at 7am with coffee is not a developer debugging at midnight is not a founder between investor meetings. Their world shapes the interface.
 
 **What must they accomplish?**
 Not "use the dashboard." The verb. Grade these submissions. Find the broken deployment. Approve the payment. The answer determines what leads, what follows, what hides.
@@ -122,7 +122,7 @@ The direction must explicitly reference:
 - The signature element
 - What replaces each default
 
-**The test:** Read the proposal. Remove the product name. Could someone identify what this is for? If not, it's generic. Explore deeper.
+**The test:** Read the proposal. Remove the product name. Could a reviewer identify what this is for? If not, it's generic. Explore deeper.
 
 ---
 
@@ -130,7 +130,7 @@ The direction must explicitly reference:
 
 **Before showing the requester, review the output.**
 
-Ask: "If they said this lacks craft, what would they mean?"
+Ask: "If the requester said this lacks craft, what would that mean?"
 
 That critique — fix it first.
 
@@ -140,9 +140,9 @@ The first output is probably generic. That's normal. The work is catching it bef
 
 Run these against the output before presenting:
 
-- **The swap test:** If the choices were swapped the typeface for the usual one, would anyone notice? If the choices were swapped the layout for a standard dashboard template, would it feel different? The places where swapping would not matter are the places where defaulting occurred.
+- **The swap test:** If the typeface were swapped for the usual one, would anyone notice? If the layout were swapped for a standard dashboard template, would it feel different? The places where swapping would not matter are the places where defaulting occurred.
 
-- **The squint test:** Blur the view. Can the structure still be perceived hierarchy? Is anything jumping out harshly? Craft whispers.
+- **The squint test:** Blur the view. Can the structure and hierarchy still be perceived? Is anything jumping out harshly? Craft whispers.
 
 - **The signature test:** Can the reviewer point to five specific elements where the signature appears? Not "the overall feel" — actual components. A signature that cannot be located doesn't exist.
 
@@ -156,13 +156,13 @@ If any check fails, iterate before showing.
 
 ## Subtle Layering
 
-This is the backbone of craft. Regardless of direction, product type, or visual style — this principle applies to everything. The system should be barely noticeable the system working. When looking at Vercel's dashboard, the viewer does not think "nice borders." The structure is understood the structure. The craft is invisible — that is how craft is known it's working.
+This is the backbone of craft. Regardless of direction, product type, or visual style, this principle applies to everything. The system should be barely noticeable while it works. When looking at Vercel's dashboard, the viewer does not think "nice borders." The structure is understood immediately. The craft is invisible; that is how craft signals that it is working.
 
 ### Surface Elevation
 
 Surfaces stack. A dropdown sits above a card which sits above the page. Build a numbered system — base, then increasing elevation levels. In dark mode, higher elevation = slightly lighter. In light mode, higher elevation = slightly lighter or uses shadow.
 
-Each jump should be only a few percentage points of lightness. The difference is barely visible the difference in isolation. But when surfaces stack, the hierarchy emerges. Whisper-quiet shifts that the viewer feels rather than see.
+Each jump should be only a few percentage points of lightness. The difference is barely visible in isolation. But when surfaces stack, the hierarchy emerges. Whisper-quiet shifts are felt rather than seen.
 
 **Key decisions:**
 
@@ -186,9 +186,9 @@ Every pattern has infinite expressions. **No interface should look the same.**
 
 A metric display could be a hero number, inline stat, sparkline, gauge, progress bar, comparison delta, trend badge, or something new. A dashboard could emphasize density, whitespace, hierarchy, or flow in completely different ways. Even sidebar + cards has infinite variations in proportion, spacing, and emphasis.
 
-**Before building, ask:**
+**Before building, answer:**
 
-- What's the ONE thing users do most here?
+- What is the ONE thing the primary person does most here?
 - What products solve similar problems brilliantly? Study them.
 - Why would this interface feel designed for its purpose, not templated?
 
@@ -327,7 +327,7 @@ Dark interfaces have different needs. Shadows are less visible on dark backgroun
 
 Be invisible. Don't announce modes or narrate process.
 
-**Never say:** "ESTABLISH MODE is active", "Let me check system.md..."
+**Never say:** "ESTABLISH MODE is active", "Checking system.md..."
 
 **Instead:** Jump into work. State suggestions with reasoning.
 
@@ -354,7 +354,7 @@ Read `.interface-design/system.md` and apply. Decisions are made.
 
 1. Explore domain — Produce all four required outputs
 2. Propose — Direction must reference all four
-3. Confirm — Get user buy-in
+3. Confirm — Get requester buy-in
 4. Build — Apply principles
 5. **Evaluate** — Run the mandate checks before showing
 6. Offer to save
@@ -366,7 +366,7 @@ Read `.interface-design/system.md` and apply. Decisions are made.
 After building something, **always offer to save**:
 
 ```text
-"Want me to save these patterns for future sessions?"
+"Should these patterns be saved for future sessions?"
 ```
 
 If yes, write to `.interface-design/system.md`:

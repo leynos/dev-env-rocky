@@ -358,6 +358,11 @@ def test_uv_tool_absent_is_idempotent_when_tool_missing(monkeypatch: pytest.Monk
 def test_uv_tool_uses_spec_over_version(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
+    monkeypatch.setattr(
+        uv_tool,
+        "run",
+        lambda module, cmd: pytest.fail("check mode must not run uv"),
+    )
 
     result = run_module(
         uv_tool,

@@ -425,8 +425,130 @@ def _hook_identity_matches(existing: Dict[str, Any], desired: Dict[str, Any], id
     return True
 
 
+def _find_hook_group_index(groups: List[Any], matcher: Optional[str]) -> Optional[int]:
+    for idx, group in enumerate(groups):
+        if isinstance(group, dict) and _hook_group_matches(group, matcher):
+            return idx
+    return None
+
+
+def _get_hook_list(
+    module,
+    group: Dict[str, Any],
+    event: str,
+    path: str,
+    *,
+    create: bool,
+) -> List[Any]:
+    hook_list = group.setdefault("hooks", []) if create else group.get("hooks", [])
+    if not isinstance(hook_list, list):
+        module.fail_json(msg="Expected hooks list under event %s in %s" % (event, path))
+    return hook_list
+
+
+def _ensure_hook_group(
+    groups: List[Any],
+    matcher: Optional[str],
+    group_index: Optional[int],
+) -> Tuple[bool, Dict[str, Any]]:
+    if group_index is not None:
+        return False, groups[group_index]
+
+    group: Dict[str, Any] = {"hooks": []}
+    if matcher not in (None, ""):
+        group["matcher"] = matcher
+    groups.append(group)
+    return True, group
+
+
+def _find_hook_index(
+    hook_list: List[Any],
+    desired_hook: Dict[str, Any],
+    identity_keys: Iterable[str],
+) -> Optional[int]:
+    for idx, hook in enumerate(hook_list):
+        if isinstance(hook, dict) and _hook_identity_matches(
+            hook,
+            desired_hook,
+            identity_keys,
+        ):
+            return idx
+    return None
+
+
+def _upsert_hook_json_group(
+    module,
+    groups: List[Any],
+    matcher: Optional[str],
+    group_index: Optional[int],
+    desired_hook: Dict[str, Any],
+    identity_keys: Iterable[str],
+    event: str,
+    path: str,
+) -> bool:
+    changed, group = _ensure_hook_group(groups, matcher, group_index)
+    hook_list = _get_hook_list(module, group, event, path, create=True)
+    existing_index = _find_hook_index(hook_list, desired_hook, identity_keys)
+    if existing_index is None:
+        hook_list.append(desired_hook)
+        return True
+    if hook_list[existing_index] != desired_hook:
+        hook_list[existing_index] = desired_hook
+        return True
+    return changed
+
+
+def _remove_hook_json_group(
+    module,
+    groups: List[Any],
+    group_index: Optional[int],
+    desired_hook: Dict[str, Any],
+    identity_keys: Iterable[str],
+    event: str,
+    path: str,
+) -> bool:
+    if group_index is None:
+        return False
+
+    group = groups[group_index]
+    hook_list = _get_hook_list(module, group, event, path, create=False)
+    retained = [
+        hook
+        for hook in hook_list
+        if not (
+            isinstance(hook, dict)
+            and _hook_identity_matches(hook, desired_hook, identity_keys)
+        )
+    ]
+    if retained == hook_list:
+        return False
+
+    group["hooks"] = retained
+    if not retained:
+        groups.pop(group_index)
+    return True
+
+
+def _prune_empty_hook_roots(
+    data: Dict[str, Any],
+    hooks_root: Dict[str, Any],
+    event: str,
+    groups: List[Any],
+) -> None:
+    if not groups:
+        hooks_root.pop(event, None)
+    if not hooks_root:
+        data.pop("hooks", None)
+
+
 def manage_hook_json(
-    module, path: str, event: str, matcher: Optional[str], desired_hook: Dict[str, Any], state: str, identity_keys: Iterable[str]
+    module,
+    path: str,
+    event: str,
+    matcher: Optional[str],
+    desired_hook: Dict[str, Any],
+    state: str,
+    identity_keys: Iterable[str],
 ) -> Tuple[bool, Dict[str, Any]]:
     path = expand_path(path)
     data = load_json_file(path, default={})
@@ -439,61 +561,29 @@ def manage_hook_json(
     if not isinstance(groups, list):
         module.fail_json(msg="Expected hooks['%s'] to be a list in %s" % (event, path))
 
-    group_index = None
-    for idx, group in enumerate(groups):
-        if not isinstance(group, dict):
-            continue
-        if _hook_group_matches(group, matcher):
-            group_index = idx
-            break
-
-    changed = False
+    group_index = _find_hook_group_index(groups, matcher)
     if state == "present":
-        if group_index is None:
-            group: Dict[str, Any] = {"hooks": []}
-            if matcher not in (None, ""):
-                group["matcher"] = matcher
-            groups.append(group)
-            group_index = len(groups) - 1
-            changed = True
-        group = groups[group_index]
-        hook_list = group.setdefault("hooks", [])
-        if not isinstance(hook_list, list):
-            module.fail_json(msg="Expected hooks list under event %s in %s" % (event, path))
-        existing_index = None
-        for idx, hook in enumerate(hook_list):
-            if isinstance(hook, dict) and _hook_identity_matches(hook, desired_hook, identity_keys):
-                existing_index = idx
-                break
-        if existing_index is None:
-            hook_list.append(desired_hook)
-            changed = True
-        elif hook_list[existing_index] != desired_hook:
-            hook_list[existing_index] = desired_hook
-            changed = True
+        changed = _upsert_hook_json_group(
+            module,
+            groups,
+            matcher,
+            group_index,
+            desired_hook,
+            identity_keys,
+            event,
+            path,
+        )
     else:
-        if group_index is not None:
-            group = groups[group_index]
-            hook_list = group.get("hooks", [])
-            if not isinstance(hook_list, list):
-                module.fail_json(msg="Expected hooks list under event %s in %s" % (event, path))
-            retained = []
-            removed = False
-            for hook in hook_list:
-                if isinstance(hook, dict) and _hook_identity_matches(hook, desired_hook, identity_keys):
-                    removed = True
-                    continue
-                retained.append(hook)
-            if removed:
-                group["hooks"] = retained
-                changed = True
-            if group.get("hooks") == []:
-                groups.pop(group_index)
-                changed = True
-            if not groups:
-                hooks_root.pop(event, None)
-            if not hooks_root:
-                data.pop("hooks", None)
+        changed = _remove_hook_json_group(
+            module,
+            groups,
+            group_index,
+            desired_hook,
+            identity_keys,
+            event,
+            path,
+        )
+        _prune_empty_hook_roots(data, hooks_root, event, groups)
 
     if changed:
         if module.check_mode:

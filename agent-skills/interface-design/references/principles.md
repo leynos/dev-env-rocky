@@ -40,7 +40,7 @@ In dark mode, higher elevation = slightly lighter. In light mode, higher elevati
 
 This is where most interfaces fail. Study Vercel, Supabase, Linear — their surfaces are **barely different** but still distinguishable. Their borders are **light but not invisible**.
 
-**For surfaces:** The difference between elevation levels should be subtle — a few percentage points of lightness, not dramatic jumps. In dark mode, surface-100 might be 7% lighter than base, surface-200 might be 9%, surface-300 might be 12%. The difference is barely visible it, but the viewer feels it.
+**For surfaces:** The difference between elevation levels should be subtle — a few percentage points of lightness, not dramatic jumps. In dark mode, surface-100 might be 7% lighter than base, surface-200 might be 9%, surface-300 might be 12%. The difference is barely visible, but the viewer feels it.
 
 **For borders:** Borders should define regions without demanding attention. Use low opacity (0.05-0.12 alpha for dark mode, slightly higher for light). The border should disappear when attention is elsewhere, but be findable when the structure needs to be understood.
 
@@ -224,7 +224,7 @@ Screens need grounding. A data table floating in space feels like a component de
 
 - **Navigation** — sidebar or top nav showing current location in the app
 - **Location indicator** — breadcrumbs, page title, or active nav state
-- **User context** — who's logged in, what workspace/org
+- **Operator context** — logged-in person, workspace, or organization
 
 When building sidebars, consider using the same background as the main content area. Rely on a subtle border for separation rather than different background colours.
 
