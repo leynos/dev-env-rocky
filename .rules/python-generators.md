@@ -73,17 +73,17 @@ logic—not obscure it.
 ### BAD
 
 ```python
-def iter_numbers():
-    yield from (x * 2 for x in range(10) if x % 2 == 0)
+def process_users(users):
+    return (u.name.upper() for u in (user for user in users if user.active) if u.email)
 ```
 
 ### BETTER
 
 ```python
-def iter_even_doubles():
-    for x in range(10):
-        if x % 2 == 0:
-            yield x * 2
+def iter_active_user_names_with_email(users):
+    for user in users:
+        if user.active and user.email:
+            yield user.name.upper()
 ```
 
 ______________________________________________________________________
