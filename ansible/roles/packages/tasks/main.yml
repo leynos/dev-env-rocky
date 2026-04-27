@@ -28,6 +28,11 @@
       - git
       - difftastic
       - gh
+      - graphviz
+      - gcc
+      - gcc-c++
+      - automake
+      - autoconf
       - clang
       - golang
       - nodejs
