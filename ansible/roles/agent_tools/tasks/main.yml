@@ -15,6 +15,16 @@
     depth: 1
     single_branch: true
 
+- name: Install agent-helper-scripts helper executables
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/{{ item }}"
+    dest: "{{ ansible_env.HOME }}/.local/bin/{{ item }}"
+    mode: '0700'
+    remote_src: true
+  loop:
+    - mdformat-all
+    - notdeadyet
+
 - name: Clone nextest-skill repository
   ansible.builtin.git:
     repo: https://github.com/leynos/nextest-skill.git
