@@ -14,3 +14,7 @@ action-validator
 # Markdown utilities
 # Tool for formatting and fixing Markdown tables.
 mdtablefix
+
+# PostgreSQL utilities
+# Sets up embedded PostgreSQL clusters without privileged runtime ownership.
+pg-embed-setup-unpriv
