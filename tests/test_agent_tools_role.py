@@ -28,6 +28,24 @@ def test_skill_directory_copies_use_trailing_slash() -> None:
     )
 
 
+def test_helper_executable_directory_exists_before_copy_task() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+    directory_task = extract_task(
+        content, "Ensure ~/.local/bin directory exists for helper executables"
+    )
+
+    assert content.index(
+        "- name: Ensure ~/.local/bin directory exists for helper executables"
+    ) < content.index("- name: Install agent-helper-scripts helper executables"), (
+        "agent_tools must create ~/.local/bin before copying helper executables"
+    )
+    assert 'path: "{{ ansible_env.HOME }}/.local/bin"' in directory_task
+    assert "state: directory" in directory_task
+    assert 'owner: "{{ owner_user }}"' in directory_task
+    assert 'group: "{{ owner_user }}"' in directory_task
+    assert "mode: '0755'" in directory_task
+
+
 def test_firecrawl_mcp_uses_vaulted_api_key_without_logging() -> None:
     content = AGENT_TOOLS_TASKS.read_text()
     task = extract_task(content, "Configure Codex CLI Firecrawl MCP server")
