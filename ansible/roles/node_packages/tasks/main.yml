@@ -43,6 +43,13 @@
     state: directory
     mode: '0755'
 
+- name: Link firecrawl-mcp into ~/.local/bin
+  ansible.builtin.file:
+    src: "{{ ansible_env.HOME }}/.bun/bin/firecrawl-mcp"
+    dest: "{{ ansible_env.HOME }}/.local/bin/firecrawl-mcp"
+    state: link
+    force: true
+
 - name: Create tsgo symlink for tsc
   ansible.builtin.file:
     src: "{{ ansible_env.HOME }}/.local/bin/tsgo"

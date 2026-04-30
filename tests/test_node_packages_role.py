@@ -18,3 +18,17 @@ def test_firecrawl_mcp_is_installed_globally() -> None:
     assert "firecrawl-mcp" in package_list, (
         "bun-packages.inf must document the firecrawl-mcp global package"
     )
+
+
+def test_firecrawl_mcp_is_linked_into_local_bin() -> None:
+    tasks_content = NODE_PACKAGES_TASKS.read_text()
+
+    assert "Link firecrawl-mcp into ~/.local/bin" in tasks_content, (
+        "node_packages must expose firecrawl-mcp through the standard local bin path"
+    )
+    assert 'src: "{{ ansible_env.HOME }}/.bun/bin/firecrawl-mcp"' in tasks_content, (
+        "node_packages must link from the Bun global firecrawl-mcp executable"
+    )
+    assert 'dest: "{{ ansible_env.HOME }}/.local/bin/firecrawl-mcp"' in tasks_content, (
+        "node_packages must create the firecrawl-mcp command in ~/.local/bin"
+    )
