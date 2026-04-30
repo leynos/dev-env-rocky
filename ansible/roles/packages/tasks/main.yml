@@ -37,6 +37,7 @@
       - golang
       - nodejs
       - python3-devel
+      - python3-tomlkit
       - podman
       - helm
       - sqlite-devel

@@ -30,6 +30,7 @@ golang
 nodejs
 rustup
 python3-devel
+python3-tomlkit
 
 # Container and infrastructure tools
 # Tools for container management, Kubernetes deployments,
