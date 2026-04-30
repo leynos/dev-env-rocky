@@ -382,6 +382,7 @@
     model: "{{ item.model }}"
     model_reasoning_effort: "{{ item.reasoning_effort | default('medium') }}"
     sandbox_mode: "{{ item.sandbox_mode | default('workspace-write') }}"
+    nickname_candidates: "{{ item.nickname_candidates | default(omit) }}"
     developer_instructions: "{{ item.developer_instructions }}"
   loop:
     - name: wyvern

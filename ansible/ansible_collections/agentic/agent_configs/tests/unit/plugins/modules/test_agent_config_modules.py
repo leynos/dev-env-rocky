@@ -518,10 +518,12 @@ def test_validate_agent_executable_rejects_missing_path(tmp_path: Path) -> None:
 
 
 def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> None:
-    path = tmp_path / "reviewer.toml"
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
     args = {
         "name": "Reviewer",
         "path": str(path),
+        "config_path": str(config_path),
         "description": "Review changes.",
         "developer_instructions": "Inspect the diff.",
         "nickname_candidates": ["reviewer"],
@@ -542,16 +544,41 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
     assert 'name = "Reviewer"' in rendered, "expected rendered TOML to include subagent name"
     assert 'model_reasoning_effort = "medium"' in rendered, "expected rendered TOML to include reasoning effort"
     assert 'mcp_servers = ["context_pack"]' in rendered, "expected rendered TOML to include MCP servers"
+    rendered_config = config_path.read_text()
+    assert "[agents.reviewer]" in rendered_config, (
+        "expected rendered config to include reviewer agent registry"
+    )
+    assert 'description = "Review changes."' in rendered_config, (
+        "expected rendered config to include agent description"
+    )
+    assert 'config_file = "agents/reviewer.toml"' in rendered_config, (
+        "expected rendered config to include subagent config file"
+    )
+    assert 'nickname_candidates = ["reviewer"]' in rendered_config, (
+        "expected rendered config to include nickname candidates"
+    )
 
     rerun_result = run_module(codex_cli_subagent, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(codex_cli_subagent, {"name": "Reviewer", "path": str(path), "state": "absent"})
+    absent = run_module(
+        codex_cli_subagent,
+        {
+            "name": "Reviewer",
+            "path": str(path),
+            "config_path": str(config_path),
+            "state": "absent",
+        },
+    )
 
     assert absent["changed"] is True, f"expected absent result['changed'] to be True, got {absent['changed']!r}"
     assert not path.exists(), f"expected {path} to be removed"
+    rendered_config_after_absent = config_path.read_text()
+    assert rendered_config_after_absent == "\n", (
+        f"expected config TOML file to contain only a newline, got {rendered_config_after_absent!r}"
+    )
 
 
 def test_codex_cli_subagent_requires_present_fields(tmp_path: Path) -> None:

@@ -5,6 +5,18 @@
 
 from __future__ import annotations
 
+import os
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    clean_dict,
+    manage_named_toml_entry,
+    remove_path,
+    resolve_scoped_config_path,
+    slugify,
+    write_toml_if_changed,
+)
+
 DOCUMENTATION = r"""
 ---
 module: codex_cli_subagent
@@ -12,6 +24,7 @@ short_description: Manage Codex CLI custom subagents
 version_added: "1.0.0"
 description:
   - Manage Codex CLI custom subagent TOML files in C(~/.codex/agents/) or C(.codex/agents/).
+  - Register the subagent in the matching Codex C(config.toml) C([agents]) table so Codex can load it.
 options:
   name:
     description:
@@ -44,6 +57,16 @@ options:
       - Exact subagent TOML file to manage.
       - Overrides C(scope), C(project_dir), and C(slug).
     type: path
+  config_path:
+    description:
+      - Exact Codex C(config.toml) path used for the subagent registry entry.
+      - Overrides the path inferred from C(scope) and C(project_dir).
+    type: path
+  config_file:
+    description:
+      - C(config_file) value to write under C([agents.<slug>]).
+      - Defaults to the subagent TOML path relative to the Codex configuration directory when possible.
+    type: str
   description:
     description:
       - Human-readable subagent description.
@@ -112,22 +135,19 @@ path:
   description: Managed subagent file path.
   returned: always
   type: str
+config_path:
+  description: Managed Codex config path.
+  returned: always
+  type: str
 subagent:
   description: Effective TOML content.
   returned: when state == 'present'
   type: dict
+registry:
+  description: Effective Codex C([agents.<slug>]) registry entry.
+  returned: when state == 'present'
+  type: dict
 """
-
-import os
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
-    clean_dict,
-    resolve_scoped_config_path,
-    slugify,
-    write_toml_if_changed,
-    remove_path,
-)
 
 
 def build_subagent_definition(module: AnsibleModule) -> dict:
@@ -150,7 +170,34 @@ def build_subagent_definition(module: AnsibleModule) -> dict:
     return clean_dict(desired)
 
 
-def resolve_path(module: AnsibleModule) -> str:
+def build_registry_definition(
+    module: AnsibleModule, subagent_path: str, config_path: str
+) -> dict:
+    params = module.params
+    desired = {
+        "description": params.get("description"),
+        "config_file": params.get("config_file")
+        or resolve_config_file(subagent_path, config_path),
+        "nickname_candidates": params.get("nickname_candidates"),
+    }
+    return clean_dict(desired)
+
+
+def resolve_config_file(subagent_path: str, config_path: str) -> str:
+    expanded_subagent_path = os.path.abspath(os.path.expanduser(subagent_path))
+    expanded_config_dir = os.path.dirname(
+        os.path.abspath(os.path.expanduser(config_path))
+    )
+    try:
+        common_path = os.path.commonpath([expanded_subagent_path, expanded_config_dir])
+    except ValueError:
+        return expanded_subagent_path
+    if common_path != expanded_config_dir:
+        return expanded_subagent_path
+    return os.path.relpath(expanded_subagent_path, expanded_config_dir)
+
+
+def resolve_subagent_path(module: AnsibleModule) -> str:
     if module.params.get("path"):
         return module.params["path"]
     slug = module.params.get("slug") or slugify(module.params["name"])
@@ -166,15 +213,34 @@ def resolve_path(module: AnsibleModule) -> str:
         module.fail_json(msg=str(exc))
 
 
+def resolve_config_path(module: AnsibleModule) -> str:
+    try:
+        return resolve_scoped_config_path(
+            path=module.params.get("config_path"),
+            scope=module.params["scope"],
+            project_dir=module.params.get("project_dir"),
+            user_path="~/.codex/config.toml",
+            project_relative_path=os.path.join(".codex", "config.toml"),
+        )
+    except ValueError as exc:
+        module.fail_json(msg=str(exc))
+
+
 def main() -> None:
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},
             "slug": {"type": "str"},
-            "state": {"type": "str", "choices": ["present", "absent"], "default": "present"},
+            "state": {
+                "type": "str",
+                "choices": ["present", "absent"],
+                "default": "present",
+            },
             "scope": {"type": "str", "choices": ["user", "project"], "default": "user"},
             "project_dir": {"type": "path"},
             "path": {"type": "path"},
+            "config_path": {"type": "path"},
+            "config_file": {"type": "str"},
             "description": {"type": "str"},
             "developer_instructions": {"type": "str"},
             "nickname_candidates": {"type": "list", "elements": "str"},
@@ -187,26 +253,49 @@ def main() -> None:
         supports_check_mode=True,
     )
 
-    path = resolve_path(module)
+    path = resolve_subagent_path(module)
+    config_path = resolve_config_path(module)
+    slug = module.params.get("slug") or slugify(module.params["name"])
     if module.params["state"] == "absent":
-        changed = remove_path(module, path, recursive=False)
+        changed_file = remove_path(module, path, recursive=False)
+        changed_registry, data = manage_named_toml_entry(
+            module=module,
+            path=config_path,
+            root_key="agents",
+            name=slug,
+            desired=None,
+            state="absent",
+        )
         module.exit_json(
-            changed=changed,
+            changed=(changed_file or changed_registry),
             path=path,
+            config_path=config_path,
             scope=module.params["scope"],
-            slug=module.params.get("slug") or slugify(module.params["name"]),
+            slug=slug,
             name=module.params["name"],
+            agents=data.get("agents", {}),
         )
 
     subagent = build_subagent_definition(module)
-    changed = write_toml_if_changed(module, path, subagent)
+    registry = build_registry_definition(module, path, config_path)
+    changed_file = write_toml_if_changed(module, path, subagent)
+    changed_registry, data = manage_named_toml_entry(
+        module=module,
+        path=config_path,
+        root_key="agents",
+        name=slug,
+        desired=registry,
+        state="present",
+    )
     module.exit_json(
-        changed=changed,
+        changed=(changed_file or changed_registry),
         path=path,
+        config_path=config_path,
         scope=module.params["scope"],
-        slug=module.params.get("slug") or slugify(module.params["name"]),
+        slug=slug,
         name=module.params["name"],
         subagent=subagent,
+        registry=data.get("agents", {}).get(slug, registry),
     )
 
 
