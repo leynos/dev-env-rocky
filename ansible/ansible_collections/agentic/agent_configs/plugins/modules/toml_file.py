@@ -73,6 +73,7 @@ key:
 
 
 def import_tomlkit(module: AnsibleModule):
+    """Import ``tomlkit`` or fail the module with an actionable error."""
     try:
         import tomlkit
     except ImportError:
@@ -83,6 +84,17 @@ def import_tomlkit(module: AnsibleModule):
 
 
 def split_key_path(key: str) -> list[str]:
+    """Split a dot-separated key path while preserving escaped dots.
+
+    Args:
+        key: Dot-separated key path such as ``env.SCCACHE_DIR``.
+
+    Returns:
+        Path components in traversal order.
+
+    Raises:
+        ValueError: If the path contains an empty component.
+    """
     parts: list[str] = []
     current: list[str] = []
     escaped = False
@@ -106,6 +118,7 @@ def split_key_path(key: str) -> list[str]:
 
 
 def load_document(module: AnsibleModule, tomlkit, path: str):
+    """Load a TOML document, returning an empty document when absent."""
     content = read_text(path)
     if content is None:
         return tomlkit.document()
@@ -116,6 +129,7 @@ def load_document(module: AnsibleModule, tomlkit, path: str):
 
 
 def get_parent(module: AnsibleModule, tomlkit, document, parts: list[str]):
+    """Return the parent TOML table for a key path, creating tables as needed."""
     parent = document
     for part in parts[:-1]:
         child = parent.get(part)
@@ -129,6 +143,7 @@ def get_parent(module: AnsibleModule, tomlkit, document, parts: list[str]):
 
 
 def parse_mode(module: AnsibleModule, mode: str | None) -> int | None:
+    """Parse an octal file mode string for ``os.chmod``."""
     if mode is None:
         return None
     try:
@@ -138,17 +153,22 @@ def parse_mode(module: AnsibleModule, mode: str | None) -> int | None:
 
 
 def enforce_mode(module: AnsibleModule, path: str, mode: int | None) -> bool:
+    """Apply a parsed file mode when needed and report whether it changed."""
     if mode is None or not os.path.exists(path):
         return False
     current = os.stat(path).st_mode & 0o777
     if current == mode:
         return False
     if not module.check_mode:
-        os.chmod(path, mode)
+        try:
+            os.chmod(path, mode)
+        except OSError as exc:
+            module.fail_json(msg="Failed to chmod TOML file %s: %s" % (path, exc))
     return True
 
 
 def main() -> None:
+    """Run the Ansible module entrypoint."""
     module = AnsibleModule(
         argument_spec={
             "path": {"type": "path", "required": True},
@@ -172,7 +192,10 @@ def main() -> None:
         module.fail_json(msg=str(exc))
     desired_mode = parse_mode(module, module.params.get("mode"))
 
-    document = load_document(module, tomlkit, path)
+    try:
+        document = load_document(module, tomlkit, path)
+    except OSError as exc:
+        module.fail_json(msg="Failed to read TOML file %s: %s" % (path, exc))
     parent = get_parent(module, tomlkit, document, parts)
     leaf = parts[-1]
     changed_value = False
@@ -188,7 +211,10 @@ def main() -> None:
         changed_value = True
 
     if changed_value and not module.check_mode:
-        atomic_write_text(path, tomlkit.dumps(document))
+        try:
+            atomic_write_text(path, tomlkit.dumps(document))
+        except OSError as exc:
+            module.fail_json(msg="Failed to write TOML file %s: %s" % (path, exc))
     changed_mode = enforce_mode(module, path, desired_mode)
 
     module.exit_json(

@@ -9,9 +9,12 @@ import os
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    atomic_write_text,
     clean_dict,
     manage_named_toml_entry,
+    read_text,
     remove_path,
+    resolve_relative_config_file,
     resolve_scoped_config_path,
     slugify,
     write_toml_if_changed,
@@ -151,6 +154,14 @@ registry:
 
 
 def build_subagent_definition(module: AnsibleModule) -> dict:
+    """Build and validate the subagent TOML document.
+
+    Args:
+        module: Active Ansible module containing validated parameters.
+
+    Returns:
+        A dictionary suitable for rendering as the subagent TOML file.
+    """
     params = module.params
     if not params.get("description"):
         module.fail_json(msg="description is required when state=present")
@@ -170,34 +181,19 @@ def build_subagent_definition(module: AnsibleModule) -> dict:
     return clean_dict(desired)
 
 
-def build_registry_definition(
-    module: AnsibleModule, subagent_path: str, config_path: str
-) -> dict:
+def build_registry_definition(module: AnsibleModule, config_file: str) -> dict:
+    """Build the Codex ``[agents.<slug>]`` registry entry."""
     params = module.params
     desired = {
         "description": params.get("description"),
-        "config_file": params.get("config_file")
-        or resolve_config_file(subagent_path, config_path),
+        "config_file": config_file,
         "nickname_candidates": params.get("nickname_candidates"),
     }
     return clean_dict(desired)
 
 
-def resolve_config_file(subagent_path: str, config_path: str) -> str:
-    expanded_subagent_path = os.path.abspath(os.path.expanduser(subagent_path))
-    expanded_config_dir = os.path.dirname(
-        os.path.abspath(os.path.expanduser(config_path))
-    )
-    try:
-        common_path = os.path.commonpath([expanded_subagent_path, expanded_config_dir])
-    except ValueError:
-        return expanded_subagent_path
-    if common_path != expanded_config_dir:
-        return expanded_subagent_path
-    return os.path.relpath(expanded_subagent_path, expanded_config_dir)
-
-
 def resolve_subagent_path(module: AnsibleModule) -> str:
+    """Resolve the target subagent TOML path from explicit or scoped inputs."""
     if module.params.get("path"):
         return module.params["path"]
     slug = module.params.get("slug") or slugify(module.params["name"])
@@ -214,6 +210,7 @@ def resolve_subagent_path(module: AnsibleModule) -> str:
 
 
 def resolve_config_path(module: AnsibleModule) -> str:
+    """Resolve the Codex ``config.toml`` path from explicit or scoped inputs."""
     try:
         return resolve_scoped_config_path(
             path=module.params.get("config_path"),
@@ -226,7 +223,35 @@ def resolve_config_path(module: AnsibleModule) -> str:
         module.fail_json(msg=str(exc))
 
 
+def snapshot_path(module: AnsibleModule, path: str) -> str | None:
+    """Capture the current text content for rollback."""
+    try:
+        return read_text(path)
+    except OSError as exc:
+        module.fail_json(msg="Failed to snapshot %s: %s" % (path, exc))
+
+
+def restore_snapshot(module: AnsibleModule, path: str, content: str | None) -> None:
+    """Restore one file snapshot after a coordinated update fails."""
+    try:
+        if content is None:
+            if os.path.exists(path):
+                os.remove(path)
+            return
+        atomic_write_text(path, content)
+    except OSError as exc:
+        module.fail_json(msg="Failed to roll back %s: %s" % (path, exc))
+
+
+def error_message(exc: Exception) -> str:
+    """Return a compact message from an Ansible test exception or regular error."""
+    if exc.args and isinstance(exc.args[0], dict) and exc.args[0].get("msg"):
+        return str(exc.args[0]["msg"])
+    return str(exc)
+
+
 def main() -> None:
+    """Run the Ansible module entrypoint."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},
@@ -257,15 +282,26 @@ def main() -> None:
     config_path = resolve_config_path(module)
     slug = module.params.get("slug") or slugify(module.params["name"])
     if module.params["state"] == "absent":
+        path_snapshot = snapshot_path(module, path)
+        config_snapshot = snapshot_path(module, config_path)
         changed_file = remove_path(module, path, recursive=False)
-        changed_registry, data = manage_named_toml_entry(
-            module=module,
-            path=config_path,
-            root_key="agents",
-            name=slug,
-            desired=None,
-            state="absent",
-        )
+        try:
+            changed_registry, data = manage_named_toml_entry(
+                module=module,
+                path=config_path,
+                root_key="agents",
+                name=slug,
+                desired=None,
+                state="absent",
+            )
+        except Exception as exc:
+            if changed_file and not module.check_mode:
+                restore_snapshot(module, path, path_snapshot)
+                restore_snapshot(module, config_path, config_snapshot)
+            module.fail_json(
+                msg="Failed to unregister Codex subagent %s: %s"
+                % (slug, error_message(exc))
+            )
         module.exit_json(
             changed=(changed_file or changed_registry),
             path=path,
@@ -277,16 +313,29 @@ def main() -> None:
         )
 
     subagent = build_subagent_definition(module)
-    registry = build_registry_definition(module, path, config_path)
-    changed_file = write_toml_if_changed(module, path, subagent)
-    changed_registry, data = manage_named_toml_entry(
-        module=module,
-        path=config_path,
-        root_key="agents",
-        name=slug,
-        desired=registry,
-        state="present",
+    config_file = module.params.get("config_file") or resolve_relative_config_file(
+        path, config_path
     )
+    registry = build_registry_definition(module, config_file)
+    path_snapshot = snapshot_path(module, path)
+    config_snapshot = snapshot_path(module, config_path)
+    changed_file = write_toml_if_changed(module, path, subagent)
+    try:
+        changed_registry, data = manage_named_toml_entry(
+            module=module,
+            path=config_path,
+            root_key="agents",
+            name=slug,
+            desired=registry,
+            state="present",
+        )
+    except Exception as exc:
+        if changed_file and not module.check_mode:
+            restore_snapshot(module, path, path_snapshot)
+            restore_snapshot(module, config_path, config_snapshot)
+        module.fail_json(
+            msg="Failed to register Codex subagent %s: %s" % (slug, error_message(exc))
+        )
     module.exit_json(
         changed=(changed_file or changed_registry),
         path=path,

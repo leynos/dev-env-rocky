@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import tomllib
 
 import pytest
 
@@ -475,6 +476,36 @@ def test_toml_file_updates_nested_value_idempotently_and_removes(
     )
 
 
+def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -> None:
+    expected_env = {
+        "RUSTC_WRAPPER": "/home/leynos/.local/bin/notdeadyet",
+        "RUSTC_HEARTBEAT_SECS": "45",
+        "SCCACHE_DIR": "/home/leynos/.cache/sccache",
+        "SCCACHE_CACHE_SIZE": "120G",
+    }
+    codex_path = tmp_path / "config.toml"
+    claude_path = tmp_path / "settings.json"
+
+    for key, value in expected_env.items():
+        run_module(
+            toml_file,
+            {"path": str(codex_path), "key": f"env.{key}", "value": value},
+        )
+        run_module(
+            json_file,
+            {"path": str(claude_path), "key": f"env.{key}", "value": value},
+        )
+
+    codex = tomllib.loads(codex_path.read_text())
+    claude = json.loads(claude_path.read_text())
+    assert codex == {"env": expected_env}, (
+        f"expected Codex TOML env table to match sccache settings, got {codex!r}"
+    )
+    assert claude == {"env": expected_env}, (
+        f"expected Claude JSON env object to match sccache settings, got {claude!r}"
+    )
+
+
 @pytest.mark.parametrize("module", [json_file, toml_file])
 def test_structured_file_modules_require_value_when_present(
     tmp_path: Path, module
@@ -501,6 +532,74 @@ def test_structured_file_modules_reject_non_octal_modes(tmp_path: Path, module) 
         "mode must be an octal string",
     )
     assert not path.exists(), "expected invalid mode to fail before writing the file"
+
+
+def test_json_file_reports_write_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail_write(path: str, content: str) -> None:
+        raise OSError("disk denied")
+
+    monkeypatch.setattr(json_file, "atomic_write_text", fail_write)
+    assert_fails(
+        json_file,
+        {
+            "path": str(tmp_path / "settings.json"),
+            "key": "env.RUSTC_WRAPPER",
+            "value": "/home/leynos/.local/bin/notdeadyet",
+        },
+        "Failed to write JSON file",
+    )
+
+
+def test_toml_file_reports_write_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail_write(path: str, content: str) -> None:
+        raise OSError("disk denied")
+
+    monkeypatch.setattr(toml_file, "atomic_write_text", fail_write)
+    assert_fails(
+        toml_file,
+        {
+            "path": str(tmp_path / "config.toml"),
+            "key": "env.SCCACHE_DIR",
+            "value": "/home/leynos/.cache/sccache",
+        },
+        "Failed to write TOML file",
+    )
+
+
+@pytest.mark.parametrize(
+    ("module", "message"),
+    [
+        (json_file, "Failed to chmod JSON file"),
+        (toml_file, "Failed to chmod TOML file"),
+    ],
+)
+def test_structured_file_modules_report_chmod_failures(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    module,
+    message: str,
+) -> None:
+    path = tmp_path / "config"
+    path.write_text("{}\n" if module is json_file else "\n")
+
+    def fail_chmod(path: str, mode: int) -> None:
+        raise OSError("chmod denied")
+
+    monkeypatch.setattr(module.os, "chmod", fail_chmod)
+    assert_fails(
+        module,
+        {
+            "path": str(path),
+            "key": "env.RUSTC_WRAPPER",
+            "value": "/home/leynos/.local/bin/notdeadyet",
+            "mode": "0644",
+        },
+        message,
+    )
 
 
 @pytest.mark.parametrize(
@@ -777,6 +876,32 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
     assert rendered_config_after_absent == "\n", (
         f"expected config TOML file to contain only a newline, got {rendered_config_after_absent!r}"
     )
+
+
+def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
+
+    def fail_registry(*args, **kwargs):
+        raise AnsibleFailJson({"msg": "registry denied"})
+
+    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
+    assert_fails(
+        codex_cli_subagent,
+        {
+            "name": "Reviewer",
+            "path": str(path),
+            "config_path": str(config_path),
+            "description": "Review changes.",
+            "developer_instructions": "Inspect the diff.",
+        },
+        "Failed to register Codex subagent reviewer",
+    )
+    assert not path.exists(), "expected subagent file to be rolled back"
+    assert not config_path.exists(), "expected config file to remain absent"
 
 
 def test_codex_cli_subagent_requires_present_fields(tmp_path: Path) -> None:

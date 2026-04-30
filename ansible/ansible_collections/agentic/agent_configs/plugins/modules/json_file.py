@@ -75,6 +75,17 @@ key:
 
 
 def split_key_path(key: str) -> list[str]:
+    """Split a dot-separated key path while preserving escaped dots.
+
+    Args:
+        key: Dot-separated key path such as ``env.RUSTC_WRAPPER``.
+
+    Returns:
+        Path components in traversal order.
+
+    Raises:
+        ValueError: If the path contains an empty component.
+    """
     parts: list[str] = []
     current: list[str] = []
     escaped = False
@@ -100,6 +111,7 @@ def split_key_path(key: str) -> list[str]:
 def get_parent(
     module: AnsibleModule, data: dict[str, Any], parts: list[str]
 ) -> dict[str, Any]:
+    """Return the parent JSON object for a key path, creating objects as needed."""
     parent = data
     for part in parts[:-1]:
         child = parent.get(part)
@@ -113,10 +125,12 @@ def get_parent(
 
 
 def dump_json(data: dict[str, Any]) -> str:
+    """Render JSON using stable indentation and key ordering."""
     return json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
 def parse_mode(module: AnsibleModule, mode: str | None) -> int | None:
+    """Parse an octal file mode string for ``os.chmod``."""
     if mode is None:
         return None
     try:
@@ -126,17 +140,22 @@ def parse_mode(module: AnsibleModule, mode: str | None) -> int | None:
 
 
 def enforce_mode(module: AnsibleModule, path: str, mode: int | None) -> bool:
+    """Apply a parsed file mode when needed and report whether it changed."""
     if mode is None or not os.path.exists(path):
         return False
     current = os.stat(path).st_mode & 0o777
     if current == mode:
         return False
     if not module.check_mode:
-        os.chmod(path, mode)
+        try:
+            os.chmod(path, mode)
+        except OSError as exc:
+            module.fail_json(msg="Failed to chmod JSON file %s: %s" % (path, exc))
     return True
 
 
 def main() -> None:
+    """Run the Ansible module entrypoint."""
     module = AnsibleModule(
         argument_spec={
             "path": {"type": "path", "required": True},
@@ -159,7 +178,12 @@ def main() -> None:
         module.fail_json(msg=str(exc))
     desired_mode = parse_mode(module, module.params.get("mode"))
 
-    data = load_json_file(path, default={})
+    try:
+        data = load_json_file(path, default={})
+    except OSError as exc:
+        module.fail_json(msg="Failed to read JSON file %s: %s" % (path, exc))
+    except json.JSONDecodeError as exc:
+        module.fail_json(msg="Failed to parse JSON file %s: %s" % (path, exc))
     if not isinstance(data, dict):
         module.fail_json(msg="Expected JSON object in %s" % path)
 
@@ -178,7 +202,10 @@ def main() -> None:
         changed_value = True
 
     if changed_value and not module.check_mode:
-        atomic_write_text(path, dump_json(data))
+        try:
+            atomic_write_text(path, dump_json(data))
+        except OSError as exc:
+            module.fail_json(msg="Failed to write JSON file %s: %s" % (path, exc))
     changed_mode = enforce_mode(module, path, desired_mode)
 
     module.exit_json(
