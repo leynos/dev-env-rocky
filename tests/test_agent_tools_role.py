@@ -17,3 +17,20 @@ def test_skill_directory_copies_use_trailing_slash() -> None:
     assert content.count('src: "{{ item.path }}/"') == 18, (
         "expected every agent_tools skill copy task to copy directory contents"
     )
+
+
+def test_firecrawl_mcp_uses_vaulted_api_key_without_logging() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+
+    assert "Configure Codex CLI Firecrawl MCP server" in content, (
+        "agent_tools must configure the Codex Firecrawl MCP server"
+    )
+    assert "command: firecrawl-mcp" in content, (
+        "agent_tools must use the firecrawl-mcp executable requested by Codex"
+    )
+    assert 'FIRECRAWL_API_KEY: "{{ firecrawl_api_key }}"' in content, (
+        "agent_tools must source the Firecrawl API key from Ansible Vault"
+    )
+    assert "no_log: true" in content, (
+        "agent_tools must suppress task output because the MCP env contains a secret"
+    )

@@ -19,6 +19,7 @@ markdownlint-cli2
 # Command-line interfaces for AI-assisted development.
 @anthropic-ai/claude-code
 @openai/codex
+firecrawl-mcp
 
 # Package managers
 # Fast, disk-efficient package manager for Node.js.

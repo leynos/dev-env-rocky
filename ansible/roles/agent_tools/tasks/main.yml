@@ -373,6 +373,17 @@
         - -lc
         - npx @playwright/mcp@latest --no-sandbox
 
+- name: Configure Codex CLI Firecrawl MCP server
+  agentic.agent_configs.codex_cli_mcp:
+    name: firecrawl
+    state: present
+    scope: user
+    transport: stdio
+    command: firecrawl-mcp
+    env:
+      FIRECRAWL_API_KEY: "{{ firecrawl_api_key }}"
+  no_log: true
+
 - name: Configure Codex CLI subagents
   agentic.agent_configs.codex_cli_subagent:
     name: "{{ item.name }}"

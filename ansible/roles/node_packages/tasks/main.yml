@@ -25,6 +25,7 @@
     - name: "@mermaid-js/mermaid-cli"
     - name: "@anthropic-ai/claude-code"
     - name: "@openai/codex"
+    - name: "firecrawl-mcp"
     - name: "@ataraxy-labs/sem"
       trust_postinstall: true
     - name: "droid"
