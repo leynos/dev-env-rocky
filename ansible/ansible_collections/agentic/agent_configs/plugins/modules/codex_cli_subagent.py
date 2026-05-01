@@ -295,6 +295,10 @@ def main() -> None:
                 state="absent",
             )
         except Exception as exc:
+            if not (
+                exc.args and isinstance(exc.args[0], dict) and exc.args[0].get("msg")
+            ):
+                raise
             if changed_file and not module.check_mode:
                 restore_snapshot(module, path, path_snapshot)
                 restore_snapshot(module, config_path, config_snapshot)
@@ -330,6 +334,8 @@ def main() -> None:
             state="present",
         )
     except Exception as exc:
+        if not (exc.args and isinstance(exc.args[0], dict) and exc.args[0].get("msg")):
+            raise
         if changed_file and not module.check_mode:
             restore_snapshot(module, path, path_snapshot)
             restore_snapshot(module, config_path, config_snapshot)

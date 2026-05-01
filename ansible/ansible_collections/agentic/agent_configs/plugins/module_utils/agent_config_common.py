@@ -11,6 +11,7 @@ import re
 import shutil
 import tempfile
 from datetime import date, datetime, time
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 try:  # Python 3.11+
@@ -470,15 +471,12 @@ def resolve_relative_config_file(subagent_path: str, config_path: str) -> str:
     Returns an absolute path when the subagent file is outside the config
     directory. Raises no exception for paths on different drives or roots.
     """
-    expanded_subagent_path = expand_path(subagent_path)
-    expanded_config_dir = os.path.dirname(expand_path(config_path))
+    subagent = Path(expand_path(subagent_path))
+    config_dir = Path(expand_path(config_path)).parent
     try:
-        common_path = os.path.commonpath([expanded_subagent_path, expanded_config_dir])
+        return str(subagent.relative_to(config_dir))
     except ValueError:
-        return expanded_subagent_path
-    if common_path != expanded_config_dir:
-        return expanded_subagent_path
-    return os.path.relpath(expanded_subagent_path, expanded_config_dir)
+        return str(subagent)
 
 
 def manage_named_json_entry(

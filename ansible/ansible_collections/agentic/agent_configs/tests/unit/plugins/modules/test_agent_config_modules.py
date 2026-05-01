@@ -35,10 +35,14 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
     json_file,
     toml_file,
 )
+from ansible_collections.agentic.agent_configs.plugins.module_utils import (
+    agent_config_common,
+)
 
 from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
     AnsibleExitJson,
     AnsibleFailJson,
+    FakeModule,
     set_module_args,
 )
 
@@ -506,6 +510,32 @@ def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -
     )
 
 
+def test_resolve_relative_config_file_returns_path_relative_to_config_dir(
+    tmp_path: Path,
+) -> None:
+    subagent_path = tmp_path / ".codex" / "agents" / "reviewer.toml"
+    config_path = tmp_path / ".codex" / "config.toml"
+
+    result = agent_config_common.resolve_relative_config_file(
+        str(subagent_path), str(config_path)
+    )
+
+    assert result == "agents/reviewer.toml"
+
+
+def test_resolve_relative_config_file_returns_absolute_path_outside_config_dir(
+    tmp_path: Path,
+) -> None:
+    subagent_path = tmp_path / "shared" / "reviewer.toml"
+    config_path = tmp_path / ".codex" / "config.toml"
+
+    result = agent_config_common.resolve_relative_config_file(
+        str(subagent_path), str(config_path)
+    )
+
+    assert result == str(subagent_path)
+
+
 @pytest.mark.parametrize("module", [json_file, toml_file])
 def test_structured_file_modules_require_value_when_present(
     tmp_path: Path, module
@@ -638,6 +668,19 @@ def test_structured_file_modules_report_chmod_failures(
         },
         message,
     )
+
+
+@pytest.mark.parametrize("module", [json_file, toml_file])
+def test_structured_file_modules_compare_special_permission_bits(
+    tmp_path: Path, module
+) -> None:
+    path = tmp_path / "config"
+    path.write_text("{}\n" if module is json_file else "\n")
+    path.chmod(0o1777)
+
+    changed = module.enforce_mode(FakeModule(), str(path), 0o1777)
+
+    assert changed is False
 
 
 @pytest.mark.parametrize(
@@ -940,6 +983,55 @@ def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
     )
     assert not path.exists(), "expected subagent file to be rolled back"
     assert not config_path.exists(), "expected config file to remain absent"
+
+
+def test_codex_cli_subagent_reraises_unexpected_registry_update_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
+
+    def fail_registry(*args, **kwargs):
+        raise RuntimeError("unexpected registry failure")
+
+    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
+    set_module_args(
+        {
+            "name": "Reviewer",
+            "path": str(path),
+            "config_path": str(config_path),
+            "description": "Review changes.",
+            "developer_instructions": "Inspect the diff.",
+        }
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected registry failure"):
+        codex_cli_subagent.main()
+
+
+def test_codex_cli_subagent_reraises_unexpected_registry_removal_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
+
+    def fail_registry(*args, **kwargs):
+        raise RuntimeError("unexpected registry failure")
+
+    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
+    set_module_args(
+        {
+            "name": "Reviewer",
+            "path": str(path),
+            "config_path": str(config_path),
+            "state": "absent",
+        }
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected registry failure"):
+        codex_cli_subagent.main()
 
 
 def test_codex_cli_subagent_requires_present_fields(tmp_path: Path) -> None:

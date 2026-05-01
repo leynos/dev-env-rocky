@@ -167,7 +167,7 @@ def enforce_mode(module: AnsibleModule, path: str, mode: int | None) -> bool:
     """Apply a parsed file mode when needed and report whether it changed."""
     if mode is None or not os.path.exists(path):
         return False
-    current = os.stat(path).st_mode & 0o777
+    current = os.stat(path).st_mode & 0o7777
     if current == mode:
         return False
     if not module.check_mode:
