@@ -14,13 +14,14 @@ the two surfaces are never left partially updated.
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
     atomic_write_text,
     clean_dict,
-    expand_path,
     manage_named_toml_entry,
     read_text,
     remove_path,
@@ -233,25 +234,36 @@ def resolve_config_path(module: AnsibleModule) -> str:
         module.fail_json(msg=str(exc))
 
 
-def snapshot_path(module: AnsibleModule, path: str) -> str | None:
+@dataclass(frozen=True)
+class FileSnapshot:
+    """Capture one file's rollback state."""
+
+    path: Path
+    content: str | None
+    mode: int | None
+
+
+def snapshot_path(module: AnsibleModule, path: str) -> FileSnapshot:
     """Capture the current text content for rollback."""
+    resolved_path = Path(os.path.expanduser(path)).resolve()
     try:
-        return read_text(path)
+        mode = resolved_path.stat().st_mode & 0o7777 if resolved_path.exists() else None
+        return FileSnapshot(resolved_path, read_text(str(resolved_path)), mode)
     except OSError as exc:
-        module.fail_json(msg="Failed to snapshot %s: %s" % (path, exc))
+        module.fail_json(msg="Failed to snapshot %s: %s" % (resolved_path, exc))
 
 
-def restore_snapshot(module: AnsibleModule, path: str, content: str | None) -> None:
+def restore_snapshot(module: AnsibleModule, snapshot: FileSnapshot) -> None:
     """Restore one file snapshot after a coordinated update fails."""
     try:
-        if content is None:
-            resolved_path = expand_path(path)
-            if os.path.exists(resolved_path):
-                os.remove(resolved_path)
+        if snapshot.content is None:
+            remove_path(module, str(snapshot.path), recursive=False)
             return
-        atomic_write_text(path, content)
+        atomic_write_text(str(snapshot.path), snapshot.content)
+        if snapshot.mode is not None:
+            os.chmod(snapshot.path, snapshot.mode)
     except OSError as exc:
-        module.fail_json(msg="Failed to roll back %s: %s" % (path, exc))
+        module.fail_json(msg="Failed to roll back %s: %s" % (snapshot.path, exc))
 
 
 class RegistryWriteError(Exception):
@@ -337,8 +349,8 @@ def main() -> None:
             )
         except RegistryWriteError as exc:
             if changed_file and not module.check_mode:
-                restore_snapshot(module, path, path_snapshot)
-                restore_snapshot(module, config_path, config_snapshot)
+                restore_snapshot(module, path_snapshot)
+                restore_snapshot(module, config_snapshot)
             module.fail_json(
                 msg="Failed to unregister Codex subagent %s: %s"
                 % (slug, error_message(exc))
@@ -372,8 +384,8 @@ def main() -> None:
         )
     except RegistryWriteError as exc:
         if changed_file and not module.check_mode:
-            restore_snapshot(module, path, path_snapshot)
-            restore_snapshot(module, config_path, config_snapshot)
+            restore_snapshot(module, path_snapshot)
+            restore_snapshot(module, config_snapshot)
         module.fail_json(
             msg="Failed to register Codex subagent %s: %s" % (slug, error_message(exc))
         )

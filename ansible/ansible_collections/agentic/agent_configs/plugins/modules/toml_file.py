@@ -231,8 +231,15 @@ def main() -> None:
         log_operation(module, "toml_file", "check_mode", path)
     elif changed_value:
         try:
+            saved_mode = (
+                os.stat(path).st_mode & 0o7777
+                if desired_mode is None and os.path.exists(path)
+                else None
+            )
             log_operation(module, "toml_file", "write", path)
             atomic_write_text(path, tomlkit.dumps(document))
+            if desired_mode is None and saved_mode is not None:
+                os.chmod(path, saved_mode)
         except OSError as exc:
             module.fail_json(msg="Failed to write TOML file %s: %s" % (path, exc))
     changed_mode = enforce_mode(module, path, desired_mode)

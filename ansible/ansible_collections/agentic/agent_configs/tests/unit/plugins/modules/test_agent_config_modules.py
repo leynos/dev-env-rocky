@@ -528,6 +528,38 @@ def test_toml_file_mode_idempotency(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("module", "filename", "initial_content", "expected_value"),
+    [
+        (json_file, "config.json", '{"env": {"RUSTC_WRAPPER": "old"}}\n', "new"),
+        (toml_file, "config.toml", '[env]\nRUSTC_WRAPPER = "old"\n', "new"),
+    ],
+)
+def test_structured_file_modules_preserve_existing_mode_without_mode_argument(
+    tmp_path: Path,
+    module,
+    filename: str,
+    initial_content: str,
+    expected_value: str,
+) -> None:
+    """Structured writes without mode should preserve an existing file mode."""
+    path = tmp_path / filename
+    path.write_text(initial_content)
+    path.chmod(0o754)
+
+    result = run_module(
+        module,
+        {
+            "path": str(path),
+            "key": "env.RUSTC_WRAPPER",
+            "value": expected_value,
+        },
+    )
+
+    assert result["changed"] is True
+    assert path.stat().st_mode & 0o7777 == 0o754
+
+
 def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -> None:
     expected_env = {
         "RUSTC_WRAPPER": "/home/leynos/.local/bin/notdeadyet",
@@ -1129,15 +1161,32 @@ def test_codex_cli_subagent_restore_snapshot_removes_expanded_path(
     """Rollback removal should expand home-relative paths before deleting."""
     home = tmp_path / "home"
     target = home / ".codex" / "agents" / "reviewer.toml"
+    monkeypatch.setenv("HOME", str(home))
+    snapshot = codex_cli_subagent.snapshot_path(
+        FakeModule(), "~/.codex/agents/reviewer.toml"
+    )
     target.parent.mkdir(parents=True)
     target.write_text('name = "Reviewer"\n')
-    monkeypatch.setenv("HOME", str(home))
 
-    codex_cli_subagent.restore_snapshot(
-        FakeModule(), "~/.codex/agents/reviewer.toml", None
-    )
+    codex_cli_subagent.restore_snapshot(FakeModule(), snapshot)
 
     assert not target.exists(), "expected rollback to remove the expanded path"
+
+
+def test_codex_cli_subagent_restore_snapshot_preserves_mode(tmp_path: Path) -> None:
+    """Rollback restore should put file content and mode back together."""
+    path = tmp_path / "agents/reviewer.toml"
+    path.parent.mkdir(parents=True)
+    path.write_text('name = "Reviewer"\n')
+    path.chmod(0o640)
+    snapshot = codex_cli_subagent.snapshot_path(FakeModule(), str(path))
+    path.write_text('name = "Changed"\n')
+    path.chmod(0o600)
+
+    codex_cli_subagent.restore_snapshot(FakeModule(), snapshot)
+
+    assert path.read_text() == 'name = "Reviewer"\n'
+    assert path.stat().st_mode & 0o7777 == 0o640
 
 
 def test_codex_cli_subagent_reraises_unexpected_registry_update_errors(
