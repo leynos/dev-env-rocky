@@ -1,0 +1,10 @@
+---
+sccache_env_vars:
+  - key: RUSTC_WRAPPER
+    value: "{{ ansible_env.HOME }}/.local/bin/notdeadyet"
+  - key: RUSTC_HEARTBEAT_SECS
+    value: "45"
+  - key: SCCACHE_DIR
+    value: "{{ ansible_env.HOME }}/.cache/sccache"
+  - key: SCCACHE_CACHE_SIZE
+    value: "120G"

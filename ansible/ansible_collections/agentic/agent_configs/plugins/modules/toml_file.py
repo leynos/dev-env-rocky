@@ -2,6 +2,16 @@
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+"""Manage TOML configuration files for the agentic agent_configs collection.
+
+This Ansible module expands the requested ``path`` with ``expand_path``, reads
+existing content with ``read_text``, parses and updates nested TOML values, and
+persists changed documents with ``atomic_write_text``. Callers provide a target
+path, dot-separated key, optional value, state, and mode; the module returns the
+managed key and changed status. Side effects are limited to creating, updating,
+or chmoding the target TOML file, and expected read, TOML parse, write, and
+chmod failures are reported through ``module.fail_json``.
+"""
 
 from __future__ import annotations
 
@@ -73,14 +83,15 @@ key:
 
 
 def import_tomlkit(module: AnsibleModule):
-    """Import ``tomlkit`` or fail the module with an actionable error."""
+    """Import ``tomlkit`` and its parse error type or fail clearly."""
     try:
         import tomlkit
+        from tomlkit.exceptions import ParseError
     except ImportError:
         module.fail_json(
             msg="The toml_file module requires the tomlkit Python package on the target host"
         )
-    return tomlkit
+    return tomlkit, ParseError
 
 
 def split_key_path(key: str) -> list[str]:
@@ -117,14 +128,14 @@ def split_key_path(key: str) -> list[str]:
     return parts
 
 
-def load_document(module: AnsibleModule, tomlkit, path: str):
+def load_document(module: AnsibleModule, tomlkit, parse_error, path: str):
     """Load a TOML document, returning an empty document when absent."""
     content = read_text(path)
     if content is None:
         return tomlkit.document()
     try:
         return tomlkit.parse(content)
-    except Exception as exc:
+    except parse_error as exc:
         module.fail_json(msg="Failed to parse TOML file %s: %s" % (path, exc))
 
 
@@ -184,7 +195,7 @@ def main() -> None:
         supports_check_mode=True,
     )
 
-    tomlkit = import_tomlkit(module)
+    tomlkit, parse_error = import_tomlkit(module)
     path = expand_path(module.params["path"])
     try:
         parts = split_key_path(module.params["key"])
@@ -193,7 +204,7 @@ def main() -> None:
     desired_mode = parse_mode(module, module.params.get("mode"))
 
     try:
-        document = load_document(module, tomlkit, path)
+        document = load_document(module, tomlkit, parse_error, path)
     except OSError as exc:
         module.fail_json(msg="Failed to read TOML file %s: %s" % (path, exc))
     parent = get_parent(module, tomlkit, document, parts)

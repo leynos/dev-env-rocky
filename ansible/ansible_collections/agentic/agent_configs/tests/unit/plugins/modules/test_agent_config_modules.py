@@ -570,6 +570,44 @@ def test_toml_file_reports_write_failures(
     )
 
 
+def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
+    class DummyModule:
+        def fail_json(self, **kwargs):
+            raise AnsibleFailJson(kwargs)
+
+    path = tmp_path / "config.toml"
+    path.write_text("[env\n")
+    tomlkit, parse_error = toml_file.import_tomlkit(DummyModule())
+
+    with pytest.raises(AnsibleFailJson) as exc:
+        toml_file.load_document(DummyModule(), tomlkit, parse_error, str(path))
+
+    actual_message = exc.value.args[0]["msg"]
+    assert "Failed to parse TOML file" in actual_message
+
+
+def test_toml_file_does_not_mask_unexpected_parse_errors(tmp_path: Path) -> None:
+    class DummyModule:
+        def fail_json(self, **kwargs):
+            raise AnsibleFailJson(kwargs)
+
+    class BrokenTomlkit:
+        @staticmethod
+        def document():
+            return {}
+
+        @staticmethod
+        def parse(content: str):
+            raise RuntimeError("unexpected parser failure")
+
+    path = tmp_path / "config.toml"
+    path.write_text("[env]\n")
+    _, parse_error = toml_file.import_tomlkit(DummyModule())
+
+    with pytest.raises(RuntimeError, match="unexpected parser failure"):
+        toml_file.load_document(DummyModule(), BrokenTomlkit, parse_error, str(path))
+
+
 @pytest.mark.parametrize(
     ("module", "message"),
     [

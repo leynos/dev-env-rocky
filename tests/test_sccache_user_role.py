@@ -8,6 +8,7 @@ import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCCACHE_USER_TASKS = REPO_ROOT / "ansible/roles/sccache_user/tasks/main.yml"
+SCCACHE_USER_DEFAULTS = REPO_ROOT / "ansible/roles/sccache_user/defaults/main.yml"
 EXPECTED_ENV = {
     "RUSTC_WRAPPER": "{{ ansible_env.HOME }}/.local/bin/notdeadyet",
     "RUSTC_HEARTBEAT_SECS": "45",
@@ -51,6 +52,7 @@ def test_sccache_user_role_uses_structured_config_modules() -> None:
 
 def test_sccache_user_role_writes_expected_environment_structure() -> None:
     content = SCCACHE_USER_TASKS.read_text()
+    defaults = SCCACHE_USER_DEFAULTS.read_text()
     codex_task = extract_task(content, "Configure sccache environment in Codex config")
     claude_task = extract_task(
         content, "Configure sccache environment in Claude settings"
@@ -66,20 +68,20 @@ def test_sccache_user_role_writes_expected_environment_structure() -> None:
     assert json.loads(claude_json)["env"] == EXPECTED_ENV, (
         "expected sccache_user Claude values to form a valid JSON env object"
     )
+    assert 'loop: "{{ sccache_env_vars }}"' in codex_task, (
+        "expected Codex task to use the shared sccache_env_vars role default"
+    )
+    assert 'loop: "{{ sccache_env_vars }}"' in claude_task, (
+        "expected Claude task to use the shared sccache_env_vars role default"
+    )
     for key, value in EXPECTED_ENV.items():
         expected_key = f"- key: {key}"
         expected_value = f'value: "{value}"'
-        assert expected_key in codex_task, (
-            f"expected Codex task loop to include {expected_key!r}"
+        assert expected_key in defaults, (
+            f"expected sccache_env_vars default to include {expected_key!r}"
         )
-        assert expected_value in codex_task, (
-            f"expected Codex task loop to include {expected_value!r}"
-        )
-        assert expected_key in claude_task, (
-            f"expected Claude task loop to include {expected_key!r}"
-        )
-        assert expected_value in claude_task, (
-            f"expected Claude task loop to include {expected_value!r}"
+        assert expected_value in defaults, (
+            f"expected sccache_env_vars default to include {expected_value!r}"
         )
 
 

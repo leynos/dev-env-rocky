@@ -2,6 +2,16 @@
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+"""Manage JSON configuration files for the agentic collection.
+
+This Ansible module expands the requested ``path`` with ``expand_path``, reads
+an existing JSON object with ``load_json_file``, updates or removes one nested
+key, and writes the rendered JSON back with ``atomic_write_text``. Inputs are
+the target file path, a dot-separated key, an optional value, state, and mode.
+Outputs report whether the managed value or mode changed. Expected validation,
+parse, read, write, and chmod failures are returned through ``module.fail_json``
+so playbook callers receive actionable Ansible errors.
+"""
 
 from __future__ import annotations
 
