@@ -550,46 +550,56 @@ def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -
     )
 
 
-def test_resolve_relative_config_file_returns_path_relative_to_config_dir(
+@pytest.mark.parametrize(
+    ("subagent_parts", "config_parts", "expect_relative", "expected_value"),
+    [
+        (
+            (".codex", "agents", "reviewer.toml"),
+            (".codex", "config.toml"),
+            True,
+            str(Path("agents") / "reviewer.toml"),
+        ),
+        (
+            ("shared", "reviewer.toml"),
+            (".codex", "config.toml"),
+            False,
+            None,
+        ),
+        (
+            (".codex", "agents", "bot.toml"),
+            (".codex", "config.toml"),
+            True,
+            str(Path("agents") / "bot.toml"),
+        ),
+        (
+            ("other", "bot.toml"),
+            (".codex", "config.toml"),
+            False,
+            None,
+        ),
+    ],
+)
+def test_resolve_relative_config_file_parametrized(
     tmp_path: Path,
+    subagent_parts: tuple[str, ...],
+    config_parts: tuple[str, ...],
+    expect_relative: bool,
+    expected_value: str | None,
 ) -> None:
-    subagent_path = tmp_path / ".codex" / "agents" / "reviewer.toml"
-    config_path = tmp_path / ".codex" / "config.toml"
-
-    result = agent_config_common.resolve_relative_config_file(
-        str(subagent_path), str(config_path)
-    )
-
-    assert result == "agents/reviewer.toml"
-
-
-def test_resolve_relative_config_file_returns_absolute_path_outside_config_dir(
-    tmp_path: Path,
-) -> None:
-    subagent_path = tmp_path / "shared" / "reviewer.toml"
-    config_path = tmp_path / ".codex" / "config.toml"
-
-    result = agent_config_common.resolve_relative_config_file(
-        str(subagent_path), str(config_path)
-    )
-
-    assert result == str(subagent_path)
-
-
-def test_resolve_relative_config_file_inside_and_outside(tmp_path: Path) -> None:
     """Paths inside config dir must be relative; outside paths must be absolute."""
-    config_toml = str(tmp_path / ".codex" / "config.toml")
-    subagent_inside = str(tmp_path / ".codex" / "agents" / "bot.toml")
-    subagent_outside = str(tmp_path / "other" / "bot.toml")
+    subagent_path = tmp_path.joinpath(*subagent_parts)
+    config_path = tmp_path.joinpath(*config_parts)
 
-    rel = agent_config_common.resolve_relative_config_file(subagent_inside, config_toml)
-    assert not Path(rel).is_absolute(), f"expected relative path, got {rel!r}"
-    assert rel == str(Path("agents") / "bot.toml")
-
-    abs_path = agent_config_common.resolve_relative_config_file(
-        subagent_outside, config_toml
+    result = agent_config_common.resolve_relative_config_file(
+        str(subagent_path), str(config_path)
     )
-    assert Path(abs_path).is_absolute(), f"expected absolute path, got {abs_path!r}"
+
+    if expect_relative:
+        assert not Path(result).is_absolute(), f"expected relative path, got {result!r}"
+        assert result == expected_value
+    else:
+        assert Path(result).is_absolute(), f"expected absolute path, got {result!r}"
+        assert result == str(subagent_path)
 
 
 @pytest.mark.parametrize("module", [json_file, toml_file])
@@ -1050,6 +1060,8 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
     assert absent["changed"] is True, (
         f"expected absent result['changed'] to be True, got {absent['changed']!r}"
     )
+    assert "agents" not in absent, "expected absent result to use documented fields"
+    assert absent["registry"] is None, "expected absent result registry to be None"
     assert not path.exists(), f"expected {path} to be removed"
     rendered_config_after_absent = config_path.read_text()
     assert rendered_config_after_absent == "\n", (

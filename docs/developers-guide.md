@@ -30,6 +30,7 @@ The expected public helpers are:
 - `atomic_write_text`, for replacing UTF-8 text files without partial writes;
 - `expand_path`, for normalising user-provided paths before file access;
 - `read_text`, for optional UTF-8 reads where missing files are acceptable;
+- `fail_with_io_error`, for normalising and raising consistent I/O errors;
 - `write_text_if_changed`, for idempotent text writes with check-mode support;
 - `write_toml_if_changed`, for idempotent TOML writes with `tomlkit`;
 - `manage_named_toml_entry`, for named registry entries in TOML tables;

@@ -321,7 +321,7 @@ def main() -> None:
             scope=module.params["scope"],
             slug=slug,
             name=module.params["name"],
-            agents=data.get("agents", {}),
+            registry=None,
         )
 
     subagent = build_subagent_definition(module)
