@@ -14,6 +14,7 @@ the two surfaces are never left partially updated.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
@@ -251,11 +252,40 @@ def restore_snapshot(module: AnsibleModule, path: str, content: str | None) -> N
         module.fail_json(msg="Failed to roll back %s: %s" % (path, exc))
 
 
+class AnsibleFailJson(Exception):
+    """Raised by registry writes so coordinated rollback can run first."""
+
+    def __init__(self, message: str) -> None:
+        """Store the failure message reported by a proxied fail_json call."""
+        self.message = message
+        super().__init__(message)
+
+
+class RollbackModuleProxy:
+    """Proxy an Ansible module while turning fail_json into an exception."""
+
+    def __init__(self, module: AnsibleModule) -> None:
+        """Wrap the real module used for registry updates."""
+        self._module = module
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegate ordinary AnsibleModule attributes to the wrapped module."""
+        return getattr(self._module, name)
+
+    def fail_json(self, *args: Any, **kwargs: Any) -> None:
+        """Raise a rollback-aware failure instead of exiting immediately."""
+        message = kwargs.get("msg")
+        if message is None and args:
+            message = args[0]
+        if message is None:
+            message = kwargs
+        raise AnsibleFailJson(str(message))
+
+
 def error_message(exc: Exception) -> str:
-    """Return a compact message from an Ansible test exception or regular error."""
-    if exc.args and isinstance(exc.args[0], dict) and exc.args[0].get("msg"):
-        return str(exc.args[0]["msg"])
-    return str(exc)
+    """Return a compact message from an Ansible failure exception."""
+    message = getattr(exc, "message", None)
+    return str(message if message is not None else exc)
 
 
 def main() -> None:
@@ -289,24 +319,21 @@ def main() -> None:
     path = resolve_subagent_path(module)
     config_path = resolve_config_path(module)
     slug = module.params.get("slug") or slugify(module.params["name"])
+    registry_module = RollbackModuleProxy(module)
     if module.params["state"] == "absent":
         path_snapshot = snapshot_path(module, path)
         config_snapshot = snapshot_path(module, config_path)
         changed_file = remove_path(module, path, recursive=False)
         try:
             changed_registry, data = manage_named_toml_entry(
-                module=module,
+                module=registry_module,
                 path=config_path,
                 root_key="agents",
                 name=slug,
                 desired=None,
                 state="absent",
             )
-        except Exception as exc:
-            if not (
-                exc.args and isinstance(exc.args[0], dict) and exc.args[0].get("msg")
-            ):
-                raise
+        except AnsibleFailJson as exc:
             if changed_file and not module.check_mode:
                 restore_snapshot(module, path, path_snapshot)
                 restore_snapshot(module, config_path, config_snapshot)
@@ -334,16 +361,14 @@ def main() -> None:
     changed_file = write_toml_if_changed(module, path, subagent)
     try:
         changed_registry, data = manage_named_toml_entry(
-            module=module,
+            module=registry_module,
             path=config_path,
             root_key="agents",
             name=slug,
             desired=registry,
             state="present",
         )
-    except Exception as exc:
-        if not (exc.args and isinstance(exc.args[0], dict) and exc.args[0].get("msg")):
-            raise
+    except AnsibleFailJson as exc:
         if changed_file and not module.check_mode:
             restore_snapshot(module, path, path_snapshot)
             restore_snapshot(module, config_path, config_snapshot)

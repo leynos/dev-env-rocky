@@ -169,6 +169,7 @@ def enforce_mode(module: AnsibleModule, path: str, mode: int | None) -> bool:
     if mode is None or not os.path.exists(path):
         return False
     current = os.stat(path).st_mode & 0o7777
+    log_operation(module, "toml_file", "enforce_mode", path)
     if current == mode:
         return False
     if not module.check_mode:
@@ -208,6 +209,7 @@ def main() -> None:
         document = load_document(module, tomlkit, parse_error, path)
     except OSError as exc:
         module.fail_json(msg="Failed to read TOML file %s: %s" % (path, exc))
+    log_operation(module, "toml_file", "read", path)
     parent = get_parent(module, tomlkit, document, parts)
     leaf = parts[-1]
     changed_value = False
@@ -222,7 +224,12 @@ def main() -> None:
         del parent[leaf]
         changed_value = True
 
-    if changed_value and not module.check_mode:
+    if not changed_value:
+        log_operation(module, "toml_file", "unchanged", path)
+
+    if changed_value and module.check_mode:
+        log_operation(module, "toml_file", "check_mode", path)
+    elif changed_value:
         try:
             log_operation(module, "toml_file", "write", path)
             atomic_write_text(path, tomlkit.dumps(document))

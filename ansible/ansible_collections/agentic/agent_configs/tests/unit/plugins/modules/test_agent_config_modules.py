@@ -48,6 +48,7 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 
 
 def run_module(module, args: dict):
+    """Run an Ansible module in-process and return its exit payload."""
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
         module.main()
@@ -55,6 +56,7 @@ def run_module(module, args: dict):
 
 
 def assert_fails(module, args: dict, message: str) -> None:
+    """Assert that an Ansible module fails with a matching message."""
     set_module_args(args)
     with pytest.raises(AnsibleFailJson) as exc:
         module.main()
@@ -482,42 +484,48 @@ def test_toml_file_updates_nested_value_idempotently_and_removes(
 
 def test_json_file_mode_idempotency(tmp_path: Path) -> None:
     """Applying the same mode twice must report changed=False on the second run."""
-    target = str(tmp_path / "cfg.json")
-    args = {
-        "path": target,
-        "key": "x",
-        "value": 1,
-        "state": "present",
-        "mode": "0644",
-    }
+    for mode_str in ("0644", "1777", "4755"):
+        target = str(tmp_path / f"cfg_{mode_str}.json")
+        args = {
+            "path": target,
+            "key": "x",
+            "value": 1,
+            "state": "present",
+            "mode": mode_str,
+        }
 
-    first = run_module(json_file, args)
-    assert first["changed"] is True
-    second = run_module(json_file, args)
-    assert second["changed"] is False, (
-        "expected idempotent mode rerun to report changed=False, "
-        f"got {second['changed']!r}"
-    )
+        first = run_module(json_file, args)
+        assert first["changed"] is True, (
+            f"mode {mode_str}: expected changed=True on first run"
+        )
+        second = run_module(json_file, args)
+        assert second["changed"] is False, (
+            f"mode {mode_str}: expected idempotent mode rerun to report "
+            f"changed=False, got {second['changed']!r}"
+        )
 
 
 def test_toml_file_mode_idempotency(tmp_path: Path) -> None:
     """Applying the same mode twice must report changed=False on the second run."""
-    target = str(tmp_path / "cfg.toml")
-    args = {
-        "path": target,
-        "key": "x",
-        "value": 1,
-        "state": "present",
-        "mode": "0644",
-    }
+    for mode_str in ("0644", "1777", "4755"):
+        target = str(tmp_path / f"cfg_{mode_str}.toml")
+        args = {
+            "path": target,
+            "key": "x",
+            "value": 1,
+            "state": "present",
+            "mode": mode_str,
+        }
 
-    first = run_module(toml_file, args)
-    assert first["changed"] is True
-    second = run_module(toml_file, args)
-    assert second["changed"] is False, (
-        "expected idempotent mode rerun to report changed=False, "
-        f"got {second['changed']!r}"
-    )
+        first = run_module(toml_file, args)
+        assert first["changed"] is True, (
+            f"mode {mode_str}: expected changed=True on first run"
+        )
+        second = run_module(toml_file, args)
+        assert second["changed"] is False, (
+            f"mode {mode_str}: expected idempotent mode rerun to report "
+            f"changed=False, got {second['changed']!r}"
+        )
 
 
 def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -> None:
@@ -634,6 +642,7 @@ def test_json_file_reports_write_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def fail_write(path: str, content: str) -> None:
+        """Raise a write failure for JSON write error coverage."""
         raise OSError("disk denied")
 
     monkeypatch.setattr(json_file, "atomic_write_text", fail_write)
@@ -652,6 +661,7 @@ def test_toml_file_reports_write_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def fail_write(path: str, content: str) -> None:
+        """Raise a write failure for TOML write error coverage."""
         raise OSError("disk denied")
 
     monkeypatch.setattr(toml_file, "atomic_write_text", fail_write)
@@ -668,7 +678,10 @@ def test_toml_file_reports_write_failures(
 
 def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
     class DummyModule:
+        """Minimal module object that raises captured Ansible failures."""
+
         def fail_json(self, **kwargs):
+            """Raise the captured parse failure payload."""
             raise AnsibleFailJson(kwargs)
 
     path = tmp_path / "config.toml"
@@ -684,16 +697,23 @@ def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
 
 def test_toml_file_does_not_mask_unexpected_parse_errors(tmp_path: Path) -> None:
     class DummyModule:
+        """Minimal module object that raises captured Ansible failures."""
+
         def fail_json(self, **kwargs):
+            """Raise the captured parse failure payload."""
             raise AnsibleFailJson(kwargs)
 
     class BrokenTomlkit:
+        """Fake TOML implementation that raises an unexpected parse error."""
+
         @staticmethod
         def document():
+            """Return an empty TOML-like document."""
             return {}
 
         @staticmethod
         def parse(content: str):
+            """Raise the unexpected parser error under test."""
             raise RuntimeError("unexpected parser failure")
 
     path = tmp_path / "config.toml"
@@ -721,6 +741,7 @@ def test_structured_file_modules_report_chmod_failures(
     path.write_text("{}\n" if module is json_file else "\n")
 
     def fail_chmod(path: str, mode: int) -> None:
+        """Raise a chmod failure for structured file module coverage."""
         raise OSError("chmod denied")
 
     monkeypatch.setattr(module.os, "chmod", fail_chmod)
@@ -763,15 +784,21 @@ def test_structured_file_modules_handle_special_bits(
     )
 
     class StatResult:
+        """Stat result containing the requested sticky permission bits."""
+
         st_mode = 0o1000 | 0o777
 
     def stat_with_special_bits(path: str) -> StatResult:
+        """Return a stat result whose mode already matches the request."""
         return StatResult()
 
     def fail_chmod(path: str, mode: int) -> None:
+        """Fail the test if chmod runs for an already matching mode."""
         raise AssertionError("chmod should not be called for matching special bits")
 
     class FakeOs:
+        """Minimal os replacement exposing patched stat and chmod calls."""
+
         path = module.os.path
         stat = staticmethod(stat_with_special_bits)
         chmod = staticmethod(fail_chmod)
@@ -1077,7 +1104,8 @@ def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
     path = tmp_path / "agents/reviewer.toml"
 
     def fail_registry(*args, **kwargs):
-        raise AnsibleFailJson({"msg": "registry denied"})
+        """Raise the registry failure that should trigger rollback."""
+        raise codex_cli_subagent.AnsibleFailJson("registry denied")
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
     assert_fails(
@@ -1103,6 +1131,7 @@ def test_codex_cli_subagent_reraises_unexpected_registry_update_errors(
     path = tmp_path / "agents/reviewer.toml"
 
     def fail_registry(*args, **kwargs):
+        """Raise an unexpected registry update failure."""
         raise RuntimeError("unexpected registry failure")
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
@@ -1128,6 +1157,7 @@ def test_codex_cli_subagent_reraises_unexpected_registry_removal_errors(
     path = tmp_path / "agents/reviewer.toml"
 
     def fail_registry(*args, **kwargs):
+        """Raise an unexpected registry removal failure."""
         raise RuntimeError("unexpected registry failure")
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
@@ -1150,6 +1180,7 @@ def test_codex_cli_subagent_reraises_non_ansible_exceptions(
     """Non-Ansible failure exceptions must propagate, not be swallowed."""
 
     def fail_registry(*args, **kwargs):
+        """Raise an unexpected registry failure."""
         raise RuntimeError("boom")
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)

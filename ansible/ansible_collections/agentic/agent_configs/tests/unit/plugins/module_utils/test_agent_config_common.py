@@ -23,37 +23,47 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils import (
 
 
 class ModuleFailure(Exception):
+    """Raised when a fake module reports fail_json."""
+
     pass
 
 
 @dataclass
 class FakeModule:
+    """Minimal module object for exercising module utility functions."""
+
     check_mode: bool = False
 
     def fail_json(self, **kwargs: Any) -> None:
+        """Raise the captured module failure payload."""
         kwargs["failed"] = True
         raise ModuleFailure(kwargs)
 
 
 @pytest.fixture
 def fake_module() -> FakeModule:
+    """Return a default fake module for helper tests."""
     return FakeModule()
 
 
 @pytest.fixture
 def settings_path(tmp_path: Path) -> Path:
+    """Return a temporary settings JSON path."""
     return tmp_path / "settings.json"
 
 
 def assert_equal(actual: Any, expected: Any, context: str) -> None:
+    """Assert equality with a contextual failure message."""
     assert actual == expected, f"{context}: expected {expected!r}, got {actual!r}"
 
 
 def assert_is(actual: Any, expected: Any, context: str) -> None:
+    """Assert identity with a contextual failure message."""
     assert actual is expected, f"{context}: expected {expected!r}, got {actual!r}"
 
 
 def test_change_set_tracks_unique_changed_paths_and_details() -> None:
+    """ChangeSet should track unique changed paths and latest details."""
     changes = common.ChangeSet()
 
     changes.note(False, path="/tmp/ignored", ignored=True)
@@ -82,10 +92,14 @@ def test_change_set_tracks_unique_changed_paths_and_details() -> None:
     ],
 )
 def test_slugify_normalizes_resource_names(raw: str, expected: str) -> None:
-    assert_equal(common.slugify(raw), expected, "common.slugify should normalize resource name")
+    """slugify should normalise display names into stable resource slugs."""
+    assert_equal(
+        common.slugify(raw), expected, "common.slugify should normalize resource name"
+    )
 
 
 def test_dump_toml_handles_nested_tables_and_arrays() -> None:
+    """dump_toml should render nested tables and array tables."""
     rendered = common.dump_toml(
         {
             "features": {"codex_hooks": True},
@@ -121,16 +135,19 @@ def test_dump_toml_handles_nested_tables_and_arrays() -> None:
     [float("nan"), float("inf"), float("-inf")],
 )
 def test_dump_toml_rejects_nan_and_infinity(value: float) -> None:
+    """dump_toml should reject floating values unsupported by TOML."""
     with pytest.raises(TypeError, match="TOML does not support NaN or infinity"):
         common.dump_toml({"field": value})
 
 
 def test_dump_toml_rejects_unsupported_values() -> None:
+    """dump_toml should reject unsupported scalar values."""
     with pytest.raises(TypeError, match="Unsupported TOML scalar type"):
         common.dump_toml({"bad": object()})
 
 
 def test_render_markdown_normalizes_body_and_frontmatter() -> None:
+    """render_markdown should normalise frontmatter and body line endings."""
     rendered = common.render_markdown(
         {"name": "Release", "enabled": True, "tools": ["Bash", "Read"]},
         "Body\r\n",
@@ -147,6 +164,7 @@ def test_manage_named_json_entry_creates_updates_and_removes(
     fake_module: FakeModule,
     settings_path: Path,
 ) -> None:
+    """manage_named_json_entry should create, update, and remove entries."""
     changed, data = common.manage_named_json_entry(
         fake_module,
         str(settings_path),
@@ -157,8 +175,16 @@ def test_manage_named_json_entry_creates_updates_and_removes(
     )
 
     assert_is(changed, True, "manage_named_json_entry should create missing entry")
-    assert_equal(data, {"mcpServers": {"repo": {"command": "old"}}}, "manage_named_json_entry should return created data")
-    assert_equal(json.loads(settings_path.read_text()), data, "manage_named_json_entry should write created data")
+    assert_equal(
+        data,
+        {"mcpServers": {"repo": {"command": "old"}}},
+        "manage_named_json_entry should return created data",
+    )
+    assert_equal(
+        json.loads(settings_path.read_text()),
+        data,
+        "manage_named_json_entry should write created data",
+    )
 
     changed, data = common.manage_named_json_entry(
         fake_module,
@@ -170,7 +196,11 @@ def test_manage_named_json_entry_creates_updates_and_removes(
     )
 
     assert_is(changed, False, "manage_named_json_entry should be idempotent")
-    assert_equal(data, {"mcpServers": {"repo": {"command": "old"}}}, "manage_named_json_entry should keep data unchanged")
+    assert_equal(
+        data,
+        {"mcpServers": {"repo": {"command": "old"}}},
+        "manage_named_json_entry should keep data unchanged",
+    )
 
     changed, data = common.manage_named_json_entry(
         fake_module,
@@ -182,11 +212,18 @@ def test_manage_named_json_entry_creates_updates_and_removes(
     )
 
     assert_is(changed, True, "manage_named_json_entry should remove existing entry")
-    assert_equal(data, {}, "manage_named_json_entry should return empty data after removal")
-    assert_equal(json.loads(settings_path.read_text()), {}, "manage_named_json_entry should write removal")
+    assert_equal(
+        data, {}, "manage_named_json_entry should return empty data after removal"
+    )
+    assert_equal(
+        json.loads(settings_path.read_text()),
+        {},
+        "manage_named_json_entry should write removal",
+    )
 
 
 def test_manage_named_json_entry_check_mode_does_not_write(settings_path: Path) -> None:
+    """manage_named_json_entry should report check-mode changes without writes."""
     changed, data = common.manage_named_json_entry(
         FakeModule(check_mode=True),
         str(settings_path),
@@ -197,11 +234,18 @@ def test_manage_named_json_entry_check_mode_does_not_write(settings_path: Path) 
     )
 
     assert_is(changed, True, "manage_named_json_entry check mode should report change")
-    assert_equal(data, {"mcpServers": {"repo": {"command": "mcp"}}}, "manage_named_json_entry check mode should return desired data")
-    assert not settings_path.exists(), "manage_named_json_entry check mode should not write file"
+    assert_equal(
+        data,
+        {"mcpServers": {"repo": {"command": "mcp"}}},
+        "manage_named_json_entry check mode should return desired data",
+    )
+    assert not settings_path.exists(), (
+        "manage_named_json_entry check mode should not write file"
+    )
 
 
 def test_manage_named_json_entry_rejects_bad_roots(settings_path: Path) -> None:
+    """manage_named_json_entry should reject non-object root values."""
     settings_path.write_text(json.dumps({"mcpServers": []}))
 
     with pytest.raises(ModuleFailure) as exc:
@@ -223,6 +267,7 @@ def test_manage_hook_json_adds_updates_and_removes_hook(
     fake_module: FakeModule,
     settings_path: Path,
 ) -> None:
+    """manage_hook_json should add, update, and remove hook entries."""
     changed, data = common.manage_hook_json(
         fake_module,
         str(settings_path),
@@ -234,7 +279,11 @@ def test_manage_hook_json_adds_updates_and_removes_hook(
     )
 
     assert_is(changed, True, "manage_hook_json should create hook")
-    assert_equal(data["hooks"]["Stop"][0]["matcher"], "Bash", "manage_hook_json should set matcher")
+    assert_equal(
+        data["hooks"]["Stop"][0]["matcher"],
+        "Bash",
+        "manage_hook_json should set matcher",
+    )
     assert_equal(
         data["hooks"]["Stop"][0]["hooks"],
         [{"type": "command", "command": "lint", "timeout": 30}],
@@ -252,7 +301,11 @@ def test_manage_hook_json_adds_updates_and_removes_hook(
     )
 
     assert_is(changed, True, "manage_hook_json should update existing hook")
-    assert_equal(data["hooks"]["Stop"][0]["hooks"][0]["timeout"], 60, "manage_hook_json should update timeout")
+    assert_equal(
+        data["hooks"]["Stop"][0]["hooks"][0]["timeout"],
+        60,
+        "manage_hook_json should update timeout",
+    )
 
     changed, data = common.manage_hook_json(
         fake_module,
@@ -271,6 +324,7 @@ def test_manage_hook_json_adds_updates_and_removes_hook(
 def test_manage_directory_markdown_resource_handles_extra_files_and_absent(
     tmp_path: Path,
 ) -> None:
+    """manage_directory_markdown_resource should manage primary and extra files."""
     module = FakeModule()
     directory = tmp_path / "skill"
 
@@ -284,7 +338,9 @@ def test_manage_directory_markdown_resource_handles_extra_files_and_absent(
         extra_files={"references/detail.md": "Details\n"},
     )
 
-    assert_is(changes.changed, True, "manage_directory_markdown_resource should report writes")
+    assert_is(
+        changes.changed, True, "manage_directory_markdown_resource should report writes"
+    )
     assert_equal(
         (directory / "SKILL.md").read_text(),
         '---\nname: "Skill"\n---\n\nUse this skill.\n',
@@ -305,7 +361,11 @@ def test_manage_directory_markdown_resource_handles_extra_files_and_absent(
         state="present",
     )
 
-    assert_is(changes.changed, False, "manage_directory_markdown_resource should be idempotent")
+    assert_is(
+        changes.changed,
+        False,
+        "manage_directory_markdown_resource should be idempotent",
+    )
 
     changes = common.manage_directory_markdown_resource(
         module,
@@ -316,11 +376,18 @@ def test_manage_directory_markdown_resource_handles_extra_files_and_absent(
         state="absent",
     )
 
-    assert_is(changes.changed, True, "manage_directory_markdown_resource should remove directory")
-    assert not directory.exists(), "manage_directory_markdown_resource should delete directory"
+    assert_is(
+        changes.changed,
+        True,
+        "manage_directory_markdown_resource should remove directory",
+    )
+    assert not directory.exists(), (
+        "manage_directory_markdown_resource should delete directory"
+    )
 
 
 def test_check_mode_directory_resource_reports_without_writing(tmp_path: Path) -> None:
+    """Directory resource check mode should report changes without writing."""
     directory = tmp_path / "skill"
 
     changes = common.manage_directory_markdown_resource(
@@ -332,11 +399,18 @@ def test_check_mode_directory_resource_reports_without_writing(tmp_path: Path) -
         state="present",
     )
 
-    assert_is(changes.changed, True, "manage_directory_markdown_resource check mode should report change")
-    assert not directory.exists(), "manage_directory_markdown_resource check mode should not write"
+    assert_is(
+        changes.changed,
+        True,
+        "manage_directory_markdown_resource check mode should report change",
+    )
+    assert not directory.exists(), (
+        "manage_directory_markdown_resource check mode should not write"
+    )
 
 
 def test_resolve_scoped_config_path_requires_project_dir_for_project_scope() -> None:
+    """Project-scoped config paths should require a project directory."""
     with pytest.raises(ValueError, match="project_dir is required"):
         common.resolve_scoped_config_path(
             path=None,
@@ -348,6 +422,7 @@ def test_resolve_scoped_config_path_requires_project_dir_for_project_scope() -> 
 
 
 def test_maybe_validate_executable_checks_path(tmp_path: Path) -> None:
+    """maybe_validate_executable should reject non-executable paths."""
     executable = tmp_path / "tool"
     executable.write_text("#!/bin/sh\n")
     executable.chmod(0o644)

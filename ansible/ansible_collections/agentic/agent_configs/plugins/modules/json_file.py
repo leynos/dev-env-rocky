@@ -155,6 +155,7 @@ def enforce_mode(module: AnsibleModule, path: str, mode: int | None) -> bool:
     if mode is None or not os.path.exists(path):
         return False
     current = os.stat(path).st_mode & 0o7777
+    log_operation(module, "json_file", "enforce_mode", path)
     if current == mode:
         return False
     if not module.check_mode:
@@ -197,6 +198,7 @@ def main() -> None:
         module.fail_json(msg="Failed to parse JSON file %s: %s" % (path, exc))
     if not isinstance(data, dict):
         module.fail_json(msg="Expected JSON object in %s" % path)
+    log_operation(module, "json_file", "read", path)
 
     parent = get_parent(module, data, parts)
     leaf = parts[-1]
@@ -212,7 +214,12 @@ def main() -> None:
         del parent[leaf]
         changed_value = True
 
-    if changed_value and not module.check_mode:
+    if not changed_value:
+        log_operation(module, "json_file", "unchanged", path)
+
+    if changed_value and module.check_mode:
+        log_operation(module, "json_file", "check_mode", path)
+    elif changed_value:
         try:
             log_operation(module, "json_file", "write", path)
             atomic_write_text(path, dump_json(data))

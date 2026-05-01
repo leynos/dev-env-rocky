@@ -25,6 +25,7 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 
 @pytest.fixture(autouse=True)
 def patch_ansible_module(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch AnsibleModule exits so unit tests can run modules in-process."""
     monkeypatch.setattr(basic.AnsibleModule, "exit_json", exit_json)
     monkeypatch.setattr(basic.AnsibleModule, "fail_json", fail_json)
     monkeypatch.setattr(basic, "_ANSIBLE_ARGS", None)
