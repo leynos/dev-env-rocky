@@ -1105,7 +1105,7 @@ def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
 
     def fail_registry(*args, **kwargs):
         """Raise the registry failure that should trigger rollback."""
-        raise codex_cli_subagent.AnsibleFailJson("registry denied")
+        raise codex_cli_subagent.RegistryWriteError("registry denied")
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
     assert_fails(
@@ -1121,6 +1121,23 @@ def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
     )
     assert not path.exists(), "expected subagent file to be rolled back"
     assert not config_path.exists(), "expected config file to remain absent"
+
+
+def test_codex_cli_subagent_restore_snapshot_removes_expanded_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Rollback removal should expand home-relative paths before deleting."""
+    home = tmp_path / "home"
+    target = home / ".codex" / "agents" / "reviewer.toml"
+    target.parent.mkdir(parents=True)
+    target.write_text('name = "Reviewer"\n')
+    monkeypatch.setenv("HOME", str(home))
+
+    codex_cli_subagent.restore_snapshot(
+        FakeModule(), "~/.codex/agents/reviewer.toml", None
+    )
+
+    assert not target.exists(), "expected rollback to remove the expanded path"
 
 
 def test_codex_cli_subagent_reraises_unexpected_registry_update_errors(

@@ -20,6 +20,7 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
     atomic_write_text,
     clean_dict,
+    expand_path,
     manage_named_toml_entry,
     read_text,
     remove_path,
@@ -244,25 +245,26 @@ def restore_snapshot(module: AnsibleModule, path: str, content: str | None) -> N
     """Restore one file snapshot after a coordinated update fails."""
     try:
         if content is None:
-            if os.path.exists(path):
-                os.remove(path)
+            resolved_path = expand_path(path)
+            if os.path.exists(resolved_path):
+                os.remove(resolved_path)
             return
         atomic_write_text(path, content)
     except OSError as exc:
         module.fail_json(msg="Failed to roll back %s: %s" % (path, exc))
 
 
-class AnsibleFailJson(Exception):
+class RegistryWriteError(Exception):
     """Raised by registry writes so coordinated rollback can run first."""
 
     def __init__(self, message: str) -> None:
-        """Store the failure message reported by a proxied fail_json call."""
+        """Store the failure message reported by a registry fail_json call."""
         self.message = message
         super().__init__(message)
 
 
-class RollbackModuleProxy:
-    """Proxy an Ansible module while turning fail_json into an exception."""
+class RegistryModuleProxy:
+    """Proxy an Ansible module while turning fail_json into a registry error."""
 
     def __init__(self, module: AnsibleModule) -> None:
         """Wrap the real module used for registry updates."""
@@ -273,17 +275,17 @@ class RollbackModuleProxy:
         return getattr(self._module, name)
 
     def fail_json(self, *args: Any, **kwargs: Any) -> None:
-        """Raise a rollback-aware failure instead of exiting immediately."""
+        """Raise a registry write error instead of exiting immediately."""
         message = kwargs.get("msg")
         if message is None and args:
             message = args[0]
         if message is None:
             message = kwargs
-        raise AnsibleFailJson(str(message))
+        raise RegistryWriteError(str(message))
 
 
 def error_message(exc: Exception) -> str:
-    """Return a compact message from an Ansible failure exception."""
+    """Return a compact message from a registry failure exception."""
     message = getattr(exc, "message", None)
     return str(message if message is not None else exc)
 
@@ -319,7 +321,7 @@ def main() -> None:
     path = resolve_subagent_path(module)
     config_path = resolve_config_path(module)
     slug = module.params.get("slug") or slugify(module.params["name"])
-    registry_module = RollbackModuleProxy(module)
+    registry_module = RegistryModuleProxy(module)
     if module.params["state"] == "absent":
         path_snapshot = snapshot_path(module, path)
         config_snapshot = snapshot_path(module, config_path)
@@ -333,7 +335,7 @@ def main() -> None:
                 desired=None,
                 state="absent",
             )
-        except AnsibleFailJson as exc:
+        except RegistryWriteError as exc:
             if changed_file and not module.check_mode:
                 restore_snapshot(module, path, path_snapshot)
                 restore_snapshot(module, config_path, config_snapshot)
@@ -368,7 +370,7 @@ def main() -> None:
             desired=registry,
             state="present",
         )
-    except AnsibleFailJson as exc:
+    except RegistryWriteError as exc:
         if changed_file and not module.check_mode:
             restore_snapshot(module, path, path_snapshot)
             restore_snapshot(module, config_path, config_snapshot)
