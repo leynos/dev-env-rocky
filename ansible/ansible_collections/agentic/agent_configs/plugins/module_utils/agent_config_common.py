@@ -109,12 +109,22 @@ def atomic_write_text(path: str, content: str) -> None:
             os.unlink(tmp_path)
 
 
-def log_operation(module, operation: str, **fields: Any) -> None:
+def log_operation(
+    module,
+    operation: str,
+    action: Optional[str] = None,
+    path: Optional[str] = None,
+    **fields: Any,
+) -> None:
     """Emit a structured module log message when Ansible exposes logging."""
     logger = getattr(module, "log", None)
     if logger is None:
         return
     payload = {"operation": operation, **fields}
+    if action is not None:
+        payload["action"] = action
+    if path is not None:
+        payload["path"] = path
     logger(json.dumps(payload, sort_keys=True, ensure_ascii=False))
 
 

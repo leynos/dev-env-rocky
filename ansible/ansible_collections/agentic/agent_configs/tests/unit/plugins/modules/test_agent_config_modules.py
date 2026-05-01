@@ -480,6 +480,46 @@ def test_toml_file_updates_nested_value_idempotently_and_removes(
     )
 
 
+def test_json_file_mode_idempotency(tmp_path: Path) -> None:
+    """Applying the same mode twice must report changed=False on the second run."""
+    target = str(tmp_path / "cfg.json")
+    args = {
+        "path": target,
+        "key": "x",
+        "value": 1,
+        "state": "present",
+        "mode": "0644",
+    }
+
+    first = run_module(json_file, args)
+    assert first["changed"] is True
+    second = run_module(json_file, args)
+    assert second["changed"] is False, (
+        "expected idempotent mode rerun to report changed=False, "
+        f"got {second['changed']!r}"
+    )
+
+
+def test_toml_file_mode_idempotency(tmp_path: Path) -> None:
+    """Applying the same mode twice must report changed=False on the second run."""
+    target = str(tmp_path / "cfg.toml")
+    args = {
+        "path": target,
+        "key": "x",
+        "value": 1,
+        "state": "present",
+        "mode": "0644",
+    }
+
+    first = run_module(toml_file, args)
+    assert first["changed"] is True
+    second = run_module(toml_file, args)
+    assert second["changed"] is False, (
+        "expected idempotent mode rerun to report changed=False, "
+        f"got {second['changed']!r}"
+    )
+
+
 def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -> None:
     expected_env = {
         "RUSTC_WRAPPER": "/home/leynos/.local/bin/notdeadyet",
@@ -534,6 +574,22 @@ def test_resolve_relative_config_file_returns_absolute_path_outside_config_dir(
     )
 
     assert result == str(subagent_path)
+
+
+def test_resolve_relative_config_file_inside_and_outside(tmp_path: Path) -> None:
+    """Paths inside config dir must be relative; outside paths must be absolute."""
+    config_toml = str(tmp_path / ".codex" / "config.toml")
+    subagent_inside = str(tmp_path / ".codex" / "agents" / "bot.toml")
+    subagent_outside = str(tmp_path / "other" / "bot.toml")
+
+    rel = agent_config_common.resolve_relative_config_file(subagent_inside, config_toml)
+    assert not Path(rel).is_absolute(), f"expected relative path, got {rel!r}"
+    assert rel == str(Path("agents") / "bot.toml")
+
+    abs_path = agent_config_common.resolve_relative_config_file(
+        subagent_outside, config_toml
+    )
+    assert Path(abs_path).is_absolute(), f"expected absolute path, got {abs_path!r}"
 
 
 @pytest.mark.parametrize("module", [json_file, toml_file])
@@ -1032,6 +1088,29 @@ def test_codex_cli_subagent_reraises_unexpected_registry_removal_errors(
 
     with pytest.raises(RuntimeError, match="unexpected registry failure"):
         codex_cli_subagent.main()
+
+
+def test_codex_cli_subagent_reraises_non_ansible_exceptions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Non-Ansible failure exceptions must propagate, not be swallowed."""
+
+    def fail_registry(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
+    with pytest.raises(RuntimeError, match="boom"):
+        run_module(
+            codex_cli_subagent,
+            {
+                "name": "test",
+                "path": str(tmp_path / "agents/test.toml"),
+                "config_path": str(tmp_path / "config.toml"),
+                "state": "present",
+                "developer_instructions": "x",
+                "description": "y",
+            },
+        )
 
 
 def test_codex_cli_subagent_requires_present_fields(tmp_path: Path) -> None:

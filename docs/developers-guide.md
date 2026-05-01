@@ -20,6 +20,40 @@ Use these modules instead of `ansible.builtin.blockinfile` when changing agent
 configuration files. Text blocks are fragile for JSON and TOML because they can
 produce invalid syntax, duplicate tables, or overwrite user-managed settings.
 
+## Module Utilities API
+
+Module authors should use the shared helpers in `agent_config_common.py` rather
+than reimplementing file, path, or registry handling inside individual modules.
+The expected public helpers are:
+
+- `log_operation`, for structured Ansible log messages at important decisions;
+- `atomic_write_text`, for replacing UTF-8 text files without partial writes;
+- `expand_path`, for normalising user-provided paths before file access;
+- `read_text`, for optional UTF-8 reads where missing files are acceptable;
+- `write_text_if_changed`, for idempotent text writes with check-mode support;
+- `write_toml_if_changed`, for idempotent TOML writes with `tomlkit`;
+- `manage_named_toml_entry`, for named registry entries in TOML tables;
+- `manage_named_json_entry`, for named registry entries in JSON objects;
+- `resolve_relative_config_file`, for Codex subagent `config_file` values;
+- `resolve_scoped_config_path`, for user, project, and local config paths.
+
+Use `pathlib.Path` for new path manipulation in module utility helpers. The
+explicit `Path` operations make relative path handling, parent lookup, and
+cross-platform path semantics easier to review than equivalent `os.path`
+chains.
+
+The `agent_tools` role installs two helper executables into `~/.local/bin`:
+`mdformat-all` and `notdeadyet`. That directory must be created before any
+copy task writes those helpers, otherwise a fresh managed host can fail before
+later roles have had a chance to create the user-local binary path.
+
+`codex_cli_subagent` coordinates a subagent TOML file and its registry entry in
+`config.toml`. If a registry write fails after the subagent file has changed,
+catch only the Ansible failure shape produced by `fail_json`, restore both the
+subagent file and registry file snapshots with `restore_snapshot`, then fail
+the module. Re-raise all other exceptions so unexpected defects surface during
+testing instead of being converted into ordinary Ansible validation failures.
+
 ## Codex Subagents
 
 `codex_cli_subagent` manages two coordinated Codex surfaces:

@@ -24,6 +24,7 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
     atomic_write_text,
     expand_path,
     load_json_file,
+    log_operation,
 )
 
 DOCUMENTATION = r"""
@@ -213,6 +214,7 @@ def main() -> None:
 
     if changed_value and not module.check_mode:
         try:
+            log_operation(module, "json_file", "write", path)
             atomic_write_text(path, dump_json(data))
         except OSError as exc:
             module.fail_json(msg="Failed to write JSON file %s: %s" % (path, exc))

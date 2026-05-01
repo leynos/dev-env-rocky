@@ -2,6 +2,14 @@
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+"""Manage Codex CLI subagent files and their config.toml registry entries.
+
+This module creates or removes a subagent TOML file under ``~/.codex/agents``
+and keeps the corresponding ``[agents.<slug>]`` entry in the Codex
+``config.toml`` registry in sync. When a registry write fails after the
+subagent file has already changed, the module restores both file snapshots so
+the two surfaces are never left partially updated.
+"""
 
 from __future__ import annotations
 

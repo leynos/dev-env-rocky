@@ -21,6 +21,7 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
     atomic_write_text,
     expand_path,
+    log_operation,
     read_text,
 )
 
@@ -223,6 +224,7 @@ def main() -> None:
 
     if changed_value and not module.check_mode:
         try:
+            log_operation(module, "toml_file", "write", path)
             atomic_write_text(path, tomlkit.dumps(document))
         except OSError as exc:
             module.fail_json(msg="Failed to write TOML file %s: %s" % (path, exc))
