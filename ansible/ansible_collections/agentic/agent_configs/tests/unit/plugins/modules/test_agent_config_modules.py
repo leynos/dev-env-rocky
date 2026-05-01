@@ -739,6 +739,48 @@ def test_structured_file_modules_compare_special_permission_bits(
     assert changed is False
 
 
+@pytest.mark.parametrize("module", [json_file, toml_file])
+def test_structured_file_modules_handle_special_bits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, module
+) -> None:
+    """Special permission bits must not trigger repeated chmod attempts."""
+    path = tmp_path / "config"
+    expected_value = "/home/leynos/.local/bin/notdeadyet"
+    path.write_text(
+        json.dumps({"env": {"RUSTC_WRAPPER": expected_value}}) + "\n"
+        if module is json_file
+        else f'[env]\nRUSTC_WRAPPER = "{expected_value}"\n'
+    )
+
+    class StatResult:
+        st_mode = 0o1000 | 0o777
+
+    def stat_with_special_bits(path: str) -> StatResult:
+        return StatResult()
+
+    def fail_chmod(path: str, mode: int) -> None:
+        raise AssertionError("chmod should not be called for matching special bits")
+
+    class FakeOs:
+        path = module.os.path
+        stat = staticmethod(stat_with_special_bits)
+        chmod = staticmethod(fail_chmod)
+
+    monkeypatch.setattr(module, "os", FakeOs)
+
+    result = run_module(
+        module,
+        {
+            "path": str(path),
+            "key": "env.RUSTC_WRAPPER",
+            "value": expected_value,
+            "mode": "1777",
+        },
+    )
+
+    assert result["changed"] is False
+
+
 @pytest.mark.parametrize(
     ("module", "extra_args", "expected_hook"),
     [
