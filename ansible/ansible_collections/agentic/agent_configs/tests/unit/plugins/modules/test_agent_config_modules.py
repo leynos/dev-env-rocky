@@ -112,6 +112,7 @@ def test_markdown_file_modules_create_idempotently_and_remove(
     extra_args: dict,
     expected_frontmatter: list[str],
 ) -> None:
+    """Verify markdown-file modules create a file, rerun idempotently, and remove it."""
     path = tmp_path / filename
     args = {
         "name": "Release checklist",
@@ -198,6 +199,7 @@ def test_directory_skill_modules_create_extra_files_and_remove(
     primary_file: str,
     extra_file: str,
 ) -> None:
+    """Verify directory skill modules write auxiliary files and remove them on absent."""
     directory = tmp_path / module.__name__.rsplit(".", maxsplit=1)[-1]
     args = {
         "name": "Release checklist",
@@ -253,6 +255,7 @@ def test_codex_cli_skill_rejects_conflicting_openai_yaml_sources(
 
 
 def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> None:
+    """Verify markdown-file modules reject state=present without required fields."""
     assert_fails(
         claude_code_command,
         {"name": "Release checklist", "path": str(tmp_path / "command.md")},
@@ -312,6 +315,7 @@ def test_json_mcp_modules_create_idempotently_and_remove(
     root_key: str,
     expected: dict,
 ) -> None:
+    """Verify JSON-MCP modules create an entry, rerun idempotently, and remove it."""
     path = tmp_path / "mcp.json"
     args = {"path": str(path), **args}
 
@@ -399,6 +403,7 @@ def test_codex_cli_mcp_writes_toml_and_removes_entry(tmp_path: Path) -> None:
 def test_json_file_updates_nested_value_idempotently_and_removes(
     tmp_path: Path,
 ) -> None:
+    """Verify json_file writes a nested value, reruns idempotently, and removes it."""
     path = tmp_path / "settings.json"
     path.write_text('{"hooks": {"Stop": []}}\n')
     args = {
@@ -441,6 +446,7 @@ def test_json_file_updates_nested_value_idempotently_and_removes(
 def test_toml_file_updates_nested_value_idempotently_and_removes(
     tmp_path: Path,
 ) -> None:
+    """Verify toml_file writes a nested value, reruns idempotently, and removes it."""
     path = tmp_path / "config.toml"
     path.write_text('[features]\ncodex_hooks = true\n\n[env]\nSCCACHE_DIR = "/old"\n')
     args = {
@@ -561,6 +567,7 @@ def test_structured_file_modules_preserve_existing_mode_without_mode_argument(
 
 
 def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -> None:
+    """Verify sccache env vars are written to the expected JSON and TOML structures."""
     expected_env = {
         "RUSTC_WRAPPER": "/home/leynos/.local/bin/notdeadyet",
         "RUSTC_HEARTBEAT_SECS": "45",
@@ -646,6 +653,7 @@ def test_resolve_relative_config_file_parametrized(
 def test_structured_file_modules_require_value_when_present(
     tmp_path: Path, module
 ) -> None:
+    """Verify both structured-file modules reject state=present without a value."""
     assert_fails(
         module,
         {"path": str(tmp_path / "config"), "key": "env.RUSTC_WRAPPER"},
@@ -655,6 +663,7 @@ def test_structured_file_modules_require_value_when_present(
 
 @pytest.mark.parametrize("module", [json_file, toml_file])
 def test_structured_file_modules_reject_non_octal_modes(tmp_path: Path, module) -> None:
+    """Verify both structured-file modules reject a non-octal mode string."""
     path = tmp_path / "config"
 
     assert_fails(
@@ -673,6 +682,7 @@ def test_structured_file_modules_reject_non_octal_modes(tmp_path: Path, module) 
 def test_json_file_reports_write_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Verify json_file surfaces an atomic-write failure through fail_json."""
     def fail_write(path: str, content: str) -> None:
         """Raise a write failure for JSON write error coverage."""
         raise OSError("disk denied")
@@ -692,6 +702,7 @@ def test_json_file_reports_write_failures(
 def test_toml_file_reports_write_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Verify toml_file surfaces an atomic-write failure through fail_json."""
     def fail_write(path: str, content: str) -> None:
         """Raise a write failure for TOML write error coverage."""
         raise OSError("disk denied")
@@ -709,6 +720,7 @@ def test_toml_file_reports_write_failures(
 
 
 def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
+    """Verify toml_file converts a TOML parse error into a fail_json message."""
     class DummyModule:
         """Minimal module object that raises captured Ansible failures."""
 
@@ -728,6 +740,7 @@ def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
 
 
 def test_toml_file_does_not_mask_unexpected_parse_errors(tmp_path: Path) -> None:
+    """Verify toml_file propagates unexpected parser exceptions without masking."""
     class DummyModule:
         """Minimal module object that raises captured Ansible failures."""
 
@@ -769,6 +782,7 @@ def test_structured_file_modules_report_chmod_failures(
     module,
     message: str,
 ) -> None:
+    """Verify both modules surface an os.chmod failure through fail_json."""
     path = tmp_path / "config"
     path.write_text("{}\n" if module is json_file else "\n")
 
@@ -793,6 +807,7 @@ def test_structured_file_modules_report_chmod_failures(
 def test_structured_file_modules_compare_special_permission_bits(
     tmp_path: Path, module
 ) -> None:
+    """Verify enforce_mode compares against 0o7777-masked bits, not 0o777."""
     path = tmp_path / "config"
     path.write_text("{}\n" if module is json_file else "\n")
     path.chmod(0o1777)
@@ -878,6 +893,7 @@ def test_json_hook_modules_create_idempotently_and_remove(
     extra_args: dict,
     expected_hook: dict,
 ) -> None:
+    """Verify JSON-hook modules create an entry, rerun idempotently, and remove it."""
     path = tmp_path / "settings.json"
     args = {
         "agent_executable": "/bin/sh",
@@ -1039,6 +1055,7 @@ def test_codex_cli_hook_check_mode_does_not_write(tmp_path: Path) -> None:
 
 
 def test_validate_agent_executable_rejects_missing_path(tmp_path: Path) -> None:
+    """Verify subagent validation fails when the agent executable path is absent."""
     assert_fails(
         claude_code_hook,
         {
@@ -1053,6 +1070,7 @@ def test_validate_agent_executable_rejects_missing_path(tmp_path: Path) -> None:
 
 
 def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> None:
+    """Verify the subagent module writes a TOML file and removes its registry entry."""
     config_path = tmp_path / "config.toml"
     path = tmp_path / "agents/reviewer.toml"
     args = {
@@ -1132,6 +1150,7 @@ def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify the subagent module restores both snapshots when registry write fails."""
     config_path = tmp_path / "config.toml"
     path = tmp_path / "agents/reviewer.toml"
 
@@ -1193,6 +1212,7 @@ def test_codex_cli_subagent_reraises_unexpected_registry_update_errors(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify non-RegistryWriteError exceptions propagate from registry update."""
     config_path = tmp_path / "config.toml"
     path = tmp_path / "agents/reviewer.toml"
 
@@ -1219,6 +1239,7 @@ def test_codex_cli_subagent_reraises_unexpected_registry_removal_errors(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Verify non-RegistryWriteError exceptions propagate from registry removal."""
     config_path = tmp_path / "config.toml"
     path = tmp_path / "agents/reviewer.toml"
 
@@ -1265,6 +1286,7 @@ def test_codex_cli_subagent_reraises_non_ansible_exceptions(
 
 
 def test_codex_cli_subagent_requires_present_fields(tmp_path: Path) -> None:
+    """Verify the subagent module rejects state=present without required fields."""
     assert_fails(
         codex_cli_subagent,
         {
