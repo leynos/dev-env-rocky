@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import tomllib
+from typing import NoReturn
 
 import pytest
 
@@ -724,7 +725,7 @@ def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
     class DummyModule:
         """Minimal module object that raises captured Ansible failures."""
 
-        def fail_json(self, **kwargs):
+        def fail_json(self, **kwargs) -> NoReturn:
             """Raise the captured parse failure payload."""
             raise AnsibleFailJson(kwargs)
 
@@ -744,7 +745,7 @@ def test_toml_file_does_not_mask_unexpected_parse_errors(tmp_path: Path) -> None
     class DummyModule:
         """Minimal module object that raises captured Ansible failures."""
 
-        def fail_json(self, **kwargs):
+        def fail_json(self, **kwargs) -> NoReturn:
             """Raise the captured parse failure payload."""
             raise AnsibleFailJson(kwargs)
 
@@ -752,12 +753,12 @@ def test_toml_file_does_not_mask_unexpected_parse_errors(tmp_path: Path) -> None
         """Fake TOML implementation that raises an unexpected parse error."""
 
         @staticmethod
-        def document():
+        def document() -> dict:
             """Return an empty TOML-like document."""
             return {}
 
         @staticmethod
-        def parse(content: str):
+        def parse(content: str) -> NoReturn:
             """Raise the unexpected parser error under test."""
             raise RuntimeError("unexpected parser failure")
 
