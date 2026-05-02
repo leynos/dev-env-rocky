@@ -16,7 +16,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import NoReturn
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
@@ -282,11 +282,11 @@ class RegistryModuleProxy:
         """Wrap the real module used for registry updates."""
         self._module = module
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> object:
         """Delegate ordinary AnsibleModule attributes to the wrapped module."""
         return getattr(self._module, name)
 
-    def fail_json(self, *args: Any, **kwargs: Any) -> None:
+    def fail_json(self, *args: object, **kwargs: object) -> NoReturn:
         """Raise a registry write error instead of exiting immediately."""
         message = kwargs.get("msg")
         if message is None and args:
