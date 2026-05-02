@@ -17,12 +17,14 @@ from __future__ import annotations
 
 import os
 
+import tomllib
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
     atomic_write_text,
     expand_path,
     log_operation,
     read_text,
+    strip_legacy_sccache_env_block,
 )
 
 DOCUMENTATION = r"""
@@ -89,10 +91,31 @@ def import_tomlkit(module: AnsibleModule):
         import tomlkit
         from tomlkit.exceptions import ParseError
     except ImportError:
+        if module.check_mode:
+            return CheckModeToml, tomllib.TOMLDecodeError
         module.fail_json(
             msg="The toml_file module requires the tomlkit Python package on the target host"
         )
     return tomlkit, ParseError
+
+
+class CheckModeToml:
+    """Minimal TOML adapter for dry runs before target dependencies exist."""
+
+    @staticmethod
+    def document() -> dict:
+        """Return an empty TOML-like document."""
+        return {}
+
+    @staticmethod
+    def table() -> dict:
+        """Return an empty TOML-like table."""
+        return {}
+
+    @staticmethod
+    def parse(content: str) -> dict:
+        """Parse TOML with the standard library for check-mode decisions."""
+        return tomllib.loads(content)
 
 
 def split_key_path(key: str) -> list[str]:
@@ -133,9 +156,10 @@ def load_document(module: AnsibleModule, tomlkit, parse_error, path: str):
     """Load a TOML document, returning an empty document when absent."""
     content = read_text(path)
     if content is None:
-        return tomlkit.document()
+        return tomlkit.document(), False
+    content, removed_legacy_block = strip_legacy_sccache_env_block(content)
     try:
-        return tomlkit.parse(content)
+        return tomlkit.parse(content), removed_legacy_block
     except parse_error as exc:
         module.fail_json(msg="Failed to parse TOML file %s: %s" % (path, exc))
 
@@ -206,13 +230,15 @@ def main() -> None:
     desired_mode = parse_mode(module, module.params.get("mode"))
 
     try:
-        document = load_document(module, tomlkit, parse_error, path)
+        document, removed_legacy_block = load_document(
+            module, tomlkit, parse_error, path
+        )
     except OSError as exc:
         module.fail_json(msg="Failed to read TOML file %s: %s" % (path, exc))
     log_operation(module, "toml_file", "read", path)
     parent = get_parent(module, tomlkit, document, parts)
     leaf = parts[-1]
-    changed_value = False
+    changed_value = removed_legacy_block
     if module.params["state"] == "present":
         if module.params.get("value") is None:
             module.fail_json(msg="value is required when state=present")

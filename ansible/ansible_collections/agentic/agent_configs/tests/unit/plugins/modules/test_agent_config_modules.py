@@ -15,11 +15,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import tomllib
 from typing import NoReturn
 
 import pytest
-
+import tomllib
+from ansible_collections.agentic.agent_configs.plugins.module_utils import (
+    agent_config_common,
+)
 from ansible_collections.agentic.agent_configs.plugins.modules import (
     claude_code_command,
     claude_code_hook,
@@ -29,6 +31,8 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
     codex_cli_mcp,
     codex_cli_skill,
     codex_cli_subagent,
+    cursor_cli_mcp,
+    cursor_cli_skill,
     factory_droid_droid,
     factory_droid_hook,
     factory_droid_mcp,
@@ -36,10 +40,6 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
     json_file,
     toml_file,
 )
-from ansible_collections.agentic.agent_configs.plugins.module_utils import (
-    agent_config_common,
-)
-
 from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
     AnsibleExitJson,
     AnsibleFailJson,
@@ -191,6 +191,16 @@ def test_markdown_file_modules_create_idempotently_and_remove(
             "SKILL.md",
             "agents/openai.yaml",
         ),
+        (
+            cursor_cli_skill,
+            {
+                "description": "Run the release checklist.",
+                "metadata": {"owner": "release"},
+                "extra_files": {"references/release.md": "Release notes\n"},
+            },
+            "SKILL.md",
+            "references/release.md",
+        ),
     ],
 )
 def test_directory_skill_modules_create_extra_files_and_remove(
@@ -307,6 +317,22 @@ def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> No
                 "disabledTools": ["danger"],
             },
         ),
+        (
+            cursor_cli_mcp,
+            {
+                "name": "repo-tools",
+                "transport": "stdio",
+                "command": "mcp-context-pack",
+                "args": ["--stdio"],
+                "env": {"LOG": "info"},
+            },
+            "mcpServers",
+            {
+                "command": "mcp-context-pack",
+                "args": ["--stdio"],
+                "env": {"LOG": "info"},
+            },
+        ),
     ],
 )
 def test_json_mcp_modules_create_idempotently_and_remove(
@@ -399,6 +425,34 @@ def test_codex_cli_mcp_writes_toml_and_removes_entry(tmp_path: Path) -> None:
     assert rendered_after_absent == "\n", (
         f"expected TOML file to contain only a newline, got {rendered_after_absent!r}"
     )
+
+
+def test_cursor_cli_mcp_resolves_cursor_paths(tmp_path: Path) -> None:
+    project_dir = tmp_path / "repo"
+    project_dir.mkdir()
+
+    project_result = run_module(
+        cursor_cli_mcp,
+        {
+            "name": "repo-tools",
+            "scope": "project",
+            "project_dir": str(project_dir),
+            "transport": "http",
+            "url": "https://mcp.example.test",
+        },
+    )
+
+    assert project_result["path"] == str(project_dir / ".cursor" / "mcp.json")
+    rendered = json.loads((project_dir / ".cursor" / "mcp.json").read_text())
+    assert rendered == {
+        "mcpServers": {
+            "repo-tools": {
+                "type": "http",
+                "url": "https://mcp.example.test",
+                "headers": {},
+            }
+        }
+    }
 
 
 def test_json_file_updates_nested_value_idempotently_and_removes(
@@ -533,6 +587,37 @@ def test_toml_file_mode_idempotency(tmp_path: Path) -> None:
             f"mode {mode_str}: expected idempotent mode rerun to report "
             f"changed=False, got {second['changed']!r}"
         )
+
+
+def test_toml_file_removes_legacy_sccache_block_before_writing(
+    tmp_path: Path,
+) -> None:
+    """Verify toml_file repairs the obsolete sccache block that duplicated [env]."""
+    path = tmp_path / "config.toml"
+    path.write_text(
+        '[env]\nPATH = "/usr/bin"\n\n'
+        "# BEGIN ANSIBLE MANAGED BLOCK - sccache env\n"
+        "[env]\n"
+        'SCCACHE_DIR = "/old/cache"\n'
+        "# END ANSIBLE MANAGED BLOCK - sccache env\n"
+    )
+
+    result = run_module(
+        toml_file,
+        {
+            "path": str(path),
+            "key": "env.SCCACHE_DIR",
+            "value": "/home/leynos/.cache/sccache",
+        },
+    )
+
+    rendered = path.read_text()
+    parsed = tomllib.loads(rendered)
+    assert result["changed"] is True
+    assert "# BEGIN ANSIBLE MANAGED BLOCK - sccache env" not in rendered
+    assert rendered.count("[env]") == 1
+    assert parsed["env"]["PATH"] == "/usr/bin"
+    assert parsed["env"]["SCCACHE_DIR"] == "/home/leynos/.cache/sccache"
 
 
 @pytest.mark.parametrize(
@@ -684,6 +769,7 @@ def test_json_file_reports_write_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Verify json_file surfaces an atomic-write failure through fail_json."""
+
     def fail_write(path: str, content: str) -> None:
         """Raise a write failure for JSON write error coverage."""
         raise OSError("disk denied")
@@ -704,6 +790,7 @@ def test_toml_file_reports_write_failures(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Verify toml_file surfaces an atomic-write failure through fail_json."""
+
     def fail_write(path: str, content: str) -> None:
         """Raise a write failure for TOML write error coverage."""
         raise OSError("disk denied")
@@ -722,6 +809,7 @@ def test_toml_file_reports_write_failures(
 
 def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
     """Verify toml_file converts a TOML parse error into a fail_json message."""
+
     class DummyModule:
         """Minimal module object that raises captured Ansible failures."""
 
@@ -742,6 +830,7 @@ def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
 
 def test_toml_file_does_not_mask_unexpected_parse_errors(tmp_path: Path) -> None:
     """Verify toml_file propagates unexpected parser exceptions without masking."""
+
     class DummyModule:
         """Minimal module object that raises captured Ansible failures."""
 

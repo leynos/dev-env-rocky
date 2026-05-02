@@ -23,6 +23,12 @@ except Exception:  # pragma: no cover - older Python
         tomllib = None  # type: ignore
 
 TRUE_STRINGS = {"1", "true", "yes", "on"}
+LEGACY_SCCACHE_ENV_BLOCK_RE = re.compile(
+    r"\n?# BEGIN ANSIBLE MANAGED BLOCK - sccache env\n"
+    r"\[env\]\n"
+    r"(?:[^\n]*\n)*?"
+    r"# END ANSIBLE MANAGED BLOCK - sccache env\n?",
+)
 
 
 def expand_path(path: str) -> str:
@@ -86,6 +92,19 @@ def read_text(path: str) -> Optional[str]:
         return None
     with open(path, "r", encoding="utf-8") as handle:
         return handle.read()
+
+
+def strip_legacy_sccache_env_block(content: str) -> tuple[str, bool]:
+    """Remove the obsolete sccache text block that duplicated Codex ``[env]``.
+
+    Earlier versions of this repository wrote sccache variables with
+    ``blockinfile``. Hosts that already had a top-level Codex ``[env]`` table
+    then became invalid TOML, which prevents the structured modules from
+    parsing the file. The replacement ``toml_file`` module owns those same keys,
+    so this compatibility pass removes only the exact legacy managed block.
+    """
+    cleaned = LEGACY_SCCACHE_ENV_BLOCK_RE.sub("\n", content)
+    return cleaned, cleaned != content
 
 
 def atomic_write_text(path: str, content: str) -> None:
@@ -210,8 +229,12 @@ def load_toml_file(module, path: str, default: Optional[Any] = None) -> Any:
             msg="Reading TOML requires Python 3.11+ or the tomli package on the target host"
         )
     try:
-        with open(path, "rb") as handle:
-            return tomllib.load(handle)
+        with open(path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        cleaned, _ = strip_legacy_sccache_env_block(content)
+        return tomllib.loads(cleaned)
+    except tomllib.TOMLDecodeError as exc:
+        module.fail_json(msg="Failed to parse TOML file %s: %s" % (path, exc))
     except OSError as exc:
         fail_with_io_error(module, "read_toml", path, exc)
 

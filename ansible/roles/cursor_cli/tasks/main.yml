@@ -1,0 +1,14 @@
+---
+- name: Ensure Cursor CLI bin directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.local/bin"
+    state: directory
+    owner: "{{ owner_user }}"
+    group: "{{ owner_user }}"
+    mode: '0755'
+
+- name: Install Cursor CLI
+  ansible.builtin.shell:
+    cmd: curl https://cursor.com/install -fsS | bash
+  args:
+    creates: "{{ ansible_env.HOME }}/.local/bin/agent"

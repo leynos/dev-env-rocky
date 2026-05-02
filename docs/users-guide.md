@@ -16,15 +16,30 @@ The `agent_tools` and `sccache_user` roles configure user-scoped agent files
 under the owner user's home directory.
 
 Codex configuration is written to `~/.codex/config.toml`. Claude configuration
-is written to `~/.claude/settings.json`. The roles avoid raw text block edits
-for these files and instead use structured Ansible modules so existing
-configuration survives repeated runs.
+is written to `~/.claude/settings.json`. Cursor MCP configuration is written to
+`~/.cursor/mcp.json`, and Cursor skills are installed under `~/.cursor/skills`.
+The roles avoid raw text block edits for these files and instead use structured
+Ansible modules so existing configuration survives repeated runs.
+
+The `cursor_cli` role installs Cursor CLI through the official Linux and WSL
+installer:
+
+```bash
+curl https://cursor.com/install -fsS | bash
+```
+
+The installer creates the `agent` binary under `~/.local/bin`. The role runs
+before `agent_tools` so Cursor exists before MCPs and skills are configured.
+Cursor CLI does not currently support stop hooks, so this repository does not
+install Cursor stop-hook configuration.
 
 ## Firecrawl MCP
 
-The playbook installs the `firecrawl-mcp` package through the global Bun package
-role and links the executable into `~/.local/bin/firecrawl-mcp`. Codex is then
-configured with this MCP server:
+The playbook installs the `firecrawl-mcp` package through the global Bun
+package role and links the executable into `~/.local/bin/firecrawl-mcp`. Codex
+and Cursor are then configured with this MCP server.
+
+Codex receives:
 
 ```toml
 [mcp_servers.firecrawl]
@@ -34,9 +49,25 @@ command = "firecrawl-mcp"
 FIRECRAWL_API_KEY = "..."
 ```
 
+Cursor receives:
+
+```json
+{
+  "mcpServers": {
+    "firecrawl": {
+      "command": "firecrawl-mcp",
+      "env": {
+        "FIRECRAWL_API_KEY": "..."
+      }
+    }
+  }
+}
+```
+
 The real API key is not stored in plaintext in the repository. The role reads
-the vaulted `firecrawl_api_key` variable and writes it into the Codex MCP
-environment. The local Vault value is maintained from `~/__firecrawl_token`.
+the vaulted `firecrawl_api_key` variable and writes it into the Codex and
+Cursor MCP environments. The local Vault value is maintained from
+`~/__firecrawl_token`.
 
 To rotate the Firecrawl key:
 
@@ -44,8 +75,8 @@ To rotate the Firecrawl key:
 2. Refresh the ignored Vault file `ansible/group_vars/all/vault.yml` with
    `ansible-vault`.
 3. Run `make site`, or run a narrower play for the affected host.
-4. Verify that `~/.codex/config.toml` contains the `firecrawl` MCP server and
-   that `~/.local/bin/firecrawl-mcp` is executable.
+4. Verify that `~/.codex/config.toml` and `~/.cursor/mcp.json` contain the
+   `firecrawl` MCP server and that `~/.local/bin/firecrawl-mcp` is executable.
 
 ## Sccache Environment
 
@@ -60,5 +91,5 @@ Codex receives the values under the TOML `[env]` table in
 `~/.codex/config.toml`. Claude receives the same values under the JSON `env`
 object in `~/.claude/settings.json`.
 
-The obsolete `~/.claude/config.toml` file is removed because Claude does not use
-that TOML path for these settings.
+The obsolete `~/.claude/config.toml` file is removed because Claude does not
+use that TOML path for these settings.

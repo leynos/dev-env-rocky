@@ -149,6 +149,17 @@
     state: directory
     mode: '0755'
 
+- name: Ensure Cursor skills directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.cursor/skills"
+    state: directory
+    mode: '0755'
+
+- name: Check Cursor skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.cursor/skills"
+  register: cursor_skills_directory
+
 - name: Install Codex agent instructions
   ansible.builtin.copy:
     src: AGENTS.md
@@ -184,6 +195,15 @@
     remote_src: true
   loop: "{{ agent_helper_skills.files }}"
 
+- name: Install agent-helper-scripts skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ agent_helper_skills.files }}"
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+
 - name: Find skills in nextest-skill
   ansible.builtin.find:
     paths: "{{ ansible_env.HOME }}/git/nextest-skill"
@@ -206,6 +226,15 @@
     mode: 'preserve'
     remote_src: true
   loop: "{{ nextest_skills.files }}"
+
+- name: Install nextest-skill skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ nextest_skills.files }}"
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
 
 - name: Find skills in vidai-mock-skill
   ansible.builtin.find:
@@ -230,6 +259,15 @@
     remote_src: true
   loop: "{{ vidai_skills.files }}"
 
+- name: Install vidai-mock-skill skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ vidai_skills.files }}"
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+
 - name: Find skills in rust-skill
   ansible.builtin.find:
     paths: "{{ ansible_env.HOME }}/git/rust-skill/skills"
@@ -252,6 +290,15 @@
     mode: 'preserve'
     remote_src: true
   loop: "{{ rust_skills.files }}"
+
+- name: Install rust-skill skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ rust_skills.files }}"
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
 
 - name: Find skills in df12-readme-skill
   ansible.builtin.find:
@@ -278,6 +325,17 @@
     remote_src: true
   loop: "{{ df12_readme_skills.files }}"
   when: ssh_key_stat.stat.exists
+
+- name: Install df12-readme-skill skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_readme_skills.files }}"
+  when:
+    - ssh_key_stat.stat.exists
+    - not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
 
 - name: Find skills in df12-documentation-skills
   ansible.builtin.find:
@@ -310,6 +368,18 @@
   when:
     - ssh_key_stat.stat.exists
     - df12_documentation_skills_dir.stat.isdir | default(false)
+
+- name: Install df12-documentation-skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_documentation_skills.files | default([]) }}"
+  when:
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
+    - not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
 
 # Install context_pack tool for agent communication
 - name: Install context_pack tool
@@ -592,6 +662,69 @@
         - bash
         - -lc
         - npx @playwright/mcp@latest --no-sandbox
+
+# Configure Cursor CLI MCP servers using collection module. Cursor CLI does
+# not currently support stop hooks, so this role only installs skills and MCPs.
+- name: Configure Cursor CLI MCP servers
+  agentic.agent_configs.cursor_cli_mcp:
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    scope: user
+    transport: "{{ item.transport }}"
+    command: "{{ item.command | default(omit) }}"
+    args: "{{ item.args | default(omit) }}"
+    env: "{{ item.env | default(omit) }}"
+  loop:
+    - name: context_pack
+      transport: stdio
+      command: mcp-context-pack
+      env:
+        CONTEXT_PACK_ROOT: "{{ ansible_env.HOME }}/.local/state/context-pack"
+        CONTEXT_PACK_SOURCE_ROOT: "__SESSION_CWD__"
+        CONTEXT_PACK_LOG: "mcp_context_pack=info"
+        CONTEXT_PACK_INITIALIZE_TIMEOUT_MS: "20000"
+        CONTEXT_PACK_MAX_PACK_BYTES: "524288"
+        CONTEXT_PACK_MAX_SOURCE_BYTES: "2097152"
+        CONTEXT_PACK_EXPIRED_GRACE_SECONDS: "900"
+    - name: playwright
+      transport: stdio
+      command: podman
+      args:
+        - run
+        - --rm
+        - -i
+        - --network=host
+        - -e
+        - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+        - -e
+        - PLAYWRIGHT_SKIP_BROWSER_GC=1
+        - -e
+        - PLAYWRIGHT_MCP_BROWSER=chromium
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/ms-playwright:/ms-playwright:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/google-chrome:/opt/google/chrome:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/npm:/root/.npm:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/work:/work:z"
+        - -w
+        - /work
+        - mcr.microsoft.com/playwright:latest
+        - bash
+        - -lc
+        - npx @playwright/mcp@latest --no-sandbox
+
+- name: Configure Cursor CLI Firecrawl MCP server
+  agentic.agent_configs.cursor_cli_mcp:
+    name: firecrawl
+    state: present
+    scope: user
+    transport: stdio
+    command: firecrawl-mcp
+    env:
+      FIRECRAWL_API_KEY: "{{ firecrawl_api_key }}"
+  no_log: true
 
 # Create context directory for agent communication
 - name: Ensure context directory exists
