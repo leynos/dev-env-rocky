@@ -2,8 +2,34 @@
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+"""Manage Codex CLI subagent files and their config.toml registry entries.
+
+This module creates or removes a subagent TOML file under ``~/.codex/agents``
+and keeps the corresponding ``[agents.<slug>]`` entry in the Codex
+``config.toml`` registry in sync. When a registry write fails after the
+subagent file has already changed, the module restores both file snapshots so
+the two surfaces are never left partially updated.
+"""
 
 from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import NoReturn
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    atomic_write_text,
+    clean_dict,
+    manage_named_toml_entry,
+    read_text,
+    remove_path,
+    resolve_relative_config_file,
+    resolve_scoped_config_path,
+    slugify,
+    write_toml_if_changed,
+)
 
 DOCUMENTATION = r"""
 ---
@@ -12,6 +38,7 @@ short_description: Manage Codex CLI custom subagents
 version_added: "1.0.0"
 description:
   - Manage Codex CLI custom subagent TOML files in C(~/.codex/agents/) or C(.codex/agents/).
+  - Register the subagent in the matching Codex C(config.toml) C([agents]) table so Codex can load it.
 options:
   name:
     description:
@@ -44,6 +71,16 @@ options:
       - Exact subagent TOML file to manage.
       - Overrides C(scope), C(project_dir), and C(slug).
     type: path
+  config_path:
+    description:
+      - Exact Codex C(config.toml) path used for the subagent registry entry.
+      - Overrides the path inferred from C(scope) and C(project_dir).
+    type: path
+  config_file:
+    description:
+      - C(config_file) value to write under C([agents.<slug>]).
+      - Defaults to the subagent TOML path relative to the Codex configuration directory when possible.
+    type: str
   description:
     description:
       - Human-readable subagent description.
@@ -112,25 +149,30 @@ path:
   description: Managed subagent file path.
   returned: always
   type: str
+config_path:
+  description: Managed Codex config path.
+  returned: always
+  type: str
 subagent:
   description: Effective TOML content.
   returned: when state == 'present'
   type: dict
+registry:
+  description: Effective Codex C([agents.<slug>]) registry entry.
+  returned: when state == 'present'
+  type: dict
 """
-
-import os
-
-from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
-    clean_dict,
-    resolve_scoped_config_path,
-    slugify,
-    write_toml_if_changed,
-    remove_path,
-)
 
 
 def build_subagent_definition(module: AnsibleModule) -> dict:
+    """Build and validate the subagent TOML document.
+
+    Args:
+        module: Active Ansible module containing validated parameters.
+
+    Returns:
+        A dictionary suitable for rendering as the subagent TOML file.
+    """
     params = module.params
     if not params.get("description"):
         module.fail_json(msg="description is required when state=present")
@@ -150,7 +192,19 @@ def build_subagent_definition(module: AnsibleModule) -> dict:
     return clean_dict(desired)
 
 
-def resolve_path(module: AnsibleModule) -> str:
+def build_registry_definition(module: AnsibleModule, config_file: str) -> dict:
+    """Build the Codex ``[agents.<slug>]`` registry entry."""
+    params = module.params
+    desired = {
+        "description": params.get("description"),
+        "config_file": config_file,
+        "nickname_candidates": params.get("nickname_candidates"),
+    }
+    return clean_dict(desired)
+
+
+def resolve_subagent_path(module: AnsibleModule) -> str:
+    """Resolve the target subagent TOML path from explicit or scoped inputs."""
     if module.params.get("path"):
         return module.params["path"]
     slug = module.params.get("slug") or slugify(module.params["name"])
@@ -166,15 +220,104 @@ def resolve_path(module: AnsibleModule) -> str:
         module.fail_json(msg=str(exc))
 
 
+def resolve_config_path(module: AnsibleModule) -> str:
+    """Resolve the Codex ``config.toml`` path from explicit or scoped inputs."""
+    try:
+        return resolve_scoped_config_path(
+            path=module.params.get("config_path"),
+            scope=module.params["scope"],
+            project_dir=module.params.get("project_dir"),
+            user_path="~/.codex/config.toml",
+            project_relative_path=os.path.join(".codex", "config.toml"),
+        )
+    except ValueError as exc:
+        module.fail_json(msg=str(exc))
+
+
+@dataclass(frozen=True)
+class FileSnapshot:
+    """Capture one file's rollback state."""
+
+    path: Path
+    content: str | None
+    mode: int | None
+
+
+def snapshot_path(module: AnsibleModule, path: str) -> FileSnapshot:
+    """Capture the current text content for rollback."""
+    resolved_path = Path(os.path.expanduser(path)).resolve()
+    try:
+        mode = resolved_path.stat().st_mode & 0o7777 if resolved_path.exists() else None
+        return FileSnapshot(resolved_path, read_text(str(resolved_path)), mode)
+    except OSError as exc:
+        module.fail_json(msg="Failed to snapshot %s: %s" % (resolved_path, exc))
+
+
+def restore_snapshot(module: AnsibleModule, snapshot: FileSnapshot) -> None:
+    """Restore one file snapshot after a coordinated update fails."""
+    try:
+        if snapshot.content is None:
+            remove_path(module, str(snapshot.path), recursive=False)
+            return
+        atomic_write_text(str(snapshot.path), snapshot.content)
+        if snapshot.mode is not None:
+            os.chmod(snapshot.path, snapshot.mode)
+    except OSError as exc:
+        module.fail_json(msg="Failed to roll back %s: %s" % (snapshot.path, exc))
+
+
+class RegistryWriteError(Exception):
+    """Raised by registry writes so coordinated rollback can run first."""
+
+    def __init__(self, message: str) -> None:
+        """Store the failure message reported by a registry fail_json call."""
+        self.message = message
+        super().__init__(message)
+
+
+class RegistryModuleProxy:
+    """Proxy an Ansible module while turning fail_json into a registry error."""
+
+    def __init__(self, module: AnsibleModule) -> None:
+        """Wrap the real module used for registry updates."""
+        self._module = module
+
+    def __getattr__(self, name: str) -> object:
+        """Delegate ordinary AnsibleModule attributes to the wrapped module."""
+        return getattr(self._module, name)
+
+    def fail_json(self, *args: object, **kwargs: object) -> NoReturn:
+        """Raise a registry write error instead of exiting immediately."""
+        message = kwargs.get("msg")
+        if message is None and args:
+            message = args[0]
+        if message is None:
+            message = kwargs
+        raise RegistryWriteError(str(message))
+
+
+def error_message(exc: Exception) -> str:
+    """Return a compact message from a registry failure exception."""
+    message = getattr(exc, "message", None)
+    return str(message if message is not None else exc)
+
+
 def main() -> None:
+    """Run the Ansible module entrypoint."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},
             "slug": {"type": "str"},
-            "state": {"type": "str", "choices": ["present", "absent"], "default": "present"},
+            "state": {
+                "type": "str",
+                "choices": ["present", "absent"],
+                "default": "present",
+            },
             "scope": {"type": "str", "choices": ["user", "project"], "default": "user"},
             "project_dir": {"type": "path"},
             "path": {"type": "path"},
+            "config_path": {"type": "path"},
+            "config_file": {"type": "str"},
             "description": {"type": "str"},
             "developer_instructions": {"type": "str"},
             "nickname_candidates": {"type": "list", "elements": "str"},
@@ -187,26 +330,74 @@ def main() -> None:
         supports_check_mode=True,
     )
 
-    path = resolve_path(module)
+    path = resolve_subagent_path(module)
+    config_path = resolve_config_path(module)
+    slug = module.params.get("slug") or slugify(module.params["name"])
+    registry_module = RegistryModuleProxy(module)
     if module.params["state"] == "absent":
-        changed = remove_path(module, path, recursive=False)
+        path_snapshot = snapshot_path(module, path)
+        config_snapshot = snapshot_path(module, config_path)
+        changed_file = remove_path(module, path, recursive=False)
+        try:
+            changed_registry, data = manage_named_toml_entry(
+                module=registry_module,
+                path=config_path,
+                root_key="agents",
+                name=slug,
+                desired=None,
+                state="absent",
+            )
+        except RegistryWriteError as exc:
+            if changed_file and not module.check_mode:
+                restore_snapshot(module, path_snapshot)
+                restore_snapshot(module, config_snapshot)
+            module.fail_json(
+                msg="Failed to unregister Codex subagent %s: %s"
+                % (slug, error_message(exc))
+            )
         module.exit_json(
-            changed=changed,
+            changed=(changed_file or changed_registry),
             path=path,
+            config_path=config_path,
             scope=module.params["scope"],
-            slug=module.params.get("slug") or slugify(module.params["name"]),
+            slug=slug,
             name=module.params["name"],
+            registry=None,
         )
 
     subagent = build_subagent_definition(module)
-    changed = write_toml_if_changed(module, path, subagent)
+    config_file = module.params.get("config_file") or resolve_relative_config_file(
+        path, config_path
+    )
+    registry = build_registry_definition(module, config_file)
+    path_snapshot = snapshot_path(module, path)
+    config_snapshot = snapshot_path(module, config_path)
+    changed_file = write_toml_if_changed(module, path, subagent)
+    try:
+        changed_registry, data = manage_named_toml_entry(
+            module=registry_module,
+            path=config_path,
+            root_key="agents",
+            name=slug,
+            desired=registry,
+            state="present",
+        )
+    except RegistryWriteError as exc:
+        if changed_file and not module.check_mode:
+            restore_snapshot(module, path_snapshot)
+            restore_snapshot(module, config_snapshot)
+        module.fail_json(
+            msg="Failed to register Codex subagent %s: %s" % (slug, error_message(exc))
+        )
     module.exit_json(
-        changed=changed,
+        changed=(changed_file or changed_registry),
         path=path,
+        config_path=config_path,
         scope=module.params["scope"],
-        slug=module.params.get("slug") or slugify(module.params["name"]),
+        slug=slug,
         name=module.params["name"],
         subagent=subagent,
+        registry=data.get("agents", {}).get(slug, registry),
     )
 
 

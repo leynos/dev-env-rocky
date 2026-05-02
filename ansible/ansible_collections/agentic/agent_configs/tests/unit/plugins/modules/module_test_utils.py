@@ -17,26 +17,32 @@ class AnsibleFailJson(Exception):
 
 
 def set_module_args(args: dict[str, Any]) -> None:
+    """Serialize Ansible module arguments into the global test input slot."""
     payload = json.dumps({"ANSIBLE_MODULE_ARGS": args})
     basic._ANSIBLE_ARGS = to_bytes(payload)
 
 
 def exit_json(*args: Any, **kwargs: Any) -> None:
+    """Raise the captured successful module result instead of exiting."""
     if "changed" not in kwargs:
         kwargs["changed"] = False
     raise AnsibleExitJson(kwargs)
 
 
 def fail_json(*args: Any, **kwargs: Any) -> None:
+    """Raise the captured failed module result instead of exiting."""
     kwargs["failed"] = True
     raise AnsibleFailJson(kwargs)
 
 
 @dataclass
 class FakeModule:
+    """Minimal AnsibleModule replacement for direct helper tests."""
+
     check_mode: bool = False
     params: dict[str, Any] | None = None
 
     def fail_json(self, **kwargs: Any) -> None:
+        """Raise the captured failure result for helper-level assertions."""
         kwargs["failed"] = True
         raise AnsibleFailJson(kwargs)

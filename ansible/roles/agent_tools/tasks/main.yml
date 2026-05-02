@@ -15,6 +15,24 @@
     depth: 1
     single_branch: true
 
+- name: Ensure ~/.local/bin directory exists for helper executables
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.local/bin"
+    state: directory
+    owner: "{{ owner_user }}"
+    group: "{{ owner_user }}"
+    mode: '0755'
+
+- name: Install agent-helper-scripts helper executables
+  ansible.builtin.copy:
+    src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/{{ item }}"
+    dest: "{{ ansible_env.HOME }}/.local/bin/{{ item }}"
+    mode: '0700'
+    remote_src: true
+  loop:
+    - mdformat-all
+    - notdeadyet
+
 - name: Clone nextest-skill repository
   ansible.builtin.git:
     repo: https://github.com/leynos/nextest-skill.git
@@ -363,6 +381,17 @@
         - -lc
         - npx @playwright/mcp@latest --no-sandbox
 
+- name: Configure Codex CLI Firecrawl MCP server
+  agentic.agent_configs.codex_cli_mcp:
+    name: firecrawl
+    state: present
+    scope: user
+    transport: stdio
+    command: firecrawl-mcp
+    env:
+      FIRECRAWL_API_KEY: "{{ firecrawl_api_key }}"
+  no_log: true
+
 - name: Configure Codex CLI subagents
   agentic.agent_configs.codex_cli_subagent:
     name: "{{ item.name }}"
@@ -372,6 +401,7 @@
     model: "{{ item.model }}"
     model_reasoning_effort: "{{ item.reasoning_effort | default('medium') }}"
     sandbox_mode: "{{ item.sandbox_mode | default('workspace-write') }}"
+    nickname_candidates: "{{ item.nickname_candidates | default(omit) }}"
     developer_instructions: "{{ item.developer_instructions }}"
   loop:
     - name: wyvern

@@ -1,9 +1,12 @@
 # agentic.agent_configs
 
-An Ansible collection for managing filesystem-backed configuration used by Claude Code, Codex CLI, and Factory Droid.
+An Ansible collection for managing filesystem-backed configuration used by
+Claude Code, Codex CLI, and Factory Droid.
 
-The collection currently includes twelve modules:
+The collection currently includes fourteen modules:
 
+- `json_file`
+- `toml_file`
 - `claude_code_mcp`
 - `claude_code_hook`
 - `claude_code_skill`
@@ -19,13 +22,21 @@ The collection currently includes twelve modules:
 
 ## Design notes
 
-These modules edit the underlying JSON, TOML, and Markdown files directly rather than shelling out to the agent CLIs. That keeps them idempotent and easy to use in check mode.
+These modules edit the underlying JSON, TOML, and Markdown files directly
+rather than shelling out to the agent CLIs. That keeps them idempotent and easy
+to use in check mode.
 
-Hook modules require an `agent_executable` parameter, matching the assumption you asked for. The current implementation records and optionally validates that path, but it does not invoke the CLI.
+Hook modules require an `agent_executable` parameter, matching the assumption
+you asked for. The current implementation records and optionally validates that
+path, but it does not invoke the CLI.
 
-Codex modules read and rewrite TOML. On target hosts, that means Python 3.11+ or the `tomli` package for older Python versions.
+Codex modules read and rewrite TOML on Rocky 10+ hosts with Python 3.12+. The
+generic `toml_file` module also requires `tomlkit` so it can update TOML values
+without raw text blocks.
 
-`claude_code_mcp` currently manages user and project scopes. It does not attempt to manipulate Claude's local per-project MCP storage inside `~/.claude.json`.
+`claude_code_mcp` currently manages user and project scopes. It does not
+attempt to manipulate Claude's local per-project MCP storage inside
+`~/.claude.json`.
 
 ## Example
 

@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import tomllib
+from typing import NoReturn
 
 import pytest
 
@@ -31,16 +33,23 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
     factory_droid_hook,
     factory_droid_mcp,
     factory_droid_skill,
+    json_file,
+    toml_file,
+)
+from ansible_collections.agentic.agent_configs.plugins.module_utils import (
+    agent_config_common,
 )
 
 from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
     AnsibleExitJson,
     AnsibleFailJson,
+    FakeModule,
     set_module_args,
 )
 
 
 def run_module(module, args: dict):
+    """Run an Ansible module in-process and return its exit payload."""
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
         module.main()
@@ -48,11 +57,14 @@ def run_module(module, args: dict):
 
 
 def assert_fails(module, args: dict, message: str) -> None:
+    """Assert that an Ansible module fails with a matching message."""
     set_module_args(args)
     with pytest.raises(AnsibleFailJson) as exc:
         module.main()
     actual_message = exc.value.args[0]["msg"]
-    assert message in actual_message, f"expected failure message to contain {message!r}, got {actual_message!r}"
+    assert message in actual_message, (
+        f"expected failure message to contain {message!r}, got {actual_message!r}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -101,6 +113,7 @@ def test_markdown_file_modules_create_idempotently_and_remove(
     extra_args: dict,
     expected_frontmatter: list[str],
 ) -> None:
+    """Verify markdown-file modules create a file, rerun idempotently, and remove it."""
     path = tmp_path / filename
     args = {
         "name": "Release checklist",
@@ -111,15 +124,21 @@ def test_markdown_file_modules_create_idempotently_and_remove(
 
     result = run_module(module, args)
 
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
-    assert result["path"] == str(path), f"expected result['path'] to be {str(path)!r}, got {result['path']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
+    assert result["path"] == str(path), (
+        f"expected result['path'] to be {str(path)!r}, got {result['path']!r}"
+    )
     rendered = path.read_text()
     for expected in expected_frontmatter:
-        assert expected in rendered, f"expected rendered file to contain {expected!r}, got {rendered!r}"
+        assert expected in rendered, (
+            f"expected rendered file to contain {expected!r}, got {rendered!r}"
+        )
     expected_suffix = extra_args.get("body", "Run it.") + "\n"
     assert rendered.endswith(expected_suffix), (
         f"expected rendered file to end with {expected_suffix!r}, "
-        f"got tail {rendered[-len(expected_suffix) - 20:]!r}"
+        f"got tail {rendered[-len(expected_suffix) - 20 :]!r}"
     )
 
     rerun_result = run_module(module, args)
@@ -127,9 +146,13 @@ def test_markdown_file_modules_create_idempotently_and_remove(
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(module, {"name": "Release checklist", "path": str(path), "state": "absent"})
+    absent = run_module(
+        module, {"name": "Release checklist", "path": str(path), "state": "absent"}
+    )
 
-    assert absent["changed"] is True, f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    assert absent["changed"] is True, (
+        f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    )
     assert not path.exists(), f"expected {path} to be removed"
 
 
@@ -177,6 +200,7 @@ def test_directory_skill_modules_create_extra_files_and_remove(
     primary_file: str,
     extra_file: str,
 ) -> None:
+    """Verify directory skill modules write auxiliary files and remove them on absent."""
     directory = tmp_path / module.__name__.rsplit(".", maxsplit=1)[-1]
     args = {
         "name": "Release checklist",
@@ -187,25 +211,37 @@ def test_directory_skill_modules_create_extra_files_and_remove(
 
     result = run_module(module, args)
 
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
     assert result["directory"] == str(directory), (
         f"expected result['directory'] to be {str(directory)!r}, got {result['directory']!r}"
     )
-    assert (directory / primary_file).exists(), f"expected primary file {directory / primary_file} to exist"
-    assert (directory / extra_file).exists(), f"expected extra file {directory / extra_file} to exist"
+    assert (directory / primary_file).exists(), (
+        f"expected primary file {directory / primary_file} to exist"
+    )
+    assert (directory / extra_file).exists(), (
+        f"expected extra file {directory / extra_file} to exist"
+    )
 
     rerun_result = run_module(module, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(module, {"name": "Release checklist", "path": str(directory), "state": "absent"})
+    absent = run_module(
+        module, {"name": "Release checklist", "path": str(directory), "state": "absent"}
+    )
 
-    assert absent["changed"] is True, f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    assert absent["changed"] is True, (
+        f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    )
     assert not directory.exists(), f"expected {directory} to be removed"
 
 
-def test_codex_cli_skill_rejects_conflicting_openai_yaml_sources(tmp_path: Path) -> None:
+def test_codex_cli_skill_rejects_conflicting_openai_yaml_sources(
+    tmp_path: Path,
+) -> None:
     assert_fails(
         codex_cli_skill,
         {
@@ -220,6 +256,7 @@ def test_codex_cli_skill_rejects_conflicting_openai_yaml_sources(tmp_path: Path)
 
 
 def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> None:
+    """Verify markdown-file modules reject state=present without required fields."""
     assert_fails(
         claude_code_command,
         {"name": "Release checklist", "path": str(tmp_path / "command.md")},
@@ -245,7 +282,11 @@ def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> No
                 "env": {"LOG": "info"},
             },
             "mcpServers",
-            {"command": "mcp-context-pack", "args": ["--stdio"], "env": {"LOG": "info"}},
+            {
+                "command": "mcp-context-pack",
+                "args": ["--stdio"],
+                "env": {"LOG": "info"},
+            },
         ),
         (
             factory_droid_mcp,
@@ -275,27 +316,40 @@ def test_json_mcp_modules_create_idempotently_and_remove(
     root_key: str,
     expected: dict,
 ) -> None:
+    """Verify JSON-MCP modules create an entry, rerun idempotently, and remove it."""
     path = tmp_path / "mcp.json"
     args = {"path": str(path), **args}
 
     result = run_module(module, args)
 
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
-    assert result["server"] == expected, f"expected result['server'] to be {expected!r}, got {result['server']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
+    assert result["server"] == expected, (
+        f"expected result['server'] to be {expected!r}, got {result['server']!r}"
+    )
     rendered_json = json.loads(path.read_text())
     expected_json = {root_key: {"repo-tools": expected}}
-    assert rendered_json == expected_json, f"expected rendered JSON to be {expected_json!r}, got {rendered_json!r}"
+    assert rendered_json == expected_json, (
+        f"expected rendered JSON to be {expected_json!r}, got {rendered_json!r}"
+    )
 
     rerun_result = run_module(module, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(module, {"name": "repo-tools", "path": str(path), "state": "absent"})
+    absent = run_module(
+        module, {"name": "repo-tools", "path": str(path), "state": "absent"}
+    )
 
-    assert absent["changed"] is True, f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    assert absent["changed"] is True, (
+        f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    )
     absent_json = json.loads(path.read_text())
-    assert absent_json == {}, f"expected rendered JSON to be empty after removal, got {absent_json!r}"
+    assert absent_json == {}, (
+        f"expected rendered JSON to be empty after removal, got {absent_json!r}"
+    )
 
 
 def test_codex_cli_mcp_writes_toml_and_removes_entry(tmp_path: Path) -> None:
@@ -312,25 +366,504 @@ def test_codex_cli_mcp_writes_toml_and_removes_entry(tmp_path: Path) -> None:
 
     result = run_module(codex_cli_mcp, args)
 
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
     assert result["server"]["command"] == "mcp-context-pack", (
         f"expected server command to be 'mcp-context-pack', got {result['server']['command']!r}"
     )
     rendered = path.read_text()
-    assert "[mcp_servers.repo-tools]" in rendered, "expected rendered TOML to include repo-tools MCP table"
-    assert 'command = "mcp-context-pack"' in rendered, "expected rendered TOML to include mcp-context-pack command"
-    assert "startup_timeout_sec = 20" in rendered, "expected rendered TOML to include startup timeout"
+    assert "[mcp_servers.repo-tools]" in rendered, (
+        "expected rendered TOML to include repo-tools MCP table"
+    )
+    assert 'command = "mcp-context-pack"' in rendered, (
+        "expected rendered TOML to include mcp-context-pack command"
+    )
+    assert "startup_timeout_sec = 20" in rendered, (
+        "expected rendered TOML to include startup timeout"
+    )
 
     rerun_result = run_module(codex_cli_mcp, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(codex_cli_mcp, {"name": "repo-tools", "path": str(path), "state": "absent"})
+    absent = run_module(
+        codex_cli_mcp, {"name": "repo-tools", "path": str(path), "state": "absent"}
+    )
 
-    assert absent["changed"] is True, f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    assert absent["changed"] is True, (
+        f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    )
     rendered_after_absent = path.read_text()
-    assert rendered_after_absent == "\n", f"expected TOML file to contain only a newline, got {rendered_after_absent!r}"
+    assert rendered_after_absent == "\n", (
+        f"expected TOML file to contain only a newline, got {rendered_after_absent!r}"
+    )
+
+
+def test_json_file_updates_nested_value_idempotently_and_removes(
+    tmp_path: Path,
+) -> None:
+    """Verify json_file writes a nested value, reruns idempotently, and removes it."""
+    path = tmp_path / "settings.json"
+    path.write_text('{"hooks": {"Stop": []}}\n')
+    args = {
+        "path": str(path),
+        "key": "env.RUSTC_WRAPPER",
+        "value": "/home/leynos/.local/bin/notdeadyet",
+    }
+
+    result = run_module(json_file, args)
+
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
+    rendered = json.loads(path.read_text())
+    assert rendered["env"]["RUSTC_WRAPPER"] == "/home/leynos/.local/bin/notdeadyet", (
+        f"expected JSON env value to be written, got {rendered!r}"
+    )
+    assert rendered["hooks"] == {"Stop": []}, (
+        f"expected existing settings to be preserved, got {rendered!r}"
+    )
+
+    rerun_result = run_module(json_file, args)
+    assert rerun_result["changed"] is False, (
+        f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
+    )
+
+    absent = run_module(
+        json_file, {"path": str(path), "key": "env.RUSTC_WRAPPER", "state": "absent"}
+    )
+
+    assert absent["changed"] is True, (
+        f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    )
+    rendered_after_absent = json.loads(path.read_text())
+    assert "RUSTC_WRAPPER" not in rendered_after_absent["env"], (
+        f"expected JSON env value to be removed, got {rendered_after_absent!r}"
+    )
+
+
+def test_toml_file_updates_nested_value_idempotently_and_removes(
+    tmp_path: Path,
+) -> None:
+    """Verify toml_file writes a nested value, reruns idempotently, and removes it."""
+    path = tmp_path / "config.toml"
+    path.write_text('[features]\ncodex_hooks = true\n\n[env]\nSCCACHE_DIR = "/old"\n')
+    args = {
+        "path": str(path),
+        "key": "env.SCCACHE_DIR",
+        "value": "/home/leynos/.cache/sccache",
+    }
+
+    result = run_module(toml_file, args)
+
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
+    rendered = path.read_text()
+    assert "[features]" in rendered, (
+        f"expected existing TOML tables to be preserved, got {rendered!r}"
+    )
+    assert "codex_hooks = true" in rendered, (
+        f"expected existing TOML values to be preserved, got {rendered!r}"
+    )
+    assert 'SCCACHE_DIR = "/home/leynos/.cache/sccache"' in rendered, (
+        f"expected TOML env value to be written, got {rendered!r}"
+    )
+
+    rerun_result = run_module(toml_file, args)
+    assert rerun_result["changed"] is False, (
+        f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
+    )
+
+    absent = run_module(
+        toml_file, {"path": str(path), "key": "env.SCCACHE_DIR", "state": "absent"}
+    )
+
+    assert absent["changed"] is True, (
+        f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    )
+    assert "SCCACHE_DIR" not in path.read_text(), (
+        f"expected TOML env value to be removed, got {path.read_text()!r}"
+    )
+
+
+def test_json_file_mode_idempotency(tmp_path: Path) -> None:
+    """Applying the same mode twice must report changed=False on the second run."""
+    for mode_str in ("0644", "1777", "4755"):
+        target = str(tmp_path / f"cfg_{mode_str}.json")
+        args = {
+            "path": target,
+            "key": "x",
+            "value": 1,
+            "state": "present",
+            "mode": mode_str,
+        }
+
+        first = run_module(json_file, args)
+        assert first["changed"] is True, (
+            f"mode {mode_str}: expected changed=True on first run"
+        )
+        second = run_module(json_file, args)
+        assert second["changed"] is False, (
+            f"mode {mode_str}: expected idempotent mode rerun to report "
+            f"changed=False, got {second['changed']!r}"
+        )
+
+
+def test_toml_file_mode_idempotency(tmp_path: Path) -> None:
+    """Applying the same mode twice must report changed=False on the second run."""
+    for mode_str in ("0644", "1777", "4755"):
+        target = str(tmp_path / f"cfg_{mode_str}.toml")
+        args = {
+            "path": target,
+            "key": "x",
+            "value": 1,
+            "state": "present",
+            "mode": mode_str,
+        }
+
+        first = run_module(toml_file, args)
+        assert first["changed"] is True, (
+            f"mode {mode_str}: expected changed=True on first run"
+        )
+        second = run_module(toml_file, args)
+        assert second["changed"] is False, (
+            f"mode {mode_str}: expected idempotent mode rerun to report "
+            f"changed=False, got {second['changed']!r}"
+        )
+
+
+@pytest.mark.parametrize(
+    ("module", "filename", "initial_content", "expected_value"),
+    [
+        (json_file, "config.json", '{"env": {"RUSTC_WRAPPER": "old"}}\n', "new"),
+        (toml_file, "config.toml", '[env]\nRUSTC_WRAPPER = "old"\n', "new"),
+    ],
+)
+def test_structured_file_modules_preserve_existing_mode_without_mode_argument(
+    tmp_path: Path,
+    module,
+    filename: str,
+    initial_content: str,
+    expected_value: str,
+) -> None:
+    """Structured writes without mode should preserve an existing file mode."""
+    path = tmp_path / filename
+    path.write_text(initial_content)
+    path.chmod(0o754)
+
+    result = run_module(
+        module,
+        {
+            "path": str(path),
+            "key": "env.RUSTC_WRAPPER",
+            "value": expected_value,
+        },
+    )
+
+    assert result["changed"] is True
+    assert path.stat().st_mode & 0o7777 == 0o754
+
+
+def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -> None:
+    """Verify sccache env vars are written to the expected JSON and TOML structures."""
+    expected_env = {
+        "RUSTC_WRAPPER": "/home/leynos/.local/bin/notdeadyet",
+        "RUSTC_HEARTBEAT_SECS": "45",
+        "SCCACHE_DIR": "/home/leynos/.cache/sccache",
+        "SCCACHE_CACHE_SIZE": "120G",
+    }
+    codex_path = tmp_path / "config.toml"
+    claude_path = tmp_path / "settings.json"
+
+    for key, value in expected_env.items():
+        run_module(
+            toml_file,
+            {"path": str(codex_path), "key": f"env.{key}", "value": value},
+        )
+        run_module(
+            json_file,
+            {"path": str(claude_path), "key": f"env.{key}", "value": value},
+        )
+
+    codex = tomllib.loads(codex_path.read_text())
+    claude = json.loads(claude_path.read_text())
+    assert codex == {"env": expected_env}, (
+        f"expected Codex TOML env table to match sccache settings, got {codex!r}"
+    )
+    assert claude == {"env": expected_env}, (
+        f"expected Claude JSON env object to match sccache settings, got {claude!r}"
+    )
+
+
+@pytest.mark.parametrize(
+    ("subagent_parts", "config_parts", "expect_relative", "expected_value"),
+    [
+        (
+            (".codex", "agents", "reviewer.toml"),
+            (".codex", "config.toml"),
+            True,
+            str(Path("agents") / "reviewer.toml"),
+        ),
+        (
+            ("shared", "reviewer.toml"),
+            (".codex", "config.toml"),
+            False,
+            None,
+        ),
+        (
+            (".codex", "agents", "bot.toml"),
+            (".codex", "config.toml"),
+            True,
+            str(Path("agents") / "bot.toml"),
+        ),
+        (
+            ("other", "bot.toml"),
+            (".codex", "config.toml"),
+            False,
+            None,
+        ),
+    ],
+)
+def test_resolve_relative_config_file_parametrized(
+    tmp_path: Path,
+    subagent_parts: tuple[str, ...],
+    config_parts: tuple[str, ...],
+    expect_relative: bool,
+    expected_value: str | None,
+) -> None:
+    """Paths inside config dir must be relative; outside paths must be absolute."""
+    subagent_path = tmp_path.joinpath(*subagent_parts)
+    config_path = tmp_path.joinpath(*config_parts)
+
+    result = agent_config_common.resolve_relative_config_file(
+        str(subagent_path), str(config_path)
+    )
+
+    if expect_relative:
+        assert not Path(result).is_absolute(), f"expected relative path, got {result!r}"
+        assert result == expected_value
+    else:
+        assert Path(result).is_absolute(), f"expected absolute path, got {result!r}"
+        assert result == str(subagent_path)
+
+
+@pytest.mark.parametrize("module", [json_file, toml_file])
+def test_structured_file_modules_require_value_when_present(
+    tmp_path: Path, module
+) -> None:
+    """Verify both structured-file modules reject state=present without a value."""
+    assert_fails(
+        module,
+        {"path": str(tmp_path / "config"), "key": "env.RUSTC_WRAPPER"},
+        "value is required",
+    )
+
+
+@pytest.mark.parametrize("module", [json_file, toml_file])
+def test_structured_file_modules_reject_non_octal_modes(tmp_path: Path, module) -> None:
+    """Verify both structured-file modules reject a non-octal mode string."""
+    path = tmp_path / "config"
+
+    assert_fails(
+        module,
+        {
+            "path": str(path),
+            "key": "env.RUSTC_WRAPPER",
+            "value": "/home/leynos/.local/bin/notdeadyet",
+            "mode": "u=rw",
+        },
+        "mode must be an octal string",
+    )
+    assert not path.exists(), "expected invalid mode to fail before writing the file"
+
+
+def test_json_file_reports_write_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify json_file surfaces an atomic-write failure through fail_json."""
+    def fail_write(path: str, content: str) -> None:
+        """Raise a write failure for JSON write error coverage."""
+        raise OSError("disk denied")
+
+    monkeypatch.setattr(json_file, "atomic_write_text", fail_write)
+    assert_fails(
+        json_file,
+        {
+            "path": str(tmp_path / "settings.json"),
+            "key": "env.RUSTC_WRAPPER",
+            "value": "/home/leynos/.local/bin/notdeadyet",
+        },
+        "Failed to write JSON file",
+    )
+
+
+def test_toml_file_reports_write_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify toml_file surfaces an atomic-write failure through fail_json."""
+    def fail_write(path: str, content: str) -> None:
+        """Raise a write failure for TOML write error coverage."""
+        raise OSError("disk denied")
+
+    monkeypatch.setattr(toml_file, "atomic_write_text", fail_write)
+    assert_fails(
+        toml_file,
+        {
+            "path": str(tmp_path / "config.toml"),
+            "key": "env.SCCACHE_DIR",
+            "value": "/home/leynos/.cache/sccache",
+        },
+        "Failed to write TOML file",
+    )
+
+
+def test_toml_file_reports_parse_errors(tmp_path: Path) -> None:
+    """Verify toml_file converts a TOML parse error into a fail_json message."""
+    class DummyModule:
+        """Minimal module object that raises captured Ansible failures."""
+
+        def fail_json(self, **kwargs) -> NoReturn:
+            """Raise the captured parse failure payload."""
+            raise AnsibleFailJson(kwargs)
+
+    path = tmp_path / "config.toml"
+    path.write_text("[env\n")
+    tomlkit, parse_error = toml_file.import_tomlkit(DummyModule())
+
+    with pytest.raises(AnsibleFailJson) as exc:
+        toml_file.load_document(DummyModule(), tomlkit, parse_error, str(path))
+
+    actual_message = exc.value.args[0]["msg"]
+    assert "Failed to parse TOML file" in actual_message
+
+
+def test_toml_file_does_not_mask_unexpected_parse_errors(tmp_path: Path) -> None:
+    """Verify toml_file propagates unexpected parser exceptions without masking."""
+    class DummyModule:
+        """Minimal module object that raises captured Ansible failures."""
+
+        def fail_json(self, **kwargs) -> NoReturn:
+            """Raise the captured parse failure payload."""
+            raise AnsibleFailJson(kwargs)
+
+    class BrokenTomlkit:
+        """Fake TOML implementation that raises an unexpected parse error."""
+
+        @staticmethod
+        def document() -> dict:
+            """Return an empty TOML-like document."""
+            return {}
+
+        @staticmethod
+        def parse(content: str) -> NoReturn:
+            """Raise the unexpected parser error under test."""
+            raise RuntimeError("unexpected parser failure")
+
+    path = tmp_path / "config.toml"
+    path.write_text("[env]\n")
+    _, parse_error = toml_file.import_tomlkit(DummyModule())
+
+    with pytest.raises(RuntimeError, match="unexpected parser failure"):
+        toml_file.load_document(DummyModule(), BrokenTomlkit, parse_error, str(path))
+
+
+@pytest.mark.parametrize(
+    ("module", "message"),
+    [
+        (json_file, "Failed to chmod JSON file"),
+        (toml_file, "Failed to chmod TOML file"),
+    ],
+)
+def test_structured_file_modules_report_chmod_failures(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    module,
+    message: str,
+) -> None:
+    """Verify both modules surface an os.chmod failure through fail_json."""
+    path = tmp_path / "config"
+    path.write_text("{}\n" if module is json_file else "\n")
+
+    def fail_chmod(path: str, mode: int) -> None:
+        """Raise a chmod failure for structured file module coverage."""
+        raise OSError("chmod denied")
+
+    monkeypatch.setattr(module.os, "chmod", fail_chmod)
+    assert_fails(
+        module,
+        {
+            "path": str(path),
+            "key": "env.RUSTC_WRAPPER",
+            "value": "/home/leynos/.local/bin/notdeadyet",
+            "mode": "0644",
+        },
+        message,
+    )
+
+
+@pytest.mark.parametrize("module", [json_file, toml_file])
+def test_structured_file_modules_compare_special_permission_bits(
+    tmp_path: Path, module
+) -> None:
+    """Verify enforce_mode compares against 0o7777-masked bits, not 0o777."""
+    path = tmp_path / "config"
+    path.write_text("{}\n" if module is json_file else "\n")
+    path.chmod(0o1777)
+
+    changed = module.enforce_mode(FakeModule(), str(path), 0o1777)
+
+    assert changed is False
+
+
+@pytest.mark.parametrize("module", [json_file, toml_file])
+def test_structured_file_modules_handle_special_bits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, module
+) -> None:
+    """Special permission bits must not trigger repeated chmod attempts."""
+    path = tmp_path / "config"
+    expected_value = "/home/leynos/.local/bin/notdeadyet"
+    path.write_text(
+        json.dumps({"env": {"RUSTC_WRAPPER": expected_value}}) + "\n"
+        if module is json_file
+        else f'[env]\nRUSTC_WRAPPER = "{expected_value}"\n'
+    )
+
+    class StatResult:
+        """Stat result containing the requested sticky permission bits."""
+
+        st_mode = 0o1000 | 0o777
+
+    def stat_with_special_bits(path: str) -> StatResult:
+        """Return a stat result whose mode already matches the request."""
+        return StatResult()
+
+    def fail_chmod(path: str, mode: int) -> None:
+        """Fail the test if chmod runs for an already matching mode."""
+        raise AssertionError("chmod should not be called for matching special bits")
+
+    class FakeOs:
+        """Minimal os replacement exposing patched stat and chmod calls."""
+
+        path = module.os.path
+        stat = staticmethod(stat_with_special_bits)
+        chmod = staticmethod(fail_chmod)
+
+    monkeypatch.setattr(module, "os", FakeOs)
+
+    result = run_module(
+        module,
+        {
+            "path": str(path),
+            "key": "env.RUSTC_WRAPPER",
+            "value": expected_value,
+            "mode": "1777",
+        },
+    )
+
+    assert result["changed"] is False
 
 
 @pytest.mark.parametrize(
@@ -361,6 +894,7 @@ def test_json_hook_modules_create_idempotently_and_remove(
     extra_args: dict,
     expected_hook: dict,
 ) -> None:
+    """Verify JSON-hook modules create an entry, rerun idempotently, and remove it."""
     path = tmp_path / "settings.json"
     args = {
         "agent_executable": "/bin/sh",
@@ -373,8 +907,12 @@ def test_json_hook_modules_create_idempotently_and_remove(
 
     result = run_module(module, args)
 
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
-    assert result["hook"] == expected_hook, f"expected result['hook'] to be {expected_hook!r}, got {result['hook']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
+    assert result["hook"] == expected_hook, (
+        f"expected result['hook'] to be {expected_hook!r}, got {result['hook']!r}"
+    )
     settings = json.loads(path.read_text())
     assert settings["hooks"]["Stop"][0]["matcher"] == "Bash", (
         f"expected Stop hook matcher to be 'Bash', got {settings['hooks']['Stop'][0]['matcher']!r}"
@@ -400,9 +938,13 @@ def test_json_hook_modules_create_idempotently_and_remove(
         },
     )
 
-    assert absent["changed"] is True, f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    assert absent["changed"] is True, (
+        f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    )
     absent_settings = json.loads(path.read_text())
-    assert absent_settings == {}, f"expected settings JSON to be empty after removal, got {absent_settings!r}"
+    assert absent_settings == {}, (
+        f"expected settings JSON to be empty after removal, got {absent_settings!r}"
+    )
 
 
 def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> None:
@@ -421,7 +963,9 @@ def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> 
 
     result = run_module(codex_cli_hook, args)
 
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
     expected_hook = {
         "type": "command",
         "command": "run-checks",
@@ -429,7 +973,9 @@ def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> 
         "async": False,
         "statusMessage": "Checking",
     }
-    assert result["hook"] == expected_hook, f"expected result['hook'] to be {expected_hook!r}, got {result['hook']!r}"
+    assert result["hook"] == expected_hook, (
+        f"expected result['hook'] to be {expected_hook!r}, got {result['hook']!r}"
+    )
     rendered_hooks = json.loads(hooks_path.read_text())
     assert rendered_hooks["hooks"]["PostToolUse"][0]["hooks"] == [result["hook"]], (
         f"expected PostToolUse hooks to be {[result['hook']]!r}, "
@@ -461,14 +1007,18 @@ def test_codex_cli_hook_writes_session_start_hook(tmp_path: Path) -> None:
 
     result = run_module(codex_cli_hook, args)
 
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
     expected_hook = {
         "type": "command",
         "command": "session-start",
         "timeout": 30,
         "async": True,
     }
-    assert result["hook"] == expected_hook, f"expected result['hook'] to be {expected_hook!r}, got {result['hook']!r}"
+    assert result["hook"] == expected_hook, (
+        f"expected result['hook'] to be {expected_hook!r}, got {result['hook']!r}"
+    )
     rendered_hooks = json.loads(hooks_path.read_text())
     assert rendered_hooks["hooks"]["SessionStart"][0]["hooks"] == [result["hook"]], (
         f"expected SessionStart hooks to be {[result['hook']]!r}, "
@@ -498,12 +1048,15 @@ def test_codex_cli_hook_check_mode_does_not_write(tmp_path: Path) -> None:
         codex_cli_hook.main()
 
     result = exc.value.args[0]
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
     assert not hooks_path.exists(), f"expected check mode not to create {hooks_path}"
     assert not config_path.exists(), f"expected check mode not to create {config_path}"
 
 
 def test_validate_agent_executable_rejects_missing_path(tmp_path: Path) -> None:
+    """Verify subagent validation fails when the agent executable path is absent."""
     assert_fails(
         claude_code_hook,
         {
@@ -518,10 +1071,13 @@ def test_validate_agent_executable_rejects_missing_path(tmp_path: Path) -> None:
 
 
 def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> None:
-    path = tmp_path / "reviewer.toml"
+    """Verify the subagent module writes a TOML file and removes its registry entry."""
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
     args = {
         "name": "Reviewer",
         "path": str(path),
+        "config_path": str(config_path),
         "description": "Review changes.",
         "developer_instructions": "Inspect the diff.",
         "nickname_candidates": ["reviewer"],
@@ -533,28 +1089,205 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
 
     result = run_module(codex_cli_subagent, args)
 
-    assert result["changed"] is True, f"expected result['changed'] to be True, got {result['changed']!r}"
+    assert result["changed"] is True, (
+        f"expected result['changed'] to be True, got {result['changed']!r}"
+    )
     assert result["subagent"]["developer_instructions"] == "Inspect the diff.", (
         "expected developer instructions to be 'Inspect the diff.', "
         f"got {result['subagent']['developer_instructions']!r}"
     )
     rendered = path.read_text()
-    assert 'name = "Reviewer"' in rendered, "expected rendered TOML to include subagent name"
-    assert 'model_reasoning_effort = "medium"' in rendered, "expected rendered TOML to include reasoning effort"
-    assert 'mcp_servers = ["context_pack"]' in rendered, "expected rendered TOML to include MCP servers"
+    assert 'name = "Reviewer"' in rendered, (
+        "expected rendered TOML to include subagent name"
+    )
+    assert 'model_reasoning_effort = "medium"' in rendered, (
+        "expected rendered TOML to include reasoning effort"
+    )
+    assert 'mcp_servers = ["context_pack"]' in rendered, (
+        "expected rendered TOML to include MCP servers"
+    )
+    rendered_config = config_path.read_text()
+    assert "[agents.reviewer]" in rendered_config, (
+        "expected rendered config to include reviewer agent registry"
+    )
+    assert 'description = "Review changes."' in rendered_config, (
+        "expected rendered config to include agent description"
+    )
+    assert 'config_file = "agents/reviewer.toml"' in rendered_config, (
+        "expected rendered config to include subagent config file"
+    )
+    assert 'nickname_candidates = ["reviewer"]' in rendered_config, (
+        "expected rendered config to include nickname candidates"
+    )
 
     rerun_result = run_module(codex_cli_subagent, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(codex_cli_subagent, {"name": "Reviewer", "path": str(path), "state": "absent"})
+    absent = run_module(
+        codex_cli_subagent,
+        {
+            "name": "Reviewer",
+            "path": str(path),
+            "config_path": str(config_path),
+            "state": "absent",
+        },
+    )
 
-    assert absent["changed"] is True, f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    assert absent["changed"] is True, (
+        f"expected absent result['changed'] to be True, got {absent['changed']!r}"
+    )
+    assert "agents" not in absent, "expected absent result to use documented fields"
+    assert absent["registry"] is None, "expected absent result registry to be None"
     assert not path.exists(), f"expected {path} to be removed"
+    rendered_config_after_absent = config_path.read_text()
+    assert rendered_config_after_absent == "\n", (
+        f"expected config TOML file to contain only a newline, got {rendered_config_after_absent!r}"
+    )
+
+
+def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify the subagent module restores both snapshots when registry write fails."""
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
+
+    def fail_registry(*args, **kwargs):
+        """Raise the registry failure that should trigger rollback."""
+        raise codex_cli_subagent.RegistryWriteError("registry denied")
+
+    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
+    assert_fails(
+        codex_cli_subagent,
+        {
+            "name": "Reviewer",
+            "path": str(path),
+            "config_path": str(config_path),
+            "description": "Review changes.",
+            "developer_instructions": "Inspect the diff.",
+        },
+        "Failed to register Codex subagent reviewer",
+    )
+    assert not path.exists(), "expected subagent file to be rolled back"
+    assert not config_path.exists(), "expected config file to remain absent"
+
+
+def test_codex_cli_subagent_restore_snapshot_removes_expanded_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Rollback removal should expand home-relative paths before deleting."""
+    home = tmp_path / "home"
+    target = home / ".codex" / "agents" / "reviewer.toml"
+    monkeypatch.setenv("HOME", str(home))
+    snapshot = codex_cli_subagent.snapshot_path(
+        FakeModule(), "~/.codex/agents/reviewer.toml"
+    )
+    target.parent.mkdir(parents=True)
+    target.write_text('name = "Reviewer"\n')
+
+    codex_cli_subagent.restore_snapshot(FakeModule(), snapshot)
+
+    assert not target.exists(), "expected rollback to remove the expanded path"
+
+
+def test_codex_cli_subagent_restore_snapshot_preserves_mode(tmp_path: Path) -> None:
+    """Rollback restore should put file content and mode back together."""
+    path = tmp_path / "agents/reviewer.toml"
+    path.parent.mkdir(parents=True)
+    path.write_text('name = "Reviewer"\n')
+    path.chmod(0o640)
+    snapshot = codex_cli_subagent.snapshot_path(FakeModule(), str(path))
+    path.write_text('name = "Changed"\n')
+    path.chmod(0o600)
+
+    codex_cli_subagent.restore_snapshot(FakeModule(), snapshot)
+
+    assert path.read_text() == 'name = "Reviewer"\n'
+    assert path.stat().st_mode & 0o7777 == 0o640
+
+
+def test_codex_cli_subagent_reraises_unexpected_registry_update_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify non-RegistryWriteError exceptions propagate from registry update."""
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
+
+    def fail_registry(*args, **kwargs):
+        """Raise an unexpected registry update failure."""
+        raise RuntimeError("unexpected registry failure")
+
+    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
+    set_module_args(
+        {
+            "name": "Reviewer",
+            "path": str(path),
+            "config_path": str(config_path),
+            "description": "Review changes.",
+            "developer_instructions": "Inspect the diff.",
+        }
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected registry failure"):
+        codex_cli_subagent.main()
+
+
+def test_codex_cli_subagent_reraises_unexpected_registry_removal_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify non-RegistryWriteError exceptions propagate from registry removal."""
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
+
+    def fail_registry(*args, **kwargs):
+        """Raise an unexpected registry removal failure."""
+        raise RuntimeError("unexpected registry failure")
+
+    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
+    set_module_args(
+        {
+            "name": "Reviewer",
+            "path": str(path),
+            "config_path": str(config_path),
+            "state": "absent",
+        }
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected registry failure"):
+        codex_cli_subagent.main()
+
+
+def test_codex_cli_subagent_reraises_non_ansible_exceptions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Non-Ansible failure exceptions must propagate, not be swallowed."""
+
+    def fail_registry(*args, **kwargs):
+        """Raise an unexpected registry failure."""
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
+    with pytest.raises(RuntimeError, match="boom"):
+        run_module(
+            codex_cli_subagent,
+            {
+                "name": "test",
+                "path": str(tmp_path / "agents/test.toml"),
+                "config_path": str(tmp_path / "config.toml"),
+                "state": "present",
+                "developer_instructions": "x",
+                "description": "y",
+            },
+        )
 
 
 def test_codex_cli_subagent_requires_present_fields(tmp_path: Path) -> None:
+    """Verify the subagent module rejects state=present without required fields."""
     assert_fails(
         codex_cli_subagent,
         {

@@ -12,28 +12,23 @@
     mode: '0755'
     remote_src: true
 
-- name: Configure sccache environment in Codex
-  ansible.builtin.blockinfile:
+- name: Configure sccache environment in Codex config
+  agentic.agent_configs.toml_file:
     path: "{{ ansible_env.HOME }}/.codex/config.toml"
-    block: |
-      [env]
-      RUSTC_WRAPPER = "{{ ansible_env.HOME }}/.local/bin/notdeadyet"
-      RUSTC_HEARTBEAT_SECS = "45"
-      SCCACHE_DIR = "{{ ansible_env.HOME }}/.cache/sccache"
-      SCCACHE_CACHE_SIZE = "120G"
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - sccache env"
-    create: true
+    key: "env.{{ item.key }}"
+    value: "{{ item.value }}"
     mode: '0644'
+  loop: "{{ sccache_env_vars }}"
+
+- name: Remove obsolete Claude TOML config
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.claude/config.toml"
+    state: absent
 
 - name: Configure sccache environment in Claude settings
-  ansible.builtin.blockinfile:
-    path: "{{ ansible_env.HOME }}/.claude/config.toml"
-    block: |
-      [env]
-      RUSTC_WRAPPER = "{{ ansible_env.HOME }}/.local/bin/notdeadyet"
-      RUSTC_HEARTBEAT_SECS = "45"
-      SCCACHE_DIR = "{{ ansible_env.HOME }}/.cache/sccache"
-      SCCACHE_CACHE_SIZE = "120G"
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - sccache env"
-    create: true
+  agentic.agent_configs.json_file:
+    path: "{{ ansible_env.HOME }}/.claude/settings.json"
+    key: "env.{{ item.key }}"
+    value: "{{ item.value }}"
     mode: '0644'
+  loop: "{{ sccache_env_vars }}"

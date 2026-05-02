@@ -28,10 +28,16 @@
       - git
       - difftastic
       - gh
+      - graphviz
+      - gcc
+      - gcc-c++
+      - automake
+      - autoconf
       - clang
       - golang
       - nodejs
       - python3-devel
+      - python3-tomlkit
       - podman
       - helm
       - sqlite-devel
