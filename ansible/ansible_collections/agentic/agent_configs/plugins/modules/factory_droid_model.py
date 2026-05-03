@@ -248,8 +248,9 @@ def main() -> None:
         "path": expand_path(module.params["path"]),
         "model": module.params["model"],
     }
-    if module.params["state"] == "present":
-        result["custom_model"] = effective
+    if module.params["state"] == "present" and effective:
+        redacted = {**effective, "apiKey": "REDACTED"} if "apiKey" in effective else effective
+        result["custom_model"] = redacted
 
     module.exit_json(**result)
 

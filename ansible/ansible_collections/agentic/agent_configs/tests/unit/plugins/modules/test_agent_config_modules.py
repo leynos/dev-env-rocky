@@ -281,7 +281,7 @@ def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> No
 
 
 @pytest.mark.parametrize(
-    ("module", "args", "root_key", "expected"),
+    ("module", "args", "root_key", "expected", "expected_file"),
     [
         (
             claude_code_mcp,
@@ -298,6 +298,7 @@ def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> No
                 "args": ["--stdio"],
                 "env": {"LOG": "info"},
             },
+            None,
         ),
         (
             factory_droid_mcp,
@@ -317,6 +318,7 @@ def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> No
                 "disabled": True,
                 "disabledTools": ["danger"],
             },
+            None,
         ),
         (
             cursor_cli_mcp,
@@ -331,6 +333,11 @@ def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> No
             {
                 "command": "mcp-context-pack",
                 "args": ["--stdio"],
+                "env": "REDACTED",
+            },
+            {
+                "command": "mcp-context-pack",
+                "args": ["--stdio"],
                 "env": {"LOG": "info"},
             },
         ),
@@ -342,6 +349,7 @@ def test_json_mcp_modules_create_idempotently_and_remove(
     args: dict,
     root_key: str,
     expected: dict,
+    expected_file: dict | None,
 ) -> None:
     """Verify JSON-MCP modules create an entry, rerun idempotently, and remove it."""
     path = tmp_path / "mcp.json"
@@ -355,8 +363,9 @@ def test_json_mcp_modules_create_idempotently_and_remove(
     assert result["server"] == expected, (
         f"expected result['server'] to be {expected!r}, got {result['server']!r}"
     )
+    stored = expected_file if expected_file is not None else expected
     rendered_json = json.loads(path.read_text())
-    expected_json = {root_key: {"repo-tools": expected}}
+    expected_json = {root_key: {"repo-tools": stored}}
     assert rendered_json == expected_json, (
         f"expected rendered JSON to be {expected_json!r}, got {rendered_json!r}"
     )
@@ -487,7 +496,7 @@ def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:
 
     result = run_module(factory_droid_model, args)
 
-    expected_model = {
+    expected_stored_model = {
         "model": "deepseek-v4-pro",
         "displayName": "DeepSeek V4 Pro",
         "baseUrl": "https://api.deepseek.com/anthropic",
@@ -497,7 +506,14 @@ def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:
         "noImageSupport": True,
     }
     assert result["changed"] is True
-    assert result["custom_model"] == expected_model
+    assert result["custom_model"]["apiKey"] == "REDACTED", (
+        f"expected apiKey in result to be 'REDACTED', got {result['custom_model']['apiKey']!r}"
+    )
+    assert "secret-token" not in result["custom_model"].values(), (
+        "expected raw API key value to be absent from result['custom_model']"
+    )
+    assert result["custom_model"]["model"] == "deepseek-v4-pro"
+    assert result["custom_model"]["displayName"] == "DeepSeek V4 Pro"
     rendered = json.loads(path.read_text())
     assert rendered["theme"] == "dark"
     assert rendered["customModels"] == [
@@ -506,7 +522,7 @@ def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:
             "displayName": "Existing",
             "provider": "anthropic",
         },
-        expected_model,
+        expected_stored_model,
     ]
 
     rerun_result = run_module(factory_droid_model, args)

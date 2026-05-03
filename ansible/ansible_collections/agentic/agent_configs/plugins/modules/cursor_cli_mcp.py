@@ -130,6 +130,14 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 )
 
 
+_SENSITIVE_KEYS = {"env", "headers"}
+
+
+def _redact_server(server: dict) -> dict:
+    """Return a copy of the server dict with sensitive keys replaced by 'REDACTED'."""
+    return {k: ("REDACTED" if k in _SENSITIVE_KEYS and v else v) for k, v in server.items()}
+
+
 def build_server_definition(module: AnsibleModule) -> dict:
     """Build the Cursor MCP server definition from module parameters."""
     params = module.params
@@ -217,9 +225,8 @@ def main() -> None:
         "name": module.params["name"],
     }
     if module.params["state"] == "present":
-        result["server"] = data.get("mcpServers", {}).get(
-            module.params["name"], desired
-        )
+        server = data.get("mcpServers", {}).get(module.params["name"], desired)
+        result["server"] = _redact_server(server)
 
     module.exit_json(**result)
 
