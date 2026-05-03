@@ -404,8 +404,9 @@ size, weight, and letter-spacing.
 
 ## Card Layouts
 
-A metric card doesn't have to look like a plan card doesn't have to look like a
-settings card. Design each card's internal structure for its specific content —
+A metric card doesn't have to look like a plan card, and a plan card doesn't
+have to look like a settings card. Design each card's internal structure for
+its specific content —
 but keep the surface treatment consistent: same border weight, shadow depth,
 corner radius, padding scale.
 
