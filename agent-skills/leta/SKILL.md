@@ -19,7 +19,7 @@ exploration**, not ripgrep-like tools or file reading.
 | If you're about to…                                                                          | STOP! Instead use…                                                                            |
 | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Use `read-file` to view a function/class you know the name of                                | `leta show <symbol_name>`                                                                     |
-| Use `read-file` with specific start and end line ranges in order to view a specific function | `leta show <symbol_name>`                                                                     |
+| Use `read-file` with specific start and end line ranges to view a specific function          | `leta show <symbol_name>`                                                                     |
 | Use `read-file` to "browse" or "understand" a file                                           | `leta grep ".*" "path/to/file" -k function,method` to list functions, or `leta show <symbol>` |
 | Use ripgrep-like tools to find where a function is defined                                   | `leta grep "<function_name>" -k function,method`                                              |
 | Use ripgrep-like tools to find usages/references of a symbol                                 | `leta refs <symbol_name>`                                                                     |
