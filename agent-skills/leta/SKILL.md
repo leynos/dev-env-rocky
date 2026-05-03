@@ -197,7 +197,7 @@ leta files -f '\.py$'
 
 **This is the correct way to find where a symbol is used.** Don't use ripgrep
 to search for a function name - use `leta refs` instead. It understands code
-structure and won't give you false positives from comments or similarly-named
+structure and won't give you false positives from comments or similarly named
 symbols.
 
 ```bash
