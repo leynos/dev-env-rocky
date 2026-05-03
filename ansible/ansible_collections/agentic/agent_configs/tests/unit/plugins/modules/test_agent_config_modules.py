@@ -723,6 +723,59 @@ def test_toml_file_removes_legacy_sccache_block_before_writing(
     assert parsed["env"]["SCCACHE_DIR"] == "/home/leynos/.cache/sccache"
 
 
+def test_toml_file_absent_with_missing_parent_reports_no_change(
+    tmp_path: Path,
+) -> None:
+    """Verify state=absent does not create empty tables when the parent is absent."""
+    path = tmp_path / "config.toml"
+    path.write_text("[features]\ncodex_hooks = true\n")
+
+    result = _run_module(
+        toml_file,
+        {"path": str(path), "key": "env.SCCACHE_DIR", "state": "absent"},
+    )
+
+    assert result["changed"] is False, (
+        f"expected changed=False when parent table is absent, got {result['changed']!r}"
+    )
+    rendered = path.read_text()
+    parsed = tomllib.loads(rendered)
+    assert "env" not in parsed, (
+        f"expected no spurious [env] table in output, got {rendered!r}"
+    )
+
+
+def test_toml_file_absent_with_legacy_block_and_missing_key_reports_change(
+    tmp_path: Path,
+) -> None:
+    """Verify state=absent with legacy block removal reports changed=True without empty tables."""
+    path = tmp_path / "config.toml"
+    path.write_text(
+        "[features]\ncodex_hooks = true\n\n"
+        "# BEGIN ANSIBLE MANAGED BLOCK - sccache env\n"
+        "[env]\n"
+        'SCCACHE_DIR = "/old/cache"\n'
+        "# END ANSIBLE MANAGED BLOCK - sccache env\n"
+    )
+
+    result = _run_module(
+        toml_file,
+        {"path": str(path), "key": "env.NONEXISTENT_KEY", "state": "absent"},
+    )
+
+    assert result["changed"] is True, (
+        f"expected changed=True when legacy block was removed, got {result['changed']!r}"
+    )
+    rendered = path.read_text()
+    assert "# BEGIN ANSIBLE MANAGED BLOCK - sccache env" not in rendered, (
+        f"expected legacy block to be stripped, got {rendered!r}"
+    )
+    parsed = tomllib.loads(rendered)
+    assert "env" not in parsed, (
+        f"expected no spurious empty [env] table, got {rendered!r}"
+    )
+
+
 @pytest.mark.parametrize(
     ("module", "filename", "initial_content", "expected_value"),
     [

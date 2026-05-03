@@ -164,12 +164,28 @@ def load_document(module: AnsibleModule, tomlkit, parse_error, path: str):
         module.fail_json(msg="Failed to parse TOML file %s: %s" % (path, exc))
 
 
-def get_parent(module: AnsibleModule, tomlkit, document, parts: list[str]):
-    """Return the parent TOML table for a key path, creating tables as needed."""
+def get_parent(
+    module: AnsibleModule,
+    tomlkit,
+    document,
+    parts: list[str],
+    *,
+    create_missing: bool = True,
+):
+    """Return the parent TOML table for a key path.
+
+    Parameters
+    ----------
+    create_missing:
+        When ``True`` (default), create absent intermediate tables.
+        When ``False``, return ``None`` if any intermediate table is absent.
+    """
     parent = document
     for part in parts[:-1]:
         child = parent.get(part)
         if child is None:
+            if not create_missing:
+                return None
             child = tomlkit.table()
             parent[part] = child
         if not hasattr(child, "get") or not hasattr(child, "__setitem__"):
@@ -236,17 +252,21 @@ def main() -> None:
     except OSError as exc:
         module.fail_json(msg="Failed to read TOML file %s: %s" % (path, exc))
     log_operation(module, "toml_file", "read", path)
-    parent = get_parent(module, tomlkit, document, parts)
+    state = module.params["state"]
+    if state == "present":
+        parent = get_parent(module, tomlkit, document, parts, create_missing=True)
+    else:
+        parent = get_parent(module, tomlkit, document, parts, create_missing=False)
     leaf = parts[-1]
     changed_value = removed_legacy_block
-    if module.params["state"] == "present":
+    if state == "present":
         if module.params.get("value") is None:
             module.fail_json(msg="value is required when state=present")
         value = module.params.get("value")
         if parent.get(leaf) != value:
             parent[leaf] = value
             changed_value = True
-    elif leaf in parent:
+    elif parent is not None and leaf in parent:
         del parent[leaf]
         changed_value = True
 
@@ -274,7 +294,7 @@ def main() -> None:
         changed=(changed_value or changed_mode),
         path=path,
         key=module.params["key"],
-        value=parent.get(leaf) if module.params["state"] == "present" else None,
+        value=parent.get(leaf) if state == "present" else None,
     )
 
 
