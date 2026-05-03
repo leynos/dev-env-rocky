@@ -12,3 +12,9 @@
     cmd: curl https://cursor.com/install -fsS | bash
   args:
     creates: "{{ ansible_env.HOME }}/.local/bin/agent"
+  register: cursor_cli_install_result
+
+- name: Debug Cursor CLI install output
+  ansible.builtin.debug:
+    msg: "{{ cursor_cli_install_result.stdout_lines | default([]) }}"
+  when: cursor_cli_install_result is changed

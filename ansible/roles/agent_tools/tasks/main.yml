@@ -203,6 +203,12 @@
     remote_src: true
   loop: "{{ agent_helper_skills.files }}"
   when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: agent_helper_scripts_cursor_install_result
+
+- name: Debug agent-helper-scripts Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ agent_helper_scripts_cursor_install_result.results | length }} files"
+  when: agent_helper_scripts_cursor_install_result is changed
 
 - name: Find skills in nextest-skill
   ansible.builtin.find:
@@ -235,6 +241,12 @@
     remote_src: true
   loop: "{{ nextest_skills.files }}"
   when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: nextest_cursor_install_result
+
+- name: Debug nextest-skill Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ nextest_cursor_install_result.results | length }} files"
+  when: nextest_cursor_install_result is changed
 
 - name: Find skills in vidai-mock-skill
   ansible.builtin.find:
@@ -267,6 +279,12 @@
     remote_src: true
   loop: "{{ vidai_skills.files }}"
   when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: vidai_cursor_install_result
+
+- name: Debug vidai-mock-skill Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ vidai_cursor_install_result.results | length }} files"
+  when: vidai_cursor_install_result is changed
 
 - name: Find skills in rust-skill
   ansible.builtin.find:
@@ -299,6 +317,12 @@
     remote_src: true
   loop: "{{ rust_skills.files }}"
   when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: rust_cursor_install_result
+
+- name: Debug rust-skill Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ rust_cursor_install_result.results | length }} files"
+  when: rust_cursor_install_result is changed
 
 - name: Find skills in df12-readme-skill
   ansible.builtin.find:
@@ -336,6 +360,12 @@
   when:
     - ssh_key_stat.stat.exists
     - not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: df12_readme_cursor_install_result
+
+- name: Debug df12-readme-skill Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ df12_readme_cursor_install_result.results | length }} files"
+  when: df12_readme_cursor_install_result is changed
 
 - name: Find skills in df12-documentation-skills
   ansible.builtin.find:
@@ -380,6 +410,12 @@
     - ssh_key_stat.stat.exists
     - df12_documentation_skills_dir.stat.isdir | default(false)
     - not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: df12_documentation_cursor_install_result
+
+- name: Debug df12-documentation-skills Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ df12_documentation_cursor_install_result.results | length }} files"
+  when: df12_documentation_cursor_install_result is changed
 
 # Install context_pack tool for agent communication
 - name: Install context_pack tool

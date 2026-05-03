@@ -18,6 +18,17 @@ def test_cursor_cli_role_installs_official_agent_binary() -> None:
     )
 
 
+def test_cursor_cli_role_has_debug_task_for_install_output() -> None:
+    content = CURSOR_TASKS.read_text()
+
+    assert "Debug Cursor CLI install output" in content, (
+        "Cursor CLI role must include a debug task for install output"
+    )
+    assert "cursor_cli_install_result" in content, (
+        "Cursor CLI debug task must reference cursor_cli_install_result"
+    )
+
+
 def test_site_runs_cursor_cli_before_agent_tools() -> None:
     content = SITE_PLAYBOOK.read_text()
 

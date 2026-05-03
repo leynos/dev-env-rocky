@@ -107,6 +107,7 @@ import os
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    log_operation,
     manage_directory_markdown_resource,
     merge_dicts,
     normalize_mapping_order,
@@ -180,6 +181,14 @@ def main() -> None:
         extra_files=module.params.get("extra_files") or {},
     )
 
+    log_operation(
+        module,
+        "cursor_cli_skill",
+        path=directory,
+        scope=module.params["scope"],
+        name=module.params["name"],
+        changed=changes.changed,
+    )
     module.exit_json(
         changed=changes.changed,
         directory=directory,
