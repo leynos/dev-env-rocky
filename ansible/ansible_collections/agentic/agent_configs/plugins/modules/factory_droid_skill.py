@@ -142,7 +142,21 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 
 
 def build_frontmatter(module: AnsibleModule) -> dict:
-    """Build Factory Droid skill front matter from module parameters."""
+    """
+    Build Factory Droid skill front matter from module parameters.
+
+    Parameters
+    ----------
+    module : AnsibleModule
+        The Ansible module instance; ``module.params`` supplies the skill
+        name, description, optional boolean flags, and any extra metadata
+        keys.
+
+    Returns
+    -------
+    dict
+        Ordered front matter mapping ready to serialise into ``SKILL.md``.
+    """
     params = module.params
     if params["state"] == "present" and not params.get("description"):
         module.fail_json(msg="description is required when state=present")
@@ -159,7 +173,21 @@ def build_frontmatter(module: AnsibleModule) -> dict:
 
 
 def resolve_directory(module: AnsibleModule) -> str:
-    """Resolve the managed Factory Droid skill directory."""
+    """
+    Resolve the managed Factory Droid skill directory.
+
+    Parameters
+    ----------
+    module : AnsibleModule
+        The Ansible module instance; ``module.params`` supplies the
+        ``path``, ``scope``, ``slug``, ``name``, and ``project_dir``
+        values used to construct the target path.
+
+    Returns
+    -------
+    str
+        Absolute path to the managed skill directory.
+    """
     if module.params.get("path"):
         return module.params["path"]
     slug = module.params.get("slug") or slugify(module.params["name"])
@@ -176,7 +204,18 @@ def resolve_directory(module: AnsibleModule) -> str:
 
 
 def main() -> None:
-    """Run the Ansible module."""
+    """
+    Run the Ansible module.
+
+    Initialises the ``AnsibleModule``, resolves the target skill
+    directory, applies the requested state, and exits via
+    ``module.exit_json``.  On parameter errors the module exits early
+    via ``module.fail_json``.
+
+    Returns
+    -------
+    None
+    """
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},
