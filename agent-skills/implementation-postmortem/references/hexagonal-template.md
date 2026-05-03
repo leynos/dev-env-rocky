@@ -47,8 +47,8 @@ For each adapter:
 
 | Adapter         | Type   | Lines | Boilerplate % | Logic % | Verdict |
 | --------------- | ------ | ----- | ------------- | ------- | ------- |
-|                 | in/out |
-| thin/concerning |
+| -               | in/out | -     | -             | -       | -               |
+| -               | -      | -     | -             | -       | thin/concerning |
 
 **Red flags:**
 
