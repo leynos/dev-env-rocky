@@ -63,7 +63,8 @@ testing instead of being converted into ordinary Ansible validation failures.
 
 The module validates the subagent and registry data before writing. When a
 registry update fails after the subagent file has changed, the module restores
-the previous file snapshots so the two surfaces do not remain partially updated.
+the previous file snapshots, so the two surfaces do not remain partially
+updated.
 
 ## Firecrawl MCP
 
