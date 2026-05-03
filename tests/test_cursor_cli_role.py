@@ -16,6 +16,12 @@ def test_cursor_cli_role_installs_official_agent_binary() -> None:
     assert 'creates: "{{ ansible_env.HOME }}/.local/bin/agent"' in content, (
         "Cursor CLI installer must be idempotent around the agent binary"
     )
+    assert "set -o pipefail" in content, (
+        "Cursor CLI install pipeline must set pipefail so curl failures propagate"
+    )
+    assert "executable: /bin/bash" in content, (
+        "Cursor CLI install task must use /bin/bash to support pipefail"
+    )
 
 
 def test_cursor_cli_role_has_debug_task_for_install_output() -> None:

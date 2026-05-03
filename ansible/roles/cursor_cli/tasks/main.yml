@@ -9,7 +9,8 @@
 
 - name: Install Cursor CLI
   ansible.builtin.shell:
-    cmd: curl https://cursor.com/install -fsS | bash
+    cmd: set -o pipefail; curl https://cursor.com/install -fsS | bash
+    executable: /bin/bash
   args:
     creates: "{{ ansible_env.HOME }}/.local/bin/agent"
   register: cursor_cli_install_result
