@@ -109,17 +109,6 @@
     - not ansible_check_mode
     - not ssh_key_stat.stat.exists
 
-- name: Clone df12-readme-skill repository via SSH
-  ansible.builtin.git:
-    repo: git@github.com:leynos/df12-readme-skill.git
-    dest: "{{ ansible_env.HOME }}/git/df12-readme-skill"
-    version: HEAD
-    depth: 1
-    single_branch: true
-    key_file: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
-    accept_hostkey: true
-  when: ssh_key_stat.stat.exists
-
 - name: Clone df12-documentation-skills repository via SSH
   ansible.builtin.git:
     repo: git@github.com:leynos/df12-documentation-skills.git
@@ -323,49 +312,6 @@
   ansible.builtin.debug:
     msg: "Installed {{ rust_cursor_install_result.results | length }} files"
   when: rust_cursor_install_result is changed
-
-- name: Find skills in df12-readme-skill
-  ansible.builtin.find:
-    paths: "{{ ansible_env.HOME }}/git/df12-readme-skill"
-    file_type: directory
-    depth: 1
-  register: df12_readme_skills
-  when: ssh_key_stat.stat.exists
-
-- name: Install df12-readme-skill skills to Codex
-  ansible.builtin.copy:
-    src: "{{ item.path }}/"
-    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
-    mode: 'preserve'
-    remote_src: true
-  loop: "{{ df12_readme_skills.files | default([]) }}"
-  when: ssh_key_stat.stat.exists
-
-- name: Install df12-readme-skill skills to Claude
-  ansible.builtin.copy:
-    src: "{{ item.path }}/"
-    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
-    mode: 'preserve'
-    remote_src: true
-  loop: "{{ df12_readme_skills.files | default([]) }}"
-  when: ssh_key_stat.stat.exists
-
-- name: Install df12-readme-skill skills to Cursor
-  ansible.builtin.copy:
-    src: "{{ item.path }}/"
-    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
-    mode: 'preserve'
-    remote_src: true
-  loop: "{{ df12_readme_skills.files | default([]) }}"
-  when:
-    - ssh_key_stat.stat.exists
-    - not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
-  register: df12_readme_cursor_install_result
-
-- name: Debug df12-readme-skill Cursor skill install
-  ansible.builtin.debug:
-    msg: "Installed {{ df12_readme_cursor_install_result.results | length }} files"
-  when: df12_readme_cursor_install_result is changed
 
 - name: Find skills in df12-documentation-skills
   ansible.builtin.find:
@@ -896,17 +842,6 @@
     remote_src: true
   loop: "{{ rust_skills.files }}"
   when: dev_env_enable_droid | bool
-
-- name: Install df12-readme-skill to Factory Droid
-  ansible.builtin.copy:
-    src: "{{ item.path }}/"
-    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
-    mode: 'preserve'
-    remote_src: true
-  loop: "{{ df12_readme_skills.files | default([]) }}"
-  when:
-    - dev_env_enable_droid | bool
-    - ssh_key_stat.stat.exists
 
 - name: Install df12-documentation-skills to Factory Droid
   ansible.builtin.copy:
