@@ -33,8 +33,7 @@ Maintain two remotes:
 A `make publish` target automates the scrub-and-push cycle. It clones the
 private repository into a temporary directory, runs `git filter-repo` with a
 replacements file and path-rename directives, then force-pushes the rewritten
-history to the public remote. The private repository is never modified by the
-target.
+history to the public remote. The target never modifies the private repository.
 
 ## Publish mechanism
 
