@@ -93,4 +93,5 @@ attempt to manipulate Claude's local per-project MCP storage inside
         provider: anthropic
         base_url: https://api.deepseek.com/anthropic
         api_key: "{{ deepseek_api_key }}"
+      no_log: true
 ```

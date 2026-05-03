@@ -15,11 +15,15 @@ Use `make check` when a dry run is needed before changing a host.
 The `agent_tools` and `sccache_user` roles configure user-scoped agent files
 under the owner user's home directory.
 
-Codex configuration is written to `~/.codex/config.toml`. Claude configuration
-is written to `~/.claude/settings.json`. Cursor MCP configuration is written to
-`~/.cursor/mcp.json`, and Cursor skills are installed under `~/.cursor/skills`.
-The roles avoid raw text block edits for these files and instead use structured
-Ansible modules so existing configuration survives repeated runs.
+Codex configuration is written to `~/.codex/config.toml`. Cursor MCP
+configuration is written to `~/.cursor/mcp.json`, and Cursor skills are
+installed under `~/.cursor/skills`. These paths use structured Ansible modules
+so existing configuration survives repeated runs.
+
+Claude stop-hook configuration is an exception: `~/.claude/settings.json` is
+written by an `agent_tools` shell task that uses `jq` to write the `hooks.Stop`
+entry. Environment and `PATH` values in the same file are managed through the
+structured `json_file` module in the `sccache_user` role.
 
 The `cursor_cli` role installs Cursor CLI through the official Linux and WSL
 installer:
