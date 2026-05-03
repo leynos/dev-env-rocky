@@ -1,10 +1,9 @@
-# Interface Design
+---
+name: interface-design
+description: "This skill is for interface design — dashboards, admin panels, apps, tools, and interactive products. NOT for marketing design (landing pages, marketing sites, campaigns)."
+---
 
-______________________________________________________________________ name:
-interface-design description: This skill is for interface design — dashboards,
-admin panels, apps, tools, and interactive products. NOT for marketing design
-(landing pages, marketing sites, campaigns).
-______________________________________________________________________
+# Interface Design
 
 <!-- markdownlint-disable MD013 MD025 -->
 
