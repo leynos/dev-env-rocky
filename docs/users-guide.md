@@ -32,7 +32,7 @@ installer:
 curl https://cursor.com/install -fsS | bash
 ```
 
-The installer creates the `agent` binary under `~/.local/bin`. The role runs
+The installer creates the `cursor-agent` binary under `~/.local/bin`. The role runs
 before `agent_tools` so Cursor exists before MCPs and skills are configured.
 Cursor CLI does not currently support stop hooks, so this repository does not
 install Cursor stop-hook configuration.

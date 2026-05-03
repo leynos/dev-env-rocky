@@ -12,7 +12,7 @@
     cmd: set -o pipefail; curl https://cursor.com/install --retry 3 --connect-timeout 10 -fsS | bash
     executable: /bin/bash
   args:
-    creates: "{{ ansible_env.HOME }}/.local/bin/agent"
+    creates: "{{ ansible_env.HOME }}/.local/bin/cursor-agent"
   register: cursor_cli_install_result
 
 - name: Debug Cursor CLI install output

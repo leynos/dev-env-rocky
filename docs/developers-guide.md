@@ -93,14 +93,14 @@ entry contains the token.
 
 ## Cursor CLI Role
 
-The `cursor_cli` Ansible role installs the Cursor `agent` binary from the
-official Linux and WSL installer script. The role is idempotent: the shell task
-declares `creates: ~/.local/bin/agent`, so the installer runs only when the
-binary is absent.
+The `cursor_cli` Ansible role installs the Cursor `cursor-agent` binary from
+the official Linux and WSL installer script. The role is idempotent: the shell
+task declares `creates: ~/.local/bin/cursor-agent`, so the installer runs only
+when the binary is absent.
 
 The role must appear before `agent_tools` in `site.yml`. This ordering ensures
-the `agent` binary exists before `agent_tools` configures Cursor MCP servers
-and skills.
+the `cursor-agent` binary exists before `agent_tools` configures Cursor MCP
+servers and skills.
 
 ## cursor_cli_mcp Module
 

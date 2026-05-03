@@ -14,8 +14,8 @@ def test_cursor_cli_role_installs_official_agent_binary() -> None:
         "curl https://cursor.com/install --retry 3 --connect-timeout 10 -fsS | bash"
         in content
     ), "Cursor CLI installation must follow the official Linux/WSL installer"
-    assert 'creates: "{{ ansible_env.HOME }}/.local/bin/agent"' in content, (
-        "Cursor CLI installer must be idempotent around the agent binary"
+    assert 'creates: "{{ ansible_env.HOME }}/.local/bin/cursor-agent"' in content, (
+        "Cursor CLI installer must be idempotent around the cursor-agent binary"
     )
     assert "set -o pipefail" in content, (
         "Cursor CLI install pipeline must set pipefail so curl failures propagate"
