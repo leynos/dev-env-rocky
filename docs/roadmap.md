@@ -229,8 +229,8 @@ profiles add or remove packages without editing role internals. See
 
 This step answers whether network-dependent infrastructure tools can be tested
 through configurable release metadata and installer contracts. The outcome
-informs the policy for future tools that require upstream release discovery.
-See `ansible/roles/infra_tools/tasks/main.yml` §§2-88.
+informs the policy for future tools that require upstream release discovery. See
+ `ansible/roles/infra_tools/tasks/main.yml` §§2-88.
 
 - [ ] 3.2.1. Create a `packaging.tools` infrastructure CLI role.
   - Requires 3.1.3.

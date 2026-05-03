@@ -1,6 +1,7 @@
 # Nano Banana Prompt Patterns and Examples
 
-Use these as short starting points. Expand only the parts the user actually cares about.
+Use these as short starting points. Expand only the parts the user actually
+cares about.
 
 ## Table of Contents
 
@@ -158,5 +159,6 @@ Preserve all major spatial relationships and object counts.
 ## Notes
 
 - Start with the shortest prompt that can still encode the real constraints.
-- For local MCP usage, pair the prompt with explicit `model`, `aspectRatio`, and `output_path`.
+- For local MCP usage, pair the prompt with explicit `model`, `aspectRatio`, and
+   `output_path`.
 - Prefer safe, reusable templates over copying long source prompts verbatim.

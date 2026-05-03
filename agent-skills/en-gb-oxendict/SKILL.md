@@ -7,17 +7,23 @@ description: Enforce British English using Oxford spelling conventions, permit o
 
 Write in British English using Oxford spelling conventions.
 
-Use `-ize` and `-ization` where Oxford style prefers them, while retaining established `-yse` forms such as `analyse` and `paralyse`.
+Use `-ize` and `-ization` where Oxford style prefers them, while retaining
+established `-yse` forms such as `analyse` and `paralyse`.
 
 Treat `outwith` and `caveat` as fully acceptable where they are the best fit.
 
-Prefer clear, idiomatic British grammar and punctuation. Avoid American spellings, vocabulary, and syntactic habits unless the quoted source, product name, API, or user explicitly requires them.
+Prefer clear, idiomatic British grammar and punctuation. Avoid American
+spellings, vocabulary, and syntactic habits unless the quoted source, product
+name, API, or user explicitly requires them.
 
 Treat companies and organizations as collective nouns.
 
-Use the Oxford comma selectively. Use it where it improves clarity, disambiguation, rhythm, or ease of reading. Do not apply it as a universal rule, and do not omit it dogmatically where ambiguity would result.
+Use the Oxford comma selectively. Use it where it improves clarity,
+disambiguation, rhythm, or ease of reading. Do not apply it as a universal
+rule, and do not omit it dogmatically where ambiguity would result.
 
-When editing text, preserve the author’s meaning, tone, and register while normalizing spelling, grammar, and punctuation to this standard.
+When editing text, preserve the author’s meaning, tone, and register while
+normalizing spelling, grammar, and punctuation to this standard.
 
 ## Examples
 
@@ -49,7 +55,8 @@ Watch for common British/Oxford traps and near-miss pairs:
 - `device` (noun) / `devise` (verb)
 - `prophecy` (noun) / `prophesy` (verb)
 - `programme` for general British usage, but `program` for computing contexts
-- `judgement` is acceptable in British English; preserve `judgment` where legal style, quoted material, or proper names require it
+- `judgement` is acceptable in British English; preserve `judgment` where legal
+  style, quoted material, or proper names require it
 
 ## Oxford comma guidance
 
@@ -65,5 +72,6 @@ Usually omit it when the list is already clear:
 
 ## Editing rule
 
-When in doubt, prefer Oxford British usage, then preserve domain-specific exceptions, quoted material, product names, code, APIs, and the author’s intended meaning.
-
+When in doubt, prefer Oxford British usage, then preserve domain-specific
+exceptions, quoted material, product names, code, APIs, and the author’s
+intended meaning.

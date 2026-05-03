@@ -1,8 +1,21 @@
-Yes. I’d keep them as thin wrappers rather than trying to outsmart the upstream tools.
+Yes. I’d keep them as thin wrappers rather than trying to outsmart the upstream
+tools.
 
-The upstream surfaces are just about good enough for that style of module. `uv` gives you `uv tool install`, `uv tool uninstall`, `uv tool list`, and `uv tool dir --bin`, and its tool install flow supports things like `--with` and `--python`. `cargo-binstall` documents unattended installs with `cargo binstall --no-confirm` and versioned targets like `crate@version`, while Cargo itself gives you the query/removal primitives `cargo install --list` and `cargo uninstall`. Bun documents `bun install -g`, `bun remove -g`, the default global install location under `~/.bun/install/global`, and the config/env knobs for overriding global package and bin directories. For the Ansible side, the normal pattern is `AnsibleModule` plus `run_command()` for external executables. ([Astral Docs][1])
+The upstream surfaces are just about good enough for that style of module. `uv`
+gives you `uv tool install`, `uv tool uninstall`, `uv tool list`, and
+`uv tool dir --bin`, and its tool install flow supports things like `--with` and
+ `--python`. `cargo-binstall` documents unattended installs with
+`cargo binstall --no-confirm` and versioned targets like `crate@version`, while
+Cargo itself gives you the query/removal primitives `cargo install --list` and
+`cargo uninstall`. Bun documents `bun install -g`, `bun remove -g`, the default
+global install location under `~/.bun/install/global`, and the config/env knobs
+for overriding global package and bin directories. For the Ansible side, the
+normal pattern is `AnsibleModule` plus `run_command()` for external
+executables. ([Astral Docs][1])
 
-I’m keeping these deliberately narrow: `state: present|absent`, optional exact version, check mode, and modest return data. I’ve left out the full `DOCUMENTATION` / `EXAMPLES` / `RETURN` stanzas to keep the sketches readable.
+I’m keeping these deliberately narrow: `state: present|absent`, optional exact
+version, check mode, and modest return data. I’ve left out the full
+`DOCUMENTATION` / `EXAMPLES` / `RETURN` stanzas to keep the sketches readable.
 
 ### `uv_tool.py`
 
@@ -507,11 +520,31 @@ if __name__ == "__main__":
 
 A few blunt caveats.
 
-The `uv` module is the least clean one. It uses `uv tool list` as the state source, which is sensible for a sketch but still depends on human-oriented output rather than a documented stable machine-readable interface for that specific command. The docs clearly give you the install/list/uninstall commands, tool directories, executable directory, and install options; they just do not document a structured `uv tool list` output contract on the pages I checked. `uv tool install` also installs by package/tool name, not by executable name, so `name` should be whatever `uv tool list` reports. ([Astral Docs][2])
+The `uv` module is the least clean one. It uses `uv tool list` as the state
+source, which is sensible for a sketch but still depends on human-oriented
+output rather than a documented stable machine-readable interface for that
+specific command. The docs clearly give you the install/list/uninstall
+commands, tool directories, executable directory, and install options; they
+just do not document a structured `uv tool list` output contract on the pages I
+checked. `uv tool install` also installs by package/tool name, not by
+executable name, so `name` should be whatever `uv tool list` reports. ([Astral
+Docs][2])
 
-The `cargo_binstall` sketch uses Cargo’s own install database as the source of truth via `cargo install --list`, and removes with `cargo uninstall`. I expect that to line up with `cargo-binstall` because binstall explicitly positions itself as a near drop-in replacement for `cargo install`, but that part is still an inference rather than a first-party guarantee I found spelled out as a compatibility contract. Cargo’s install root and uninstall semantics are documented, though. ([Docs.rs][3])
+The `cargo_binstall` sketch uses Cargo’s own install database as the source of
+truth via `cargo install --list`, and removes with `cargo uninstall`. I expect
+that to line up with `cargo-binstall` because binstall explicitly positions
+itself as a near drop-in replacement for `cargo install`, but that part is
+still an inference rather than a first-party guarantee I found spelled out as a
+compatibility contract. Cargo’s install root and uninstall semantics are
+documented, though. ([Docs.rs][3])
 
-The `bun_global` sketch is the cleanest structurally, but only if Bun uses its documented default global directory or you surface the override via `BUN_INSTALL_GLOBAL_DIR` / `BUN_INSTALL_BIN` or explicit module params. If you set `install.globalDir` in `bunfig.toml` without exporting the matching environment variable, pass `global_dir` explicitly so state detection reads the right `node_modules` tree. Bun documents both the default global location and those override knobs. ([Bun][4])
+The `bun_global` sketch is the cleanest structurally, but only if Bun uses its
+documented default global directory or you surface the override via
+`BUN_INSTALL_GLOBAL_DIR` / `BUN_INSTALL_BIN` or explicit module params. If you
+set `install.globalDir` in `bunfig.toml` without exporting the matching
+environment variable, pass `global_dir` explicitly so state detection reads the
+right `node_modules` tree. Bun documents both the default global location and
+those override knobs. ([Bun][4])
 
 A minimal playbook use would look like this:
 
@@ -534,10 +567,11 @@ A minimal playbook use would look like this:
         version: "9.23.0"
 ```
 
-If you want, I’ll turn these sketches into collection-ready modules with proper docs stanzas and a small unit-test matrix.
+If you want, I’ll turn these sketches into collection-ready modules with proper
+docs stanzas and a small unit-test matrix.
 
-[1]: https://docs.astral.sh/uv/guides/tools/ "Using tools | uv"
-[2]: https://docs.astral.sh/uv/reference/cli/ "Commands | uv"
-[3]: https://docs.rs/crate/cargo-binstall/latest "cargo-binstall 1.17.9 - Docs.rs"
-[4]: https://bun.com/docs/guides/install/from-npm-install-to-bun-install "Migrate from npm install to bun install - Bun"
-
+[1]: <https://docs.astral.sh/uv/guides/tools/> "Using tools | uv" [2]:
+<https://docs.astral.sh/uv/reference/cli/> "Commands | uv" [3]:
+<https://docs.rs/crate/cargo-binstall/latest> "cargo-binstall 1.17.9 - Docs.rs" [
+4]: <https://bun.com/docs/guides/install/from-npm-install-to-bun-install>
+"Migrate from npm install to bun install - Bun"

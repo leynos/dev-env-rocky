@@ -1,10 +1,10 @@
 # df12 Productions: voice and copy style guide
 
-*Guidance for marketing copy, landing pages, product descriptions, and public-facing
-technical writing. Not a documentation standard—see the documentation style guide for
-repository prose.*
+*Guidance for marketing copy, landing pages, product descriptions, and
+public-facing technical writing. Not a documentation standard—see the
+documentation style guide for repository prose.*
 
----
+______________________________________________________________________
 
 ## Governing principle
 
@@ -25,7 +25,7 @@ The voice sits at the intersection of three qualities:
   terms. Hedging and hand-waving signal that the author does not understand the
   product.
 
----
+______________________________________________________________________
 
 ## 1. Spelling and locale
 
@@ -47,7 +47,7 @@ established product names (e.g. `color`, `gray` in CSS).
 
 The word **"outwith"** is acceptable.
 
----
+______________________________________________________________________
 
 ## 2. Punctuation and grammar
 
@@ -65,7 +65,7 @@ The word **"outwith"** is acceptable.
 - **Em dashes.** Use the spaced en dash ( – ) per Oxford convention rather than
   an unspaced em dash.
 
----
+______________________________________________________________________
 
 ## 3. Personal pronouns
 
@@ -75,18 +75,18 @@ author or the reader.
 
 Pronouns are permitted in these narrow contexts:
 
-| Context | Example |
-|---|---|
-| Calls to action | "Start building." / "Try it today." |
-| Testimonial or personal narrative | "I've spent years leading teams…" |
-| BDD-style steps or user stories | "When I run the command…" |
-| Direct address in README openers | "You can install with…" |
+| Context                           | Example                             |
+| --------------------------------- | ----------------------------------- |
+| Calls to action                   | "Start building." / "Try it today." |
+| Testimonial or personal narrative | "I've spent years leading teams…"   |
+| BDD-style steps or user stories   | "When I run the command…"           |
+| Direct address in README openers  | "You can install with…"             |
 
 Outside these contexts, prefer constructions like "developers can…", "the tool
 provides…", or "systems should be legible" over "you can…", "we provide…", or
 "your systems."
 
----
+______________________________________________________________________
 
 ## 4. Lead with the point
 
@@ -114,13 +114,12 @@ Context follows only if needed. Preamble is dead weight.
 Read the first sentence of every paragraph in isolation. If any of them could
 be deleted without losing information, the paragraph started too late.
 
----
+______________________________________________________________________
 
 ## 5. Evidence first, commentary second
 
-Assertions carry a source. A benchmark number, a link, a specific constraint,
-a named technology. Personal commentary sits *after* the evidence—or not at
-all.
+Assertions carry a source. A benchmark number, a link, a specific constraint, a
+named technology. Personal commentary sits *after* the evidence—or not at all.
 
 ### Do
 
@@ -142,7 +141,7 @@ If a claim cannot be substantiated, cut it or flag the gap honestly.
 "Benchmarks pending" is stronger than an unanchored superlative. Intellectual
 honesty is not a weakness; it is the entire game.
 
----
+______________________________________________________________________
 
 ## 6. Compression
 
@@ -169,7 +168,7 @@ them.
 After drafting, delete every adjective and adverb. Add back only those that
 change the meaning.
 
----
+______________________________________________________________________
 
 ## 7. Dry wit, not decoration
 
@@ -199,7 +198,7 @@ kidding"), it is not funny enough to include. The exception is the occasional
 😂 or 😁 in informal developer contexts—never in product copy, landing pages,
 or announcements.
 
----
+______________________________________________________________________
 
 ## 8. Technical precision, conversational frame
 
@@ -226,7 +225,7 @@ abstract definition.
 > Observability, which refers to the ability to understand the internal state of
 > a system based on its external outputs, is something we prioritise.
 
----
+______________________________________________________________________
 
 ## 9. Structure and rhythm
 
@@ -251,7 +250,7 @@ Reserve anaphora (deliberate parallel repetition) for moments of genuine
 conviction. It works because it is rare. Deploying it on minor product features
 dilutes its force.
 
----
+______________________________________________________________________
 
 ## 10. Formatting
 
@@ -266,19 +265,19 @@ dilutes its force.
 - Follow [markdownlint](https://github.com/DavidAnson/markdownlint)
   recommendations.
 
----
+______________________________________________________________________
 
 ## 11. Naming and identity
 
-| Term | Usage |
-|---|---|
-| **df12** | Always lowercase. Never "DF12", "Df12", or "DF-12". |
-| **df12 Productions** | Full legal/formal name. Use on first reference in formal contexts; "df12" thereafter. |
-| **Logisphere crew** | See section 12 for deployment guidance. Refer to characters by name; never explain the conceit. |
-| **"Software gremlin"** | Acceptable self-descriptor in informal copy. Not a title. |
-| **Edinburgh** | Always name the city. "Based in Edinburgh, Scotland" on first reference. |
+| Term                   | Usage                                                                                           |
+| ---------------------- | ----------------------------------------------------------------------------------------------- |
+| **df12**               | Always lowercase. Never "DF12", "Df12", or "DF-12".                                             |
+| **df12 Productions**   | Full legal/formal name. Use on first reference in formal contexts; "df12" thereafter.           |
+| **Logisphere crew**    | See section 12 for deployment guidance. Refer to characters by name; never explain the conceit. |
+| **"Software gremlin"** | Acceptable self-descriptor in informal copy. Not a title.                                       |
+| **Edinburgh**          | Always name the city. "Based in Edinburgh, Scotland" on first reference.                        |
 
----
+______________________________________________________________________
 
 ## 12. The Logisphere crew in public-facing copy
 
@@ -290,17 +289,17 @@ illustrated by a cast the reader remembers.
 
 ### The core crew
 
-Six characters form the permanent roster. Each maps to a domain concern, not
-a personality quirk:
+Six characters form the permanent roster. Each maps to a domain concern, not a
+personality quirk:
 
-| Character | Domain | One-line lens |
-|---|---|---|
-| **Pandalump** 🐼 | Architecture & structure | Does every component have one job and a good name? |
-| **Wafflecat** 🐈🧇 | Creative R&D & alternatives | Is this the obvious solution or the right one? |
-| **Buzzy Bee** 🐝 | Performance & observability | What happens at 10× load? Where are the metrics? |
-| **Telefono** ☎️ | Types, contracts & protocols | Do the types make invalid states unrepresentable? |
-| **Doggylump** 🐶 | Reliability & failure modes | What is the user experience of this failure? |
-| **Dinolump** 🦕 | DX, readability & continuity | Would a new contributor understand this in a day? |
+| Character          | Domain                       | One-line lens                                      |
+| ------------------ | ---------------------------- | -------------------------------------------------- |
+| **Pandalump** 🐼   | Architecture & structure     | Does every component have one job and a good name? |
+| **Wafflecat** 🐈🧇 | Creative R&D & alternatives  | Is this the obvious solution or the right one?     |
+| **Buzzy Bee** 🐝   | Performance & observability  | What happens at 10× load? Where are the metrics?   |
+| **Telefono** ☎️    | Types, contracts & protocols | Do the types make invalid states unrepresentable?  |
+| **Doggylump** 🐶   | Reliability & failure modes  | What is the user experience of this failure?       |
+| **Dinolump** 🦕    | DX, readability & continuity | Would a new contributor understand this in a day?  |
 
 **Sharkylump** 🦈 is the chair and designated responsible individual (DRI) of
 the Logisphere governance structure. Sharkylump does not appear in illustrated
@@ -383,7 +382,7 @@ architecture (Mode B). Do not mix modes within a single document.
   They live in technical narratives. That constraint is what keeps them
   effective.
 
----
+______________________________________________________________________
 
 ## 13. Tone boundaries
 
@@ -404,7 +403,7 @@ architecture (Mode B). Do not mix modes within a single document.
 - Hedging. "Perhaps", "it seems", "we believe" have no place in product copy
   unless genuine uncertainty exists and is worth communicating.
 
----
+______________________________________________________________________
 
 ## 14. Rhetorical questions
 
@@ -427,7 +426,7 @@ forces the reader to confront the logical consequence of a position.
 The answer to a rhetorical question must be self-evident. If the answer is
 ambiguous, rephrase as a statement.
 
----
+______________________________________________________________________
 
 ## 15. Calls to action
 
@@ -446,7 +445,7 @@ Direct. No ceremony.
 > We'd love for you to check out the documentation and let us know what you
 > think!
 
----
+______________________________________________________________________
 
 ## 16. Copy checklist
 

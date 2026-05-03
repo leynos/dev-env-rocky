@@ -16,15 +16,15 @@ description: >
 
 # df12 Productions copy skill
 
-This skill enforces the df12 voice and copy style guide when writing or
-editing public-facing prose for df12 Productions.
+This skill enforces the df12 voice and copy style guide when writing or editing
+public-facing prose for df12 Productions.
 
 ## Before writing anything
 
-Read the full style guide at `references/voice-and-copy-style-guide.md`.
-It contains the complete rules, do/don't examples, and the Logisphere
-crew deployment guidance. What follows here is a compressed operational
-checklist — the reference is authoritative when in doubt.
+Read the full style guide at `references/voice-and-copy-style-guide.md`. It
+contains the complete rules, do/don't examples, and the Logisphere crew
+deployment guidance. What follows here is a compressed operational checklist —
+the reference is authoritative when in doubt.
 
 ## The voice in five words
 
@@ -48,28 +48,27 @@ US spelling only in code identifiers and API surfaces (`color` in CSS).
 
 ### 1. Lead with the point
 
-First sentence = the claim. No preamble, no throat-clearing, no "It's
-worth noting that…". Enter at the verb. If the opening three words can be
-deleted, delete them.
+First sentence = the claim. No preamble, no throat-clearing, no "It's worth
+noting that…". Enter at the verb. If the opening three words can be deleted,
+delete them.
 
-**Good:** "AI workflows fail in novel ways."
-**Bad:** "At df12, we believe that AI workflows can sometimes fail in
-novel ways."
+**Good:** "AI workflows fail in novel ways." **Bad:** "At df12, we believe that
+AI workflows can sometimes fail in novel ways."
 
 ### 2. Compress
 
-Shortest version that preserves meaning. After drafting, delete every
-adjective and adverb, then add back only those that change the meaning.
+Shortest version that preserves meaning. After drafting, delete every adjective
+and adverb, then add back only those that change the meaning.
 
-**Good:** "Predictable behaviour across environments."
-**Bad:** "What we aim to achieve is a seamless experience that remains
-reliably predictable across a wide variety of different environments."
+**Good:** "Predictable behaviour across environments." **Bad:** "What we aim to
+achieve is a seamless experience that remains reliably predictable across a
+wide variety of different environments."
 
 ### 3. Evidence before commentary
 
-Assertions carry a source: a number, a version, a named technology, a
-link. Commentary follows evidence, never precedes it. If a claim cannot
-be substantiated, cut it or flag the gap.
+Assertions carry a source: a number, a version, a named technology, a link.
+Commentary follows evidence, never precedes it. If a claim cannot be
+substantiated, cut it or flag the gap.
 
 **Good:** "Tested against PostgreSQL 16.2, SQLite 3.45, and DuckDB 1.0."
 **Bad:** "This should work with most databases."
@@ -81,34 +80,32 @@ uncertainty exists and is worth communicating.
 
 ### 5. Dry wit only
 
-Humour is deadpan, observational, or absurdist. It never explains itself.
-No emoji in product copy. No exclamation marks for enthusiasm. If a joke
-needs signalling, it is not good enough.
+Humour is deadpan, observational, or absurdist. It never explains itself. No
+emoji in product copy. No exclamation marks for enthusiasm. If a joke needs
+signalling, it is not good enough.
 
-**Good:** "Long enough to know where the sharp edges hide."
-**Bad:** "We've been around the block a few times! 😄"
+**Good:** "Long enough to know where the sharp edges hide." **Bad:** "We've
+been around the block a few times! 😄"
 
 ### 6. Rhetorical questions must be devastating
 
-The answer must be self-evident. If it is ambiguous, rephrase as a
-statement.
+The answer must be self-evident. If it is ambiguous, rephrase as a statement.
 
-**Good:** "If a system cannot be reasoned about, why would anyone trust
-it?"
+**Good:** "If a system cannot be reasoned about, why would anyone trust it?"
 **Bad:** "Have you ever thought about what it would be like to have more
 legible infrastructure?"
 
 ### 7. No startup vocabulary
 
 Never use: revolutionary, game-changing, next-generation, cutting-edge,
-best-in-class, we're thrilled to announce, we're excited to share,
-leverage (as a verb), synergy, disrupt, empower, unlock.
+best-in-class, we're thrilled to announce, we're excited to share, leverage (as
+a verb), synergy, disrupt, empower, unlock.
 
 ## Personal pronouns
 
 Avoid first- and second-person pronouns by default. Use impersonal and
-third-person constructions: "developers can…", "the tool provides…",
-"systems should be legible."
+third-person constructions: "developers can…", "the tool provides…", "systems
+should be legible."
 
 Pronouns are permitted in exactly four contexts:
 
@@ -139,17 +136,17 @@ Everywhere else, rewrite.
 
 ## Structure and rhythm
 
-Alternate between short declarative sentences and longer ones that
-elaborate. The short sentence delivers the point; the longer one provides
-evidence or context.
+Alternate between short declarative sentences and longer ones that elaborate.
+The short sentence delivers the point; the longer one provides evidence or
+context.
 
 **Pattern:** Bold fragment. Supporting sentence with detail.
 
 > **Small, Sharp Tools.** Each tool does one thing exceptionally well. No
 > bloat, no feature creep, just focused utility.
 
-Reserve anaphora (parallel repetition) for moments of genuine conviction.
-It works because it is rare.
+Reserve anaphora (parallel repetition) for moments of genuine conviction. It
+works because it is rare.
 
 ## Calls to action
 
@@ -168,21 +165,21 @@ Direct. No ceremony.
 
 ## The Logisphere crew
 
-The Logisphere is df12's community of experts — illustrated plushie
-characters representing specialist review lenses. Read the full guidance
-in `references/voice-and-copy-style-guide.md` section 12 before writing
-any content that involves the crew. The critical rules:
+The Logisphere is df12's community of experts — illustrated plushie characters
+representing specialist review lenses. Read the full guidance in
+`references/voice-and-copy-style-guide.md` section 12 before writing any
+content that involves the crew. The critical rules:
 
 ### Core roster
 
-| Character | Domain |
-|---|---|
-| Pandalump 🐼 | Architecture & structure |
-| Wafflecat 🐈🧇 | Creative R&D & alternatives |
-| Buzzy Bee 🐝 | Performance & observability |
-| Telefono ☎️ | Types, contracts & protocols |
-| Doggylump 🐶 | Reliability & failure modes |
-| Dinolump 🦕 | DX, readability & continuity |
+| Character      | Domain                       |
+| -------------- | ---------------------------- |
+| Pandalump 🐼   | Architecture & structure     |
+| Wafflecat 🐈🧇 | Creative R&D & alternatives  |
+| Buzzy Bee 🐝   | Performance & observability  |
+| Telefono ☎️    | Types, contracts & protocols |
+| Doggylump 🐶   | Reliability & failure modes  |
+| Dinolump 🦕    | DX, readability & continuity |
 
 Sharkylump 🦈 chairs the governance structure but does not appear in
 illustrated content.
@@ -193,12 +190,11 @@ illustrated content.
 characters when the content concerns df12's general tools, processes, or
 methodology. Each character appears in sections matching their domain.
 
-**Mode B — Product-specific characters.** Create bespoke characters that
-map to the product's architectural concepts. The core crew does not
-appear.
+**Mode B — Product-specific characters.** Create bespoke characters that map to
+the product's architectural concepts. The core crew does not appear.
 
-Choose the mode that best serves the product's domain concepts. Do not
-mix modes in a single document.
+Choose the mode that best serves the product's domain concepts. Do not mix
+modes in a single document.
 
 ### Illustration rules
 
@@ -237,8 +233,7 @@ Run this checklist against every piece of output:
 7. Does the register match the audience?
 8. Would this sound stilted read aloud? Rewrite it.
 9. Is this "serious tools" or "playful worlds" — and does it need to be
-   both? Not every sentence carries both. The mix across a page is what
-   matters.
+   both? Not every sentence carries both. The mix across a page is what matters.
 10. Am I using a personal pronoun? Check the four permitted contexts.
 
 ## Examples of the voice in action

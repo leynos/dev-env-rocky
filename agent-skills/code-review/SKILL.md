@@ -9,7 +9,8 @@ aliases:
 
 # Code Review Skill
 
-Conduct thorough, actionable code reviews that catch real problems without drowning in noise.
+Conduct thorough, actionable code reviews that catch real problems without
+drowning in noise.
 
 ## When to Use
 
@@ -24,26 +25,29 @@ Good code review serves three purposes:
 
 1. **Catch defects** — bugs, security holes, performance traps
 2. **Enforce consistency** — style, patterns, architectural boundaries
-3. **Transfer knowledge** — reviewer learns the change, author learns alternatives
+3. **Transfer knowledge** — reviewer learns the change, author learns
+   alternatives
 
-A review that only finds style nits has failed. A review that only finds bugs but ignores maintainability has also failed. Balance matters.
+A review that only finds style nits has failed. A review that only finds bugs
+but ignores maintainability has also failed. Balance matters.
 
 ## Context Gathering
 
-Never review blind. The diff alone lacks the information needed to judge whether code is correct, appropriate, or consistent.
+Never review blind. The diff alone lacks the information needed to judge
+whether code is correct, appropriate, or consistent.
 
 ### Required Context
 
-| Source | Purpose |
-|--------|---------|
-| PR description / commit messages | Understand intent |
-| `AGENTS.md` | Coding style rules |
-| `.rules/*` | Additional project conventions |
-| `docs/*-design.md` | Architectural intent |
-| `docs/roadmap.md` | Current priorities |
-| `docs/documentation-style-guide.md` | Doc conventions |
-| Neighbouring files | Established patterns |
-| `.github/workflows/*` | CI expectations |
+| Source                              | Purpose                        |
+| ----------------------------------- | ------------------------------ |
+| PR description / commit messages    | Understand intent              |
+| `AGENTS.md`                         | Coding style rules             |
+| `.rules/*`                          | Additional project conventions |
+| `docs/*-design.md`                  | Architectural intent           |
+| `docs/roadmap.md`                   | Current priorities             |
+| `docs/documentation-style-guide.md` | Doc conventions                |
+| Neighbouring files                  | Established patterns           |
+| `.github/workflows/*`               | CI expectations                |
 
 ### Detecting Project Type
 
@@ -176,16 +180,16 @@ The code should be maintainable.
 
 **Code Smells to Flag:**
 
-| Smell | Symptom |
-|-------|---------|
-| Repeated code | Copy-paste with minor variations |
-| Complex conditionals | Nested if/else, boolean expressions with >3 terms |
-| Bumpy road | Function alternates between high and low abstraction |
-| High similarity | Two functions that differ only in one parameter |
-| Magic literals | Unexplained numbers or strings |
-| Long parameter lists | Functions taking >4 arguments |
-| Feature envy | Method uses another object's data more than its own |
-| Primitive obsession | Using strings/ints where a type would clarify intent |
+| Smell                | Symptom                                              |
+| -------------------- | ---------------------------------------------------- |
+| Repeated code        | Copy-paste with minor variations                     |
+| Complex conditionals | Nested if/else, boolean expressions with >3 terms    |
+| Bumpy road           | Function alternates between high and low abstraction |
+| High similarity      | Two functions that differ only in one parameter      |
+| Magic literals       | Unexplained numbers or strings                       |
+| Long parameter lists | Functions taking >4 arguments                        |
+| Feature envy         | Method uses another object's data more than its own  |
+| Primitive obsession  | Using strings/ints where a type would clarify intent |
 
 **Positive Patterns to Encourage:**
 
@@ -305,6 +309,7 @@ Questions, minor notes, patterns worth discussing.
 - [ ] Test coverage appropriate
 - [ ] No security concerns
 - [ ] No performance regressions
+
 ```
 
 ## Best Practices
@@ -324,39 +329,48 @@ Style violations and minor inefficiencies are suggestions, not blockers.
 
 Bad: "This function is too complex."
 
-Good: "This function has a cyclomatic complexity of 15. The nested conditionals on lines 34-52 could be extracted into a `validate_input()` helper."
+Good: "This function has a cyclomatic complexity of 15. The nested conditionals
+on lines 34-52 could be extracted into a `validate_input()` helper."
 
 ### Suggest, Don't Demand
 
 Bad: "Change this to use `filter_map`."
 
-Good: "Consider using `filter_map` here—it combines the filter and map into a single pass and makes the None-handling explicit."
+Good: "Consider using `filter_map` here—it combines the filter and map into a
+single pass and makes the None-handling explicit."
 
 ### Acknowledge Good Work
 
-If something is particularly well done, say so. Positive reinforcement shapes future contributions.
+If something is particularly well done, say so. Positive reinforcement shapes
+future contributions.
 
 ### Ask Questions
 
-If you don't understand why something was done a certain way, ask. The author may have context you lack. Or they may realise their approach needs better documentation.
+If you don't understand why something was done a certain way, ask. The author
+may have context you lack. Or they may realise their approach needs better
+documentation.
 
 ### Consider the Author
 
-A junior contributor needs different feedback than a senior maintainer. Adjust your tone and the level of explanation accordingly.
+A junior contributor needs different feedback than a senior maintainer. Adjust
+your tone and the level of explanation accordingly.
 
 ### Timebox
 
-Diminishing returns set in. If you've spent an hour on a 200-line PR, you're likely past the point of useful findings. Note your time limit and move on.
+Diminishing returns set in. If you've spent an hour on a 200-line PR, you're
+likely past the point of useful findings. Note your time limit and move on.
 
 ## Common Pitfalls
 
 ### Reviewing Without Context
 
-Reading the diff without understanding the feature leads to superficial or incorrect feedback.
+Reading the diff without understanding the feature leads to superficial or
+incorrect feedback.
 
 ### Bikeshedding
 
-Spending disproportionate time on trivial style matters while missing structural problems.
+Spending disproportionate time on trivial style matters while missing
+structural problems.
 
 ### Rubber Stamping
 
@@ -364,22 +378,31 @@ Approving without genuine review erodes the value of the process.
 
 ### Being Adversarial
 
-Review is collaborative, not competitive. The goal is better code, not scoring points.
+Review is collaborative, not competitive. The goal is better code, not scoring
+points.
 
 ### Scope Creep
 
-Requesting changes unrelated to the PR's purpose. File separate issues for pre-existing problems.
+Requesting changes unrelated to the PR's purpose. File separate issues for
+pre-existing problems.
 
 ### Blocking on Preferences
 
-Your preferred approach isn't necessarily better. If the code works, follows conventions, and is maintainable, accept it even if you'd have written it differently.
+Your preferred approach isn't necessarily better. If the code works, follows
+conventions, and is maintainable, accept it even if you'd have written it
+differently.
 
 ## Supplementary Guides
 
 For detailed patterns and examples, see:
 
-- `guides/security-issues.md` — Injection attacks (SQL, shell, log, XSS, prompt), TOCTOU race conditions, secret exposure, authentication/authorisation flaws, cryptographic issues, deserialisation, path traversal
-- `guides/performance-concerns.md` — Algorithmic complexity (accidental quadratic), resource leaks, bad neighbour problems, database performance, network efficiency, memory management, concurrency issues
+- `guides/security-issues.md` — Injection attacks (SQL, shell, log, XSS,
+  prompt), TOCTOU race conditions, secret exposure,
+  authentication/authorisation flaws, cryptographic issues, deserialisation,
+  path traversal
+- `guides/performance-concerns.md` — Algorithmic complexity (accidental
+  quadratic), resource leaks, bad neighbour problems, database performance,
+  network efficiency, memory management, concurrency issues
 - `checklists/language-specific.md` — Rust, Python, TypeScript checklists
 - `examples/code-smells.md` — Before/after examples of common smells
 
@@ -408,4 +431,5 @@ For detailed patterns and examples, see:
 
 ## Prompt Template
 
-See `templates/review-prompt.md` for a ready-to-use prompt incorporating these practices.
+See `templates/review-prompt.md` for a ready-to-use prompt incorporating these
+practices.
