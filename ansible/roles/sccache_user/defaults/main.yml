@@ -8,3 +8,7 @@ sccache_env_vars:
     value: "{{ ansible_env.HOME }}/.cache/sccache"
   - key: SCCACHE_CACHE_SIZE
     value: "120G"
+
+claude_extra_env_vars:
+  - key: PATH
+    value: "{{ ansible_env.HOME }}/.cargo/bin:{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.HOME }}/.bun/bin:/usr/local/bin:/usr/bin:/usr/sbin"

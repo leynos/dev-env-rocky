@@ -108,5 +108,11 @@ Codex receives the values under the TOML `[env]` table in
 `~/.codex/config.toml`. Claude receives the same values under the JSON `env`
 object in `~/.claude/settings.json`.
 
+Claude also receives a scoped `PATH` value in `~/.claude/settings.json` so
+stop-hook commands can find user-installed tools without changing Codex or the
+system environment. The role builds the user-owned path entries from the
+managed user's home directory and includes `~/.cargo/bin`, `~/.local/bin`, and
+`~/.bun/bin`.
+
 The obsolete `~/.claude/config.toml` file is removed because Claude does not
 use that TOML path for these settings.

@@ -31,4 +31,4 @@
     key: "env.{{ item.key }}"
     value: "{{ item.value }}"
     mode: '0644'
-  loop: "{{ sccache_env_vars }}"
+  loop: "{{ sccache_env_vars + claude_extra_env_vars }}"
