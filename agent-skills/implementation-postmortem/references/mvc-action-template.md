@@ -98,7 +98,7 @@ If tools are implemented as finite state machines:
 
 **State machine smells:**
 
-- State explosion (FSM becoming untractable)
+- State explosion (FSM becoming intractable)
 - Missing transitions (input combinations not handled)
 - Commands interleaved with state logic (should be separate)
 
