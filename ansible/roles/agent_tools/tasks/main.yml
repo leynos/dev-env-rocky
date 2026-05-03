@@ -1080,6 +1080,7 @@
       [Service]
       Type=simple
       ExecStart=%h/.bun/bin/lody start
+      Environment=PATH=/home/{{ owner_user }}/.local/bin:/home/{{ owner_user }}/.cargo/bin:/home/{{ owner_user }}/.bun/bin:/home/{{ owner_user }}/go/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin
       Restart=on-failure
       RestartSec=5
 
