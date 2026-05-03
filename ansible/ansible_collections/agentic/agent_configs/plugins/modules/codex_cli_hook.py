@@ -183,14 +183,20 @@ def build_hook_definition(module: AnsibleModule) -> dict:
 
 def ensure_feature_flag(module: AnsibleModule, config_path: str) -> bool:
     """Enable the codex_hooks feature flag in the Codex config file."""
-    data = load_toml_file(module, config_path, default={})
+    data, removed_legacy_block = load_toml_file(module, config_path, default={})
     if not isinstance(data, dict):
         module.fail_json(msg="Expected TOML root object in %s" % config_path)
     features = data.setdefault("features", {})
     if not isinstance(features, dict):
         module.fail_json(msg="Expected [features] to be a table in %s" % config_path)
     if features.get("codex_hooks") is True:
-        return False
+        if not removed_legacy_block:
+            return False
+        # Flag already set but legacy block was cleaned; write back to persist
+        # the removal.
+        if not module.check_mode:
+            write_toml_if_changed(module, config_path, data)
+        return True
     features["codex_hooks"] = True
     if module.check_mode:
         return True

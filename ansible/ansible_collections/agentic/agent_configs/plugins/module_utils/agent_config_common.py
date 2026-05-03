@@ -217,13 +217,21 @@ def write_json_if_changed(module, path: str, data: Any) -> bool:
     return write_text_if_changed(module, path, dump_json(data))
 
 
-def load_toml_file(module, path: str, default: Optional[Any] = None) -> Any:
-    """Load TOML from a file, returning a copied default when absent."""
+def load_toml_file(
+    module, path: str, default: Optional[Any] = None
+) -> Tuple[Any, bool]:
+    """Load TOML from a file, returning a copied default when absent.
+
+    Returns ``(data, removed_legacy_block)``.  The second element is
+    ``True`` when the legacy sccache env block was stripped before
+    parsing.  Callers that would otherwise make no further change should
+    still write the file back so the cleaned content is persisted.
+    """
     path = expand_path(path)
     if default is None:
         default = {}
     if not os.path.exists(path):
-        return deep_copy(default)
+        return deep_copy(default), False
     if tomllib is None:
         module.fail_json(
             msg="Reading TOML requires Python 3.11+ or the tomli package on the target host"
@@ -231,8 +239,8 @@ def load_toml_file(module, path: str, default: Optional[Any] = None) -> Any:
     try:
         with open(path, "r", encoding="utf-8") as handle:
             content = handle.read()
-        cleaned, _ = strip_legacy_sccache_env_block(content)
-        return tomllib.loads(cleaned)
+        cleaned, removed_legacy_block = strip_legacy_sccache_env_block(content)
+        return tomllib.loads(cleaned), removed_legacy_block
     except tomllib.TOMLDecodeError as exc:
         module.fail_json(msg="Failed to parse TOML file %s: %s" % (path, exc))
     except OSError as exc:
@@ -579,7 +587,7 @@ def manage_named_toml_entry(
 ) -> Tuple[bool, Dict[str, Any]]:
     """Create, update, or remove a named table inside a TOML root table."""
     path = expand_path(path)
-    data = load_toml_file(module, path, default={})
+    data, removed_legacy_block = load_toml_file(module, path, default={})
     if not isinstance(data, dict):
         module.fail_json(msg="Expected TOML root object in %s" % path)
     root = data.setdefault(root_key, {})
@@ -598,7 +606,7 @@ def manage_named_toml_entry(
         if not root:
             data.pop(root_key, None)
 
-    if changed:
+    if changed or removed_legacy_block:
         if module.check_mode:
             log_operation(
                 module,
