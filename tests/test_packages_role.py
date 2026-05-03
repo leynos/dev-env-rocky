@@ -11,5 +11,5 @@ def test_system_packages_include_ninja_build() -> None:
     tasks_content = PACKAGES_TASKS.read_text()
 
     assert "- ninja-build" in tasks_content, (
-        "packages role must install the Fedora Ninja package"
+        "packages role must install the Ninja package"
     )
