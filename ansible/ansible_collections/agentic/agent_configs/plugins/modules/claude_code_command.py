@@ -133,6 +133,7 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 
 
 def build_frontmatter(module: AnsibleModule) -> dict:
+    """Build Claude Code command front matter from module parameters."""
     params = module.params
     if params["state"] == "present" and not params.get("description"):
         module.fail_json(msg="description is required when state=present")
@@ -149,6 +150,7 @@ def build_frontmatter(module: AnsibleModule) -> dict:
 
 
 def resolve_path(module: AnsibleModule) -> str:
+    """Resolve the managed Claude command file path."""
     if module.params.get("path"):
         return module.params["path"]
     slug = module.params.get("slug") or slugify(module.params["name"])
@@ -166,6 +168,7 @@ def resolve_path(module: AnsibleModule) -> str:
 
 
 def main() -> None:
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

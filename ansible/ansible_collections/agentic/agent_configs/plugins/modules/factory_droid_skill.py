@@ -142,6 +142,7 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 
 
 def build_frontmatter(module: AnsibleModule) -> dict:
+    """Build Factory Droid skill front matter from module parameters."""
     params = module.params
     if params["state"] == "present" and not params.get("description"):
         module.fail_json(msg="description is required when state=present")
@@ -158,6 +159,7 @@ def build_frontmatter(module: AnsibleModule) -> dict:
 
 
 def resolve_directory(module: AnsibleModule) -> str:
+    """Resolve the managed Factory Droid skill directory."""
     if module.params.get("path"):
         return module.params["path"]
     slug = module.params.get("slug") or slugify(module.params["name"])
@@ -174,6 +176,7 @@ def resolve_directory(module: AnsibleModule) -> str:
 
 
 def main() -> None:
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

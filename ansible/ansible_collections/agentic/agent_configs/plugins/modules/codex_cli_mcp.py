@@ -186,6 +186,7 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 
 
 def build_server_definition(module: AnsibleModule) -> dict:
+    """Build the Codex CLI MCP server definition from module parameters."""
     params = module.params
     transport = params.get("transport")
     extra = params.get("extra") or {}
@@ -230,6 +231,7 @@ def build_server_definition(module: AnsibleModule) -> dict:
 
 
 def main() -> None:
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

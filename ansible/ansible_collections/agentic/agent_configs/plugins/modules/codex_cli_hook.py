@@ -168,6 +168,7 @@ hook:
 """
 
 def build_hook_definition(module: AnsibleModule) -> dict:
+    """Build a Codex CLI hook definition from module parameters."""
     params = module.params
     desired = {
         "type": "command",
@@ -181,6 +182,7 @@ def build_hook_definition(module: AnsibleModule) -> dict:
 
 
 def ensure_feature_flag(module: AnsibleModule, config_path: str) -> bool:
+    """Enable the codex_hooks feature flag in the Codex config file."""
     data = load_toml_file(module, config_path, default={})
     if not isinstance(data, dict):
         module.fail_json(msg="Expected TOML root object in %s" % config_path)
@@ -197,6 +199,7 @@ def ensure_feature_flag(module: AnsibleModule, config_path: str) -> bool:
 
 
 def main() -> None:
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "agent_executable": {"type": "path", "required": True},
