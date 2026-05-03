@@ -37,6 +37,17 @@ before `agent_tools` so Cursor exists before MCPs and skills are configured.
 Cursor CLI does not currently support stop hooks, so this repository does not
 install Cursor stop-hook configuration.
 
+## Lody Daemon PATH
+
+When `lody` is enabled, `agent_tools` writes
+`~/.config/systemd/user/lody-daemon.service` with a fixed service `PATH`
+environment so the daemon is not dependent on shell startup files such as
+`~/.bashrc`.
+
+```text
+PATH=/home/leynos/.local/bin:/home/leynos/.cargo/bin:/home/leynos/.bun/bin:/home/leynos/go/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin
+```
+
 ## System Packages
 
 The `packages` role provisions RPM packages on the managed host. The full list
