@@ -229,7 +229,7 @@ Key parameters:
 
 State detection reads `package.json` from the global `node_modules` tree. If
 `install.globalDir` is set in `bunfig.toml` without exporting the matching
-environment variable, pass `global_dir` explicitly so the module reads the
+environment variable, pass `global_dir` explicitly, so the module reads the
 correct location.
 
 ### Playbook example
