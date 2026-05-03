@@ -19,7 +19,7 @@ from a single `zod` install: `zod` (classic), `zod/mini` (tree-shakable), and
 `zod/v4/core` (for library authors). TypeScript ≥5.5 and `strict: true` in
 tsconfig are hard requirements.
 
-```
+```bash
 npm install zod@^4.0.0
 ```
 
