@@ -437,7 +437,7 @@ broken.
 
 Screens need grounding. A data table floating in space feels like a component
 demo, not a product. Include navigation showing current location in the app,
-location indicators, and user context. When building sidebars, consider same
+location indicators, and user context. When building sidebars, consider the same
 background as main content with border separation rather than different colours.
 
 ## Dark Mode
