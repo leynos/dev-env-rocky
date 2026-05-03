@@ -294,7 +294,7 @@ Document when this is acceptable in your contributing guide.
 
 ### Parallel Execution
 
-Biome is already parallel internally. For CI, parallelise at the job level
+Biome is already parallel internally. For CI, parallelize at the job level
 rather than calling Biome multiple times.
 
 ### Incremental Checking
