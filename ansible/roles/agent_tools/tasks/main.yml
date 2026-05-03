@@ -417,6 +417,44 @@
     msg: "Installed {{ df12_documentation_cursor_install_result.results | length }} files"
   when: df12_documentation_cursor_install_result is changed
 
+# Install private repo skills (not available in upstream repositories)
+- name: Install private repo skills to Codex
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../agent-skills/{{ item }}/"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item }}"
+    mode: 'preserve'
+  loop:
+    - compressed-authority
+    - grepai
+    - interface-design
+    - nanobanana
+    - rebase
+
+- name: Install private repo skills to Claude
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../agent-skills/{{ item }}/"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item }}"
+    mode: 'preserve'
+  loop:
+    - compressed-authority
+    - grepai
+    - interface-design
+    - nanobanana
+    - rebase
+
+- name: Install private repo skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../agent-skills/{{ item }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item }}"
+    mode: 'preserve'
+  loop:
+    - compressed-authority
+    - grepai
+    - interface-design
+    - nanobanana
+    - rebase
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+
 # Install context_pack tool for agent communication
 - name: Install context_pack tool
   ansible.builtin.shell:
@@ -881,6 +919,19 @@
     - dev_env_enable_droid | bool
     - ssh_key_stat.stat.exists
     - df12_documentation_skills_dir.stat.isdir | default(false)
+
+- name: Install private repo skills to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../agent-skills/{{ item }}/"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item }}"
+    mode: 'preserve'
+  loop:
+    - compressed-authority
+    - grepai
+    - interface-design
+    - nanobanana
+    - rebase
+  when: dev_env_enable_droid | bool
 
 # Configure Factory Droid hooks using collection module
 - name: Configure Factory Droid hooks
