@@ -49,7 +49,7 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 )
 
 
-def run_module(module, args: dict):
+def _run_module(module, args: dict) -> dict:
     """Run an Ansible module in-process and return its exit payload."""
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
@@ -57,7 +57,7 @@ def run_module(module, args: dict):
     return exc.value.args[0]
 
 
-def assert_fails(module, args: dict, message: str) -> None:
+def _assert_fails(module, args: dict, message: str) -> None:
     """Assert that an Ansible module fails with a matching message."""
     set_module_args(args)
     with pytest.raises(AnsibleFailJson) as exc:
@@ -123,7 +123,7 @@ def test_markdown_file_modules_create_idempotently_and_remove(
         **extra_args,
     }
 
-    result = run_module(module, args)
+    result = _run_module(module, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -142,12 +142,12 @@ def test_markdown_file_modules_create_idempotently_and_remove(
         f"got tail {rendered[-len(expected_suffix) - 20 :]!r}"
     )
 
-    rerun_result = run_module(module, args)
+    rerun_result = _run_module(module, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(
+    absent = _run_module(
         module, {"name": "Release checklist", "path": str(path), "state": "absent"}
     )
 
@@ -220,7 +220,7 @@ def test_directory_skill_modules_create_extra_files_and_remove(
         **extra_args,
     }
 
-    result = run_module(module, args)
+    result = _run_module(module, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -235,12 +235,12 @@ def test_directory_skill_modules_create_extra_files_and_remove(
         f"expected extra file {directory / extra_file} to exist"
     )
 
-    rerun_result = run_module(module, args)
+    rerun_result = _run_module(module, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(
+    absent = _run_module(
         module, {"name": "Release checklist", "path": str(directory), "state": "absent"}
     )
 
@@ -253,7 +253,7 @@ def test_directory_skill_modules_create_extra_files_and_remove(
 def test_codex_cli_skill_rejects_conflicting_openai_yaml_sources(
     tmp_path: Path,
 ) -> None:
-    assert_fails(
+    _assert_fails(
         codex_cli_skill,
         {
             "name": "Release checklist",
@@ -268,12 +268,12 @@ def test_codex_cli_skill_rejects_conflicting_openai_yaml_sources(
 
 def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> None:
     """Verify markdown-file modules reject state=present without required fields."""
-    assert_fails(
+    _assert_fails(
         claude_code_command,
         {"name": "Release checklist", "path": str(tmp_path / "command.md")},
         "description is required",
     )
-    assert_fails(
+    _assert_fails(
         factory_droid_droid,
         {"name": "Reviewer", "path": str(tmp_path / "reviewer.md"), "body": ""},
         "body must be non-empty",
@@ -355,7 +355,7 @@ def test_json_mcp_modules_create_idempotently_and_remove(
     path = tmp_path / "mcp.json"
     args = {"path": str(path), **args}
 
-    result = run_module(module, args)
+    result = _run_module(module, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -370,12 +370,12 @@ def test_json_mcp_modules_create_idempotently_and_remove(
         f"expected rendered JSON to be {expected_json!r}, got {rendered_json!r}"
     )
 
-    rerun_result = run_module(module, args)
+    rerun_result = _run_module(module, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(
+    absent = _run_module(
         module, {"name": "repo-tools", "path": str(path), "state": "absent"}
     )
 
@@ -400,7 +400,7 @@ def test_codex_cli_mcp_writes_toml_and_removes_entry(tmp_path: Path) -> None:
         "startup_timeout_sec": 20,
     }
 
-    result = run_module(codex_cli_mcp, args)
+    result = _run_module(codex_cli_mcp, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -419,12 +419,12 @@ def test_codex_cli_mcp_writes_toml_and_removes_entry(tmp_path: Path) -> None:
         "expected rendered TOML to include startup timeout"
     )
 
-    rerun_result = run_module(codex_cli_mcp, args)
+    rerun_result = _run_module(codex_cli_mcp, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(
+    absent = _run_module(
         codex_cli_mcp, {"name": "repo-tools", "path": str(path), "state": "absent"}
     )
 
@@ -441,7 +441,7 @@ def test_cursor_cli_mcp_resolves_cursor_paths(tmp_path: Path) -> None:
     project_dir = tmp_path / "repo"
     project_dir.mkdir()
 
-    project_result = run_module(
+    project_result = _run_module(
         cursor_cli_mcp,
         {
             "name": "repo-tools",
@@ -494,7 +494,7 @@ def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:
         "extra": {"noImageSupport": True},
     }
 
-    result = run_module(factory_droid_model, args)
+    result = _run_module(factory_droid_model, args)
 
     expected_stored_model = {
         "model": "deepseek-v4-pro",
@@ -525,10 +525,10 @@ def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:
         expected_stored_model,
     ]
 
-    rerun_result = run_module(factory_droid_model, args)
+    rerun_result = _run_module(factory_droid_model, args)
     assert rerun_result["changed"] is False
 
-    updated = run_module(
+    updated = _run_module(
         factory_droid_model,
         {
             **args,
@@ -540,7 +540,7 @@ def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:
     assert updated["custom_model"]["displayName"] == "DeepSeek V4 Pro Updated"
     assert updated["custom_model"]["maxOutputTokens"] == 16384
 
-    absent = run_module(
+    absent = _run_module(
         factory_droid_model,
         {"path": str(path), "model": "deepseek-v4-pro", "state": "absent"},
     )
@@ -570,7 +570,7 @@ def test_json_file_updates_nested_value_idempotently_and_removes(
         "value": "/home/leynos/.local/bin/notdeadyet",
     }
 
-    result = run_module(json_file, args)
+    result = _run_module(json_file, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -583,12 +583,12 @@ def test_json_file_updates_nested_value_idempotently_and_removes(
         f"expected existing settings to be preserved, got {rendered!r}"
     )
 
-    rerun_result = run_module(json_file, args)
+    rerun_result = _run_module(json_file, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(
+    absent = _run_module(
         json_file, {"path": str(path), "key": "env.RUSTC_WRAPPER", "state": "absent"}
     )
 
@@ -613,7 +613,7 @@ def test_toml_file_updates_nested_value_idempotently_and_removes(
         "value": "/home/leynos/.cache/sccache",
     }
 
-    result = run_module(toml_file, args)
+    result = _run_module(toml_file, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -629,12 +629,12 @@ def test_toml_file_updates_nested_value_idempotently_and_removes(
         f"expected TOML env value to be written, got {rendered!r}"
     )
 
-    rerun_result = run_module(toml_file, args)
+    rerun_result = _run_module(toml_file, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(
+    absent = _run_module(
         toml_file, {"path": str(path), "key": "env.SCCACHE_DIR", "state": "absent"}
     )
 
@@ -658,11 +658,11 @@ def test_json_file_mode_idempotency(tmp_path: Path) -> None:
             "mode": mode_str,
         }
 
-        first = run_module(json_file, args)
+        first = _run_module(json_file, args)
         assert first["changed"] is True, (
             f"mode {mode_str}: expected changed=True on first run"
         )
-        second = run_module(json_file, args)
+        second = _run_module(json_file, args)
         assert second["changed"] is False, (
             f"mode {mode_str}: expected idempotent mode rerun to report "
             f"changed=False, got {second['changed']!r}"
@@ -681,11 +681,11 @@ def test_toml_file_mode_idempotency(tmp_path: Path) -> None:
             "mode": mode_str,
         }
 
-        first = run_module(toml_file, args)
+        first = _run_module(toml_file, args)
         assert first["changed"] is True, (
             f"mode {mode_str}: expected changed=True on first run"
         )
-        second = run_module(toml_file, args)
+        second = _run_module(toml_file, args)
         assert second["changed"] is False, (
             f"mode {mode_str}: expected idempotent mode rerun to report "
             f"changed=False, got {second['changed']!r}"
@@ -705,7 +705,7 @@ def test_toml_file_removes_legacy_sccache_block_before_writing(
         "# END ANSIBLE MANAGED BLOCK - sccache env\n"
     )
 
-    result = run_module(
+    result = _run_module(
         toml_file,
         {
             "path": str(path),
@@ -742,7 +742,7 @@ def test_structured_file_modules_preserve_existing_mode_without_mode_argument(
     path.write_text(initial_content)
     path.chmod(0o754)
 
-    result = run_module(
+    result = _run_module(
         module,
         {
             "path": str(path),
@@ -767,11 +767,11 @@ def test_sccache_environment_modules_write_expected_structures(tmp_path: Path) -
     claude_path = tmp_path / "settings.json"
 
     for key, value in expected_env.items():
-        run_module(
+        _run_module(
             toml_file,
             {"path": str(codex_path), "key": f"env.{key}", "value": value},
         )
-        run_module(
+        _run_module(
             json_file,
             {"path": str(claude_path), "key": f"env.{key}", "value": value},
         )
@@ -843,7 +843,7 @@ def test_structured_file_modules_require_value_when_present(
     tmp_path: Path, module
 ) -> None:
     """Verify both structured-file modules reject state=present without a value."""
-    assert_fails(
+    _assert_fails(
         module,
         {"path": str(tmp_path / "config"), "key": "env.RUSTC_WRAPPER"},
         "value is required",
@@ -855,7 +855,7 @@ def test_structured_file_modules_reject_non_octal_modes(tmp_path: Path, module) 
     """Verify both structured-file modules reject a non-octal mode string."""
     path = tmp_path / "config"
 
-    assert_fails(
+    _assert_fails(
         module,
         {
             "path": str(path),
@@ -878,7 +878,7 @@ def test_json_file_reports_write_failures(
         raise OSError("disk denied")
 
     monkeypatch.setattr(json_file, "atomic_write_text", fail_write)
-    assert_fails(
+    _assert_fails(
         json_file,
         {
             "path": str(tmp_path / "settings.json"),
@@ -899,7 +899,7 @@ def test_toml_file_reports_write_failures(
         raise OSError("disk denied")
 
     monkeypatch.setattr(toml_file, "atomic_write_text", fail_write)
-    assert_fails(
+    _assert_fails(
         toml_file,
         {
             "path": str(tmp_path / "config.toml"),
@@ -984,7 +984,7 @@ def test_structured_file_modules_report_chmod_failures(
         raise OSError("chmod denied")
 
     monkeypatch.setattr(module.os, "chmod", fail_chmod)
-    assert_fails(
+    _assert_fails(
         module,
         {
             "path": str(path),
@@ -1045,7 +1045,7 @@ def test_structured_file_modules_handle_special_bits(
 
     monkeypatch.setattr(module, "os", FakeOs)
 
-    result = run_module(
+    result = _run_module(
         module,
         {
             "path": str(path),
@@ -1097,7 +1097,7 @@ def test_json_hook_modules_create_idempotently_and_remove(
         **extra_args,
     }
 
-    result = run_module(module, args)
+    result = _run_module(module, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -1113,12 +1113,12 @@ def test_json_hook_modules_create_idempotently_and_remove(
         f"expected Stop hooks to be {[expected_hook]!r}, got {settings['hooks']['Stop'][0]['hooks']!r}"
     )
 
-    rerun_result = run_module(module, args)
+    rerun_result = _run_module(module, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(
+    absent = _run_module(
         module,
         {
             "agent_executable": "/bin/sh",
@@ -1153,7 +1153,7 @@ def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> 
         "status_message": "Checking",
     }
 
-    result = run_module(codex_cli_hook, args)
+    result = _run_module(codex_cli_hook, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -1178,7 +1178,7 @@ def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> 
         f"expected Codex hook feature flag in config, got {rendered_config!r}"
     )
 
-    rerun_result = run_module(codex_cli_hook, args)
+    rerun_result = _run_module(codex_cli_hook, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
@@ -1197,7 +1197,7 @@ def test_codex_cli_hook_writes_session_start_hook(tmp_path: Path) -> None:
         "async_hook": True,
     }
 
-    result = run_module(codex_cli_hook, args)
+    result = _run_module(codex_cli_hook, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -1216,7 +1216,7 @@ def test_codex_cli_hook_writes_session_start_hook(tmp_path: Path) -> None:
         f"expected SessionStart hooks to be {[result['hook']]!r}, "
         f"got {rendered_hooks['hooks']['SessionStart'][0]['hooks']!r}"
     )
-    rerun_result = run_module(codex_cli_hook, args)
+    rerun_result = _run_module(codex_cli_hook, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
@@ -1249,7 +1249,7 @@ def test_codex_cli_hook_check_mode_does_not_write(tmp_path: Path) -> None:
 
 def test_validate_agent_executable_rejects_missing_path(tmp_path: Path) -> None:
     """Verify subagent validation fails when the agent executable path is absent."""
-    assert_fails(
+    _assert_fails(
         claude_code_hook,
         {
             "agent_executable": str(tmp_path / "missing"),
@@ -1279,7 +1279,7 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
         "mcp_servers": ["context_pack"],
     }
 
-    result = run_module(codex_cli_subagent, args)
+    result = _run_module(codex_cli_subagent, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -1312,12 +1312,12 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
         "expected rendered config to include nickname candidates"
     )
 
-    rerun_result = run_module(codex_cli_subagent, args)
+    rerun_result = _run_module(codex_cli_subagent, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = run_module(
+    absent = _run_module(
         codex_cli_subagent,
         {
             "name": "Reviewer",
@@ -1352,7 +1352,7 @@ def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
         raise codex_cli_subagent.RegistryWriteError("registry denied")
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
-    assert_fails(
+    _assert_fails(
         codex_cli_subagent,
         {
             "name": "Reviewer",
@@ -1465,7 +1465,7 @@ def test_codex_cli_subagent_reraises_non_ansible_exceptions(
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
     with pytest.raises(RuntimeError, match="boom"):
-        run_module(
+        _run_module(
             codex_cli_subagent,
             {
                 "name": "test",
@@ -1480,7 +1480,7 @@ def test_codex_cli_subagent_reraises_non_ansible_exceptions(
 
 def test_codex_cli_subagent_requires_present_fields(tmp_path: Path) -> None:
     """Verify the subagent module rejects state=present without required fields."""
-    assert_fails(
+    _assert_fails(
         codex_cli_subagent,
         {
             "name": "Reviewer",
