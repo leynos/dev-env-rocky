@@ -1,10 +1,10 @@
 """Regression tests for the sccache user role task definitions."""
 
 import json
-from pathlib import Path
 import re
-import tomllib
+from pathlib import Path
 
+import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCCACHE_USER_TASKS = REPO_ROOT / "ansible/roles/sccache_user/tasks/main.yml"

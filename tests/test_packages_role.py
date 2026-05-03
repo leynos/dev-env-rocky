@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGES_TASKS = REPO_ROOT / "ansible/roles/packages/tasks/main.yml"
 

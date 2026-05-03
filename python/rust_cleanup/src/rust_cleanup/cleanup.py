@@ -30,7 +30,6 @@ import sys
 import time
 from pathlib import Path
 
-
 SKIP_DIRS = frozenset(
     {".git", "node_modules", ".svn", ".hg", "__pycache__", ".pytest_cache"}
 )
