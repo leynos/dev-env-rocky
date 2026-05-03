@@ -88,7 +88,7 @@ If tools are implemented as finite state machines:
 
 | Tool | States | Input Coverage | Command Emission  | Cancellation | Verdict |
 | ---- | ------ | -------------- | ----------------- | ------------ | ------- |
-|      | count  | mouse/key/a11y | clean/interleaved | clean/leaky  |
+| -    | count  | mouse/key/a11y | clean/interleaved | clean/leaky  | -       |
 
 **Cross-tool questions:**
 
