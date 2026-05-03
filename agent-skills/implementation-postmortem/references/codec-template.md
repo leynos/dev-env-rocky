@@ -39,11 +39,11 @@ How much ceremony was required? Where did the abstraction fight you?
 
 | Strategy        | Status | Composable | Opt-out Overhead | Notes |
 | --------------- | ------ | ---------- | ---------------- | ----- |
-| Length-prefixed |
-| Delimiter-based |
-| COBS            |
-| Fixed-size      |
-| Custom          |
+| Length-prefixed | TBD    | TBD        | TBD              | -     |
+| Delimiter-based | TBD    | TBD        | TBD              | -     |
+| COBS            | TBD    | TBD        | TBD              | -     |
+| Fixed-size      | TBD    | TBD        | TBD              | -     |
+| Custom          | TBD    | TBD        | TBD              | -     |
 
 **Integration questions:**
 
@@ -173,11 +173,11 @@ For each deviation:
 
 | Layer         | Test Type                | Coverage | Notes |
 | ------------- | ------------------------ | -------- | ----- |
-| Codec unit    | Encode/decode round-trip |
-| Framing       | Partial read simulation  |
-| Fragmentation | Interleaved reassembly   |
-| Integration   | Full pipeline            |
-| Fuzz          | Malformed input          |
+| Codec unit    | Encode/decode round-trip | TBD      | -     |
+| Framing       | Partial read simulation  | TBD      | -     |
+| Fragmentation | Interleaved reassembly   | TBD      | -     |
+| Integration   | Full pipeline            | TBD      | -     |
+| Fuzz          | Malformed input          | TBD      | -     |
 
 **Questions:**
 
