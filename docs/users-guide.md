@@ -29,7 +29,7 @@ The `cursor_cli` role installs Cursor CLI through the official Linux and WSL
 installer:
 
 ```bash
-curl https://cursor.com/install -fsS | bash
+curl https://cursor.com/install --retry 3 --connect-timeout 10 -fsS | bash
 ```
 
 The installer creates the `cursor-agent` binary under `~/.local/bin`. The role runs
