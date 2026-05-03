@@ -161,6 +161,97 @@ Returns `(cleaned_content, was_changed)`. It is called automatically by
 `load_toml_file()` and by `toml_file`'s `load_document()` before parsing, so
 callers do not need to invoke it directly.
 
+## Tool Package Modules
+
+The `packaging.tools` collection provides thin wrappers around three package
+manager CLIs. Each module follows the same narrow contract: `state:
+present|absent`, an optional exact `version`, check mode, and modest return
+data (`name`, `state`, `previous_version`, `installed_version`, `cmd`).
+
+### uv_tool
+
+`packaging.tools.uv_tool` installs and removes Python tools managed by `uv`.
+
+Key parameters:
+
+- `name` (required): Tool name as reported by `uv tool list`.
+- `version`: Exact version to install.
+- `spec`: Full install specifier; overrides the `name==version` default.
+- `with_packages`: Additional packages to include via `--with`.
+- `python`: Python version or path passed to `--python`.
+- `force`: Pass `--force` to reinstall even if already present.
+- `uv_path`: Path to the `uv` executable; defaults to `uv`.
+
+State detection reads `uv tool list`. That output is human-oriented and has
+no documented stable machine-readable contract, so the regex parser may need
+adjustment if `uv` changes its output layout. The `name` parameter must match
+what `uv tool list` reports, which is the package name — not the executable
+name.
+
+### cargo_binstall
+
+`packaging.tools.cargo_binstall` installs and removes Rust binaries via
+`cargo-binstall`.
+
+Key parameters:
+
+- `name` (required): Crate name.
+- `version`: Exact version; install target becomes `name@version`.
+- `root`: Sets `CARGO_INSTALL_ROOT`; must be passed to both install and
+  uninstall operations.
+- `no_confirm`: Pass `--no-confirm`; defaults to `true` for unattended runs.
+- `force`: Pass `--force` to reinstall.
+- `cargo_path`: Path to the `cargo` executable; defaults to `cargo`.
+
+State detection uses `cargo install --list`, which is documented and stable.
+Removal uses `cargo uninstall`. The assumption that `cargo-binstall` writes
+entries readable by `cargo install --list` is reasonable given binstall's
+stated goal of being a drop-in for `cargo install`, but is an inference
+rather than an explicit compatibility guarantee.
+
+### bun_global
+
+`packaging.tools.bun_global` installs and removes global Node packages via
+Bun.
+
+Key parameters:
+
+- `name` (required): Package name, including scoped names such as
+  `@scope/pkg`.
+- `version`: Exact version; install target becomes `name@version`.
+- `global_dir`: Override for the global modules directory; defaults to
+  `$BUN_INSTALL_GLOBAL_DIR` or `~/.bun/install/global`.
+- `global_bin_dir`: Override for the global bin directory; defaults to
+  `$BUN_INSTALL_BIN` or `~/.bun/bin`.
+- `ignore_scripts`: Pass `--ignore-scripts` to suppress lifecycle scripts.
+- `bun_path`: Path to the `bun` executable; defaults to `bun`.
+
+State detection reads `package.json` from the global `node_modules` tree. If
+`install.globalDir` is set in `bunfig.toml` without exporting the matching
+environment variable, pass `global_dir` explicitly so the module reads the
+correct location.
+
+### Playbook example
+
+```yaml
+- hosts: all
+  tasks:
+    - name: Install ruff with uv
+      packaging.tools.uv_tool:
+        name: ruff
+        version: "0.5.0"
+
+    - name: Install cargo-nextest with cargo-binstall
+      packaging.tools.cargo_binstall:
+        name: cargo-nextest
+        version: "0.9.86"
+
+    - name: Install eslint globally with Bun
+      packaging.tools.bun_global:
+        name: eslint
+        version: "9.23.0"
+```
+
 ## Dependencies
 
 Managed hosts are expected to run Rocky Linux 10 or newer with system Python
