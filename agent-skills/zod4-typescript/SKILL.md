@@ -303,8 +303,8 @@ This section is a **concise** checklist. For the full migration guide, see
 ### Semantic changes (silent breakage risk)
 
 1. **`z.number()` rejects `Infinity`/`-Infinity`.**
-2. **`.int()` rejects unsafe integers** (outside `Number.MIN_SAFE_INTEGER` ..
-    `MAX_SAFE_INTEGER`).
+2. **`.int()` rejects unsafe integers** (outside `Number.MIN_SAFE_INTEGER` to
+    `Number.MAX_SAFE_INTEGER`).
 3. **`.default()` now short-circuits.** The default value must match the
     *output* type,
     not the input type. For pre-parse defaults, use `.prefault()`.
