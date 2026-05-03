@@ -162,5 +162,5 @@ If the architecture specifies a module structure:
 - Circular dependencies between modules?
 - Types in wrong modules?
 
-**Visualise:** Draw actual dependency graph. Compare to intended structure.
+**Visualize:** Draw actual dependency graph. Compare to intended structure.
 Explain every deviation.
