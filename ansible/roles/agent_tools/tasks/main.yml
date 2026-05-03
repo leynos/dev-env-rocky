@@ -338,7 +338,7 @@
     dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
-  loop: "{{ df12_readme_skills.files }}"
+  loop: "{{ df12_readme_skills.files | default([]) }}"
   when: ssh_key_stat.stat.exists
 
 - name: Install df12-readme-skill skills to Claude
@@ -347,7 +347,7 @@
     dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
-  loop: "{{ df12_readme_skills.files }}"
+  loop: "{{ df12_readme_skills.files | default([]) }}"
   when: ssh_key_stat.stat.exists
 
 - name: Install df12-readme-skill skills to Cursor
@@ -356,7 +356,7 @@
     dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
-  loop: "{{ df12_readme_skills.files }}"
+  loop: "{{ df12_readme_skills.files | default([]) }}"
   when:
     - ssh_key_stat.stat.exists
     - not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
@@ -903,7 +903,7 @@
     dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
-  loop: "{{ df12_readme_skills.files }}"
+  loop: "{{ df12_readme_skills.files | default([]) }}"
   when:
     - dev_env_enable_droid | bool
     - ssh_key_stat.stat.exists
