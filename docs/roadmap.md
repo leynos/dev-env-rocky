@@ -2,8 +2,9 @@
 
 This roadmap translates the current Ansible role extraction findings into an
 outcome-oriented delivery sequence. It does not promise dates. Each phase
-carries one testable idea at the GIST level. The steps underneath that phase
-work toward validating or falsifying the idea, answering sequencing questions,
+carries one testable idea at the Goal, Idea, Steps, and Tasks (GIST) level.
+The steps underneath that phase work toward validating or falsifying the idea,
+answering sequencing questions,
 and leaving behind usable automation rather than another horizontal layer.
 
 The roadmap is grounded in the existing operator and developer documentation,
@@ -29,7 +30,8 @@ This step answers which responsibilities are reusable collection behaviour and
 which are specific to the owner's environment. The outcome informs the order of
 role moves and prevents a broad relocation of `agent_tools` without a stable
 contract. See `docs/developers-guide.md` §§Structured File Modules-Validation,
-`docs/users-guide.md` §§Agent Configuration-Firecrawl MCP, and
+`docs/users-guide.md` §§Agent Configuration-Firecrawl Model Context Protocol
+(MCP), and
 `ansible/site.yml` §§1-54.
 
 - [ ] 1.1.1. Add an architectural decision record for the collection boundary.
