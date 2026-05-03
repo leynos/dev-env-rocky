@@ -33,6 +33,23 @@ before `agent_tools` so Cursor exists before MCPs and skills are configured.
 Cursor CLI does not currently support stop hooks, so this repository does not
 install Cursor stop-hook configuration.
 
+## Factory Droid DeepSeek Models
+
+When Droid is enabled, the playbook configures two Factory Droid custom models:
+
+- `deepseek-v4-pro[1m]`
+- `deepseek-v4-pro`
+
+Both models use DeepSeek's Anthropic-compatible endpoint:
+
+```text
+https://api.deepseek.com/anthropic
+```
+
+The API token is not stored in plaintext in the repository. The role reads the
+vaulted `deepseek_api_key` variable and writes it into Factory Droid's
+`~/.factory/settings.json` custom model configuration.
+
 ## Firecrawl MCP
 
 The playbook installs the `firecrawl-mcp` package through the global Bun

@@ -85,3 +85,23 @@ def test_cursor_cli_gets_skills_mcps_and_no_stop_hook() -> None:
     assert "cursor_cli_hook" not in content.lower(), (
         "Cursor CLI does not currently support stop hooks, so agent_tools must not install them"
     )
+
+
+def test_droid_gets_deepseek_custom_models_without_logging_token() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+    task = extract_task(content, "Configure Factory Droid DeepSeek custom models")
+
+    assert "agentic.agent_configs.factory_droid_model" in task, (
+        "agent_tools must configure Droid custom models through the Factory Droid model module"
+    )
+    assert "https://api.deepseek.com/anthropic" in task, (
+        "DeepSeek custom models must use the Anthropic-compatible endpoint"
+    )
+    assert "deepseek-v4-pro[1m]" in task
+    assert "deepseek-v4-pro" in task
+    assert 'api_key: "{{ deepseek_api_key }}"' in task, (
+        "DeepSeek custom models must use the vaulted API key"
+    )
+    assert "no_log: true" in task, (
+        "DeepSeek custom model task must suppress token-bearing output"
+    )

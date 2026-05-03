@@ -36,6 +36,7 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
     factory_droid_droid,
     factory_droid_hook,
     factory_droid_mcp,
+    factory_droid_model,
     factory_droid_skill,
     json_file,
     toml_file,
@@ -452,6 +453,92 @@ def test_cursor_cli_mcp_resolves_cursor_paths(tmp_path: Path) -> None:
                 "headers": {},
             }
         }
+    }
+
+
+def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:
+    """Verify Factory Droid custom model entries are keyed by model id."""
+    path = tmp_path / "settings.json"
+    path.write_text(
+        json.dumps(
+            {
+                "theme": "dark",
+                "customModels": [
+                    {
+                        "model": "existing-model",
+                        "displayName": "Existing",
+                        "provider": "anthropic",
+                    }
+                ],
+            }
+        )
+        + "\n"
+    )
+    args = {
+        "path": str(path),
+        "model": "deepseek-v4-pro",
+        "display_name": "DeepSeek V4 Pro",
+        "provider": "anthropic",
+        "base_url": "https://api.deepseek.com/anthropic",
+        "api_key": "secret-token",
+        "max_output_tokens": 8192,
+        "extra": {"noImageSupport": True},
+    }
+
+    result = run_module(factory_droid_model, args)
+
+    expected_model = {
+        "model": "deepseek-v4-pro",
+        "displayName": "DeepSeek V4 Pro",
+        "baseUrl": "https://api.deepseek.com/anthropic",
+        "apiKey": "secret-token",
+        "provider": "anthropic",
+        "maxOutputTokens": 8192,
+        "noImageSupport": True,
+    }
+    assert result["changed"] is True
+    assert result["custom_model"] == expected_model
+    rendered = json.loads(path.read_text())
+    assert rendered["theme"] == "dark"
+    assert rendered["customModels"] == [
+        {
+            "model": "existing-model",
+            "displayName": "Existing",
+            "provider": "anthropic",
+        },
+        expected_model,
+    ]
+
+    rerun_result = run_module(factory_droid_model, args)
+    assert rerun_result["changed"] is False
+
+    updated = run_module(
+        factory_droid_model,
+        {
+            **args,
+            "display_name": "DeepSeek V4 Pro Updated",
+            "max_output_tokens": 16384,
+        },
+    )
+    assert updated["changed"] is True
+    assert updated["custom_model"]["displayName"] == "DeepSeek V4 Pro Updated"
+    assert updated["custom_model"]["maxOutputTokens"] == 16384
+
+    absent = run_module(
+        factory_droid_model,
+        {"path": str(path), "model": "deepseek-v4-pro", "state": "absent"},
+    )
+    assert absent["changed"] is True
+    absent_json = json.loads(path.read_text())
+    assert absent_json == {
+        "theme": "dark",
+        "customModels": [
+            {
+                "model": "existing-model",
+                "displayName": "Existing",
+                "provider": "anthropic",
+            }
+        ],
     }
 
 

@@ -910,6 +910,22 @@
         - npx @playwright/mcp@latest --no-sandbox
   when: dev_env_enable_droid | bool
 
+- name: Configure Factory Droid DeepSeek custom models
+  agentic.agent_configs.factory_droid_model:
+    model: "{{ item.model }}"
+    state: present
+    display_name: "{{ item.display_name }}"
+    provider: anthropic
+    base_url: https://api.deepseek.com/anthropic
+    api_key: "{{ deepseek_api_key }}"
+  loop:
+    - model: deepseek-v4-pro[1m]
+      display_name: DeepSeek V4 Pro 1M
+    - model: deepseek-v4-pro
+      display_name: DeepSeek V4 Pro
+  no_log: true
+  when: dev_env_enable_droid | bool
+
 # Droid daemon systemd user service
 - name: Ensure systemd user directory exists
   ansible.builtin.file:

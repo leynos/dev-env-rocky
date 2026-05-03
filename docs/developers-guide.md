@@ -80,6 +80,19 @@ The Firecrawl task uses `no_log: true` because the MCP environment contains a
 secret. Tests assert this on the Firecrawl task block itself, not by searching
 the whole role file.
 
+## Factory Droid Custom Models
+
+`factory_droid_model` manages one entry in Factory Droid's `customModels` list
+inside `~/.factory/settings.json`. Entries are keyed by the provider model ID,
+which lets the module update or remove one custom model without replacing other
+user-managed models.
+
+The `agent_tools` role uses this module to configure the DeepSeek Anthropic API
+endpoint at `https://api.deepseek.com/anthropic` for `deepseek-v4-pro[1m]` and
+`deepseek-v4-pro`. The API token comes from the vaulted `deepseek_api_key`
+variable, and the task must keep `no_log: true` because the rendered model entry
+contains the token.
+
 ## Dependencies
 
 Managed hosts are expected to run Rocky Linux 10 or newer with system
