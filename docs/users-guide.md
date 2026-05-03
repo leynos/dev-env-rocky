@@ -33,6 +33,18 @@ before `agent_tools` so Cursor exists before MCPs and skills are configured.
 Cursor CLI does not currently support stop hooks, so this repository does not
 install Cursor stop-hook configuration.
 
+## System Packages
+
+The `packages` role provisions RPM packages on the managed host. The full list
+is maintained in `ansible/roles/packages/tasks/main.yml`; add new packages
+there.
+
+The following packages are currently provisioned:
+
+- `ninja-build` — provides the `ninja` binary, required when projects use
+  Ninja as their build backend (e.g. Meson, or CMake configured with
+  `-G Ninja`).
+
 ## Factory Droid DeepSeek Models
 
 When Droid is enabled, the playbook configures two Factory Droid custom models:
