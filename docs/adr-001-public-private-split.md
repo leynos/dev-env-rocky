@@ -108,8 +108,8 @@ publish: ## Push scrubbed history to the public lodybox repository
 
 The force-push overwrites the public repository's history on each run. This is
 intentional: the public repository is a derived artefact, not a collaboration
-surface. Do not accept pull requests against it or use it as a dependency in
-other projects.
+surface. Pull requests should not be accepted against it, nor should it be used
+as a dependency in other projects.
 
 Add `.publish-work/` to `.gitignore` to prevent the temporary clone from being
 picked up as untracked content.
