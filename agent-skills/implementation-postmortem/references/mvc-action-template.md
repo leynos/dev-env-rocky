@@ -130,10 +130,10 @@ If the architecture defines explicit invariants, assess each:
 
 | Invariant                         | Status | Evidence |
 | --------------------------------- | ------ | -------- |
-| All behaviour through commands    | ✓/✗    |
-| Single source of truth            | ✓/✗    |
-| Deterministic state transitions   | ✓/✗    |
-| [Add project-specific invariants] |
+| All behaviour through commands    | ✓/✗    | -        |
+| Single source of truth            | ✓/✗    | -        |
+| Deterministic state transitions   | ✓/✗    | -        |
+| [Add project-specific invariants] | ✓/✗    | -        |
 
 For any ✗:
 
