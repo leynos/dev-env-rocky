@@ -31,6 +31,7 @@
       - graphviz
       - gcc
       - gcc-c++
+      - ninja-build
       - automake
       - autoconf
       - clang
