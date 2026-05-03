@@ -1,8 +1,6 @@
 # Debugging Plan: {ISSUE_TITLE}
 
-**Generated**: {TIMESTAMP}
-**Issue ID**: {ISSUE_REF}
-**Severity**: {SEVERITY}
+**Generated**: {TIMESTAMP} **Issue ID**: {ISSUE_REF} **Severity**: {SEVERITY}
 
 ## Problem Statement
 

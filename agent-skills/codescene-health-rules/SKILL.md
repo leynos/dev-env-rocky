@@ -15,8 +15,7 @@ CodeScene evaluates 25+ code health factors and aggregates them into a 1–10
 score. You control that behaviour via two mechanisms:
 
 1. **`.codescene/code-health-rules.json`** — repo-scoped (or global) overrides
-   for
-   rule weights and low-level thresholds.
+   for rule weights and low-level thresholds.
 2. **`@codescene` source directives** — per-function suppression as inline
    comments.
 
@@ -29,14 +28,11 @@ When the user asks to generate or modify `code-health-rules.json`:
 1. **Clarify scope** — which files/paths need different rules? (test vs src, a
    specific language, a legacy subdirectory?)
 2. **Clarify intent per rule** — disable entirely (`0.0`), down-weight (
-   `0.1–0.9`),
-   or tighten/loosen a raw threshold?
+   `0.1–0.9`), or tighten/loosen a raw threshold?
 3. **Emit only the overrides** — omit rules the user wants kept at defaults;
-   this is
-   how CodeScene itself recommends it and it reduces config drift.
+   this is how CodeScene itself recommends it and it reduces config drift.
 4. **Place the file at `.codescene/code-health-rules.json`** in the repo root
-   and
-   commit it alongside application code.
+   and commit it alongside application code.
 
 ______________________________________________________________________
 
@@ -203,8 +199,7 @@ void legacy_dispatch(Event* e) { … }
 - The smell name must **exactly match** what the virtual code review shows. Note
   that "Bumpy Road" appears as `"Bumpy Road Ahead"` in directive context.
 - CodeScene surfaces all active directives in the PR review summary. Nothing
-  flies
-  under the radar.
+  flies under the radar.
 - Always include a rationale and a date so future maintainers can reassess.
 
 ______________________________________________________________________
@@ -212,8 +207,6 @@ ______________________________________________________________________
 ## Reference Files
 
 - [`references/rules-catalogue.md`](references/rules-catalogue.md) — All named
-  rules
-  with category, criticality, and recommended handling
+  rules with category, criticality, and recommended handling
 - [`references/thresholds.md`](references/thresholds.md) — Known threshold keys
-  with
-  descriptions and typical override values
+  with descriptions and typical override values

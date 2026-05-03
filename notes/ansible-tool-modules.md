@@ -572,6 +572,6 @@ docs stanzas and a small unit-test matrix.
 
 [1]: <https://docs.astral.sh/uv/guides/tools/> "Using tools | uv" [2]:
 <https://docs.astral.sh/uv/reference/cli/> "Commands | uv" [3]:
-<https://docs.rs/crate/cargo-binstall/latest> "cargo-binstall 1.17.9 - Docs.rs" [
-4]: <https://bun.com/docs/guides/install/from-npm-install-to-bun-install>
+<https://docs.rs/crate/cargo-binstall/latest> "cargo-binstall 1.17.9 - Docs.rs"
+[ 4]: <https://bun.com/docs/guides/install/from-npm-install-to-bun-install>
 "Migrate from npm install to bun install - Bun"

@@ -114,14 +114,12 @@ const zodSchema = z.fromJSONSchema(jsonSchema, options?);
 ### Limitations
 
 - No 1:1 round-trip soundness: `schema → toJSONSchema → fromJSONSchema` may not
-  produce
-  an equivalent schema, because some Zod features (refinements, transforms,
-  codecs) have no JSON Schema representation, and vice versa.
+  produce an equivalent schema, because some Zod features (refinements,
+  transforms, codecs) have no JSON Schema representation, and vice versa.
 - Complex JSON Schema features like `$dynamicRef`, `if/then/else`, and certain
   `patternProperties` combinations may not convert faithfully.
 - The returned schema is loosely typed (`ZodTypeAny`) — you lose the
-  compile-time type
-  information that hand-authored Zod schemas provide.
+  compile-time type information that hand-authored Zod schemas provide.
 
 ### Practical use case
 

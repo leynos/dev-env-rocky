@@ -283,11 +283,9 @@ This section is a **concise** checklist. For the full migration guide, see
 ### High impact
 
 1. **`message` → `error`** in all refinement / check options. `message` still
-   works but is
-   deprecated.
+   works but is deprecated.
 2. **`invalid_type_error` / `required_error`** — dropped entirely. Use `error`
-   function
-   form.
+   function form.
 3. **`errorMap`** — renamed to `error`. Can now return a plain string or
    undefined.
 4. **`.format()` / `.flatten()`** — deprecated. Use `z.treeifyError()`.
@@ -510,8 +508,7 @@ parsing functions. The `"zod/v4/core"` subpath is a permanent, stable permalink.
 4. **`.meta()` and registries** to drive JSON Schema / OpenAPI generation.
 5. **Shape spread over `.extend()`** for best tsc performance in large schemas.
 6. **`.safeParse()` over `.parse()`** in user-facing paths — avoid try/catch
-   for expected
-   validation failures.
+   for expected validation failures.
 7. **`z.prettifyError()` for humans; `z.treeifyError()` for programmatic
    access.**
 8. **`z.int()` / `z.int32()`** over `z.number().int()` for clarity and built-in

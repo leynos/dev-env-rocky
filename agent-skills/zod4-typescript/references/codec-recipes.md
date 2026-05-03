@@ -13,8 +13,7 @@ Introduced in Zod 4.1. Available on classic `zod` schemas via `.decode()` /
 1. `.transform()` is incompatible with `.encode()` — mixing them throws at
    runtime.
 2. `.default()` short-circuits on decode (returns default for `undefined`),
-   rejects
-   `undefined` on encode.
+   rejects `undefined` on encode.
 3. `.catch()` applies on decode only.
 4. Codecs compose via `.pipe()` — the pipe reverses direction during encode.
 
