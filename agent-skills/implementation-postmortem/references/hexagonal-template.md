@@ -98,10 +98,10 @@ If present (orchestrating domain operations):
 
 | Layer       | Test Type                     | Coverage | Notes |
 | ----------- | ----------------------------- | -------- | ----- |
-| Domain      | Unit (no mocks needed)        |
-| Ports       | Contract tests                |
-| Adapters    | Integration (real infra)      |
-| Application | Use-case tests (mocked ports) |
+| Domain      | Unit (no mocks needed)        | TBD      | -     |
+| Ports       | Contract tests                | TBD      | -     |
+| Adapters    | Integration (real infra)      | TBD      | -     |
+| Application | Use-case tests (mocked ports) | TBD      | -     |
 
 **Questions:**
 
