@@ -10,9 +10,10 @@ SITE_PLAYBOOK = REPO_ROOT / "ansible/site.yml"
 def test_cursor_cli_role_installs_official_agent_binary() -> None:
     content = CURSOR_TASKS.read_text()
 
-    assert "curl https://cursor.com/install -fsS | bash" in content, (
-        "Cursor CLI installation must follow the official Linux/WSL installer"
-    )
+    assert (
+        "curl https://cursor.com/install --retry 3 --connect-timeout 10 -fsS | bash"
+        in content
+    ), "Cursor CLI installation must follow the official Linux/WSL installer"
     assert 'creates: "{{ ansible_env.HOME }}/.local/bin/agent"' in content, (
         "Cursor CLI installer must be idempotent around the agent binary"
     )
