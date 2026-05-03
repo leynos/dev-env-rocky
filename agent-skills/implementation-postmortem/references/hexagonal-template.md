@@ -73,7 +73,7 @@ The fundamental rule: dependencies point inward (adapters → ports → domain).
 - Ports defined in domain, implemented in adapters?
 - No circular dependencies between layers?
 
-**Visualise:** Draw the actual dependency graph. Compare to intended hexagonal
+**Visualize:** Draw the actual dependency graph. Compare to intended hexagonal
 structure. Explain every deviation.
 
 ### Application Service Layer
