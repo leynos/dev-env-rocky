@@ -3,7 +3,7 @@
 An Ansible collection for managing filesystem-backed configuration used by
 Claude Code, Codex CLI, and Factory Droid.
 
-The collection currently includes fourteen modules:
+The collection currently includes fifteen modules:
 
 - `json_file`
 - `toml_file`
@@ -19,6 +19,7 @@ The collection currently includes fourteen modules:
 - `factory_droid_hook`
 - `factory_droid_skill`
 - `factory_droid_droid`
+- `factory_droid_model`
 
 ## Design notes
 
@@ -84,4 +85,13 @@ attempt to manipulate Claude's local per-project MCP storage inside
           - Execute
         body: |
           Review the supplied changes and highlight concrete defects.
+
+    - name: Configure a Factory Droid custom model
+      factory_droid_model:
+        model: deepseek-v4-pro
+        display_name: DeepSeek V4 Pro
+        provider: anthropic
+        base_url: https://api.deepseek.com/anthropic
+        api_key: "{{ deepseek_api_key }}"
+      no_log: true
 ```

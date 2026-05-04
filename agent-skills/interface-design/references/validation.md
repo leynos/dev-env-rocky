@@ -35,9 +35,10 @@ Before creating a component, check system.md:
 - Pattern exists? Use it.
 - Need variation? Extend, don't create new.
 
-Memory compounds: each pattern saved makes future work faster and more consistent.
+Memory compounds: each pattern saved makes future work faster and more
+consistent.
 
----
+______________________________________________________________________
 
 ## Validation Checks
 
@@ -45,7 +46,8 @@ If system.md defines specific values, check consistency:
 
 **Spacing** — All values multiples of the defined base?
 
-**Depth** — Using the declared strategy throughout? (borders-only means no shadows)
+**Depth** — Using the declared strategy throughout? (borders-only means no
+shadows)
 
 **Colours** — Using defined palette, not random hex codes?
 

@@ -24,12 +24,11 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-
 from rust_cleanup import (
     CACHEDIR_TAG,
-    CleanupError,
     CUTOFF_SECONDS,
     TARGET_DIR,
+    CleanupError,
     cleanup_target_dirs,
     delete_directory,
     find_target_dirs,

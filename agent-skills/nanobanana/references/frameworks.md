@@ -1,6 +1,7 @@
 # Nano Banana Frameworks
 
-Use these compact frameworks to choose the right prompt shape without loading a giant prompt bank.
+Use these compact frameworks to choose the right prompt shape without loading a
+giant prompt bank.
 
 ## 1. Simple Generation
 
@@ -16,7 +17,8 @@ Example:
 
 ## 2. Structured Blueprint Prompt
 
-Use for posters, covers, dashboards, brand boards, magazine layouts, and infographics.
+Use for posters, covers, dashboards, brand boards, magazine layouts, and
+infographics.
 
 Structure:
 
@@ -60,7 +62,8 @@ Constraints:
 
 ## 3. JSON-Like Constraint Prompt
 
-Use when the request has many simultaneous rules, multiple references, or precise logic.
+Use when the request has many simultaneous rules, multiple references, or
+precise logic.
 
 Guidance:
 
@@ -168,6 +171,7 @@ Keep [row / cluster / center] balanced and clearly separated.
 ## 8. Tool-to-Task Mapping
 
 - `generate_image`: blank-canvas creation, posters, product shots, diagrams.
-- `edit_image`: local object swaps, background replacement, text changes, cleanup.
+- `edit_image`: local object swaps, background replacement, text changes,
+  cleanup.
 - `character_consistency`: same character across scenes or storyboard frames.
 - `multi_image_fusion`: merge identity, product, pose, or style references.

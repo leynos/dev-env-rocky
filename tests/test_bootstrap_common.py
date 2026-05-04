@@ -5,7 +5,6 @@ import shlex
 import subprocess
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BOOTSTRAP_COMMON = REPO_ROOT / "bootstrap-common"
 INSTALL_SUB_AGENTS = REPO_ROOT / "install-sub-agents"

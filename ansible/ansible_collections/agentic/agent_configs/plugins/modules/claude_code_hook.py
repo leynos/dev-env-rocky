@@ -149,6 +149,7 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 
 
 def build_hook_definition(module: AnsibleModule) -> dict:
+    """Build a Claude Code hook definition from module parameters."""
     params = module.params
     desired = {
         "type": "command",
@@ -163,6 +164,7 @@ def build_hook_definition(module: AnsibleModule) -> dict:
 
 
 def main() -> None:
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "agent_executable": {"type": "path", "required": True},

@@ -128,6 +128,7 @@ stderr:
 """
 
 def resolve_binary(module: AnsibleModule, value: str) -> str:
+    """Resolve and return the path to a named Cargo binary."""
     path = module.get_bin_path(value, required=False)
     if path:
         return path
@@ -136,6 +137,7 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
 
 
 def run(module: AnsibleModule, cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str, str]:
+    """Run a command using the Ansible module runner and return its output."""
     rc, stdout, stderr = module.run_command(cmd, environ_update=env or {})
     return rc, stdout, stderr
 
@@ -146,6 +148,7 @@ def read_installed_version(
     crate_name: str,
     env: dict[str, str],
 ) -> str | None:
+    """Return the currently installed version of a Cargo crate, or None."""
     rc, stdout, stderr = run(module, [cargo_bin, "install", "--list"], env=env)
     if rc != 0:
         module.fail_json(
@@ -162,6 +165,7 @@ def read_installed_version(
 
 
 def main() -> None:
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

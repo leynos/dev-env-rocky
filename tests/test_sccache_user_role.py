@@ -1,10 +1,10 @@
 """Regression tests for the sccache user role task definitions."""
 
 import json
-from pathlib import Path
 import re
-import tomllib
+from pathlib import Path
 
+import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCCACHE_USER_TASKS = REPO_ROOT / "ansible/roles/sccache_user/tasks/main.yml"
@@ -14,6 +14,9 @@ EXPECTED_ENV = {
     "RUSTC_HEARTBEAT_SECS": "45",
     "SCCACHE_DIR": "{{ ansible_env.HOME }}/.cache/sccache",
     "SCCACHE_CACHE_SIZE": "120G",
+}
+EXPECTED_CLAUDE_EXTRA_ENV = {
+    "PATH": "{{ ansible_env.HOME }}/.cargo/bin:{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.HOME }}/.bun/bin:/usr/local/bin:/usr/bin:/usr/sbin",
 }
 
 
@@ -60,19 +63,20 @@ def test_sccache_user_role_writes_expected_environment_structure() -> None:
     codex_toml = "[env]\n" + "\n".join(
         f'{key} = "{value}"' for key, value in EXPECTED_ENV.items()
     )
-    claude_json = json.dumps({"env": EXPECTED_ENV})
+    expected_claude_env = EXPECTED_ENV | EXPECTED_CLAUDE_EXTRA_ENV
+    claude_json = json.dumps({"env": expected_claude_env})
 
     assert tomllib.loads(codex_toml)["env"] == EXPECTED_ENV, (
         "expected sccache_user Codex values to form a valid TOML [env] table"
     )
-    assert json.loads(claude_json)["env"] == EXPECTED_ENV, (
+    assert json.loads(claude_json)["env"] == expected_claude_env, (
         "expected sccache_user Claude values to form a valid JSON env object"
     )
     assert 'loop: "{{ sccache_env_vars }}"' in codex_task, (
         "expected Codex task to use the shared sccache_env_vars role default"
     )
-    assert 'loop: "{{ sccache_env_vars }}"' in claude_task, (
-        "expected Claude task to use the shared sccache_env_vars role default"
+    assert 'loop: "{{ sccache_env_vars + claude_extra_env_vars }}"' in claude_task, (
+        "expected Claude task to use shared sccache env plus Claude-only extras"
     )
     for key, value in EXPECTED_ENV.items():
         expected_key = f"- key: {key}"
@@ -82,6 +86,15 @@ def test_sccache_user_role_writes_expected_environment_structure() -> None:
         )
         assert expected_value in defaults, (
             f"expected sccache_env_vars default to include {expected_value!r}"
+        )
+    for key, value in EXPECTED_CLAUDE_EXTRA_ENV.items():
+        expected_key = f"- key: {key}"
+        expected_value = f'value: "{value}"'
+        assert expected_key in defaults, (
+            f"expected claude_extra_env_vars default to include {expected_key!r}"
+        )
+        assert expected_value in defaults, (
+            f"expected claude_extra_env_vars default to include {expected_value!r}"
         )
 
 

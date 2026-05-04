@@ -17,12 +17,14 @@ from __future__ import annotations
 
 import os
 
+import tomllib
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
     atomic_write_text,
     expand_path,
     log_operation,
     read_text,
+    strip_legacy_sccache_env_block,
 )
 
 DOCUMENTATION = r"""
@@ -89,10 +91,31 @@ def import_tomlkit(module: AnsibleModule):
         import tomlkit
         from tomlkit.exceptions import ParseError
     except ImportError:
+        if module.check_mode:
+            return CheckModeToml, tomllib.TOMLDecodeError
         module.fail_json(
             msg="The toml_file module requires the tomlkit Python package on the target host"
         )
     return tomlkit, ParseError
+
+
+class CheckModeToml:
+    """Minimal TOML adapter for dry runs before target dependencies exist."""
+
+    @staticmethod
+    def document() -> dict:
+        """Return an empty TOML-like document."""
+        return {}
+
+    @staticmethod
+    def table() -> dict:
+        """Return an empty TOML-like table."""
+        return {}
+
+    @staticmethod
+    def parse(content: str) -> dict:
+        """Parse TOML with the standard library for check-mode decisions."""
+        return tomllib.loads(content)
 
 
 def split_key_path(key: str) -> list[str]:
@@ -133,19 +156,36 @@ def load_document(module: AnsibleModule, tomlkit, parse_error, path: str):
     """Load a TOML document, returning an empty document when absent."""
     content = read_text(path)
     if content is None:
-        return tomlkit.document()
+        return tomlkit.document(), False
+    content, removed_legacy_block = strip_legacy_sccache_env_block(content)
     try:
-        return tomlkit.parse(content)
+        return tomlkit.parse(content), removed_legacy_block
     except parse_error as exc:
         module.fail_json(msg="Failed to parse TOML file %s: %s" % (path, exc))
 
 
-def get_parent(module: AnsibleModule, tomlkit, document, parts: list[str]):
-    """Return the parent TOML table for a key path, creating tables as needed."""
+def get_parent(
+    module: AnsibleModule,
+    tomlkit,
+    document,
+    parts: list[str],
+    *,
+    create_missing: bool = True,
+):
+    """Return the parent TOML table for a key path.
+
+    Parameters
+    ----------
+    create_missing:
+        When ``True`` (default), create absent intermediate tables.
+        When ``False``, return ``None`` if any intermediate table is absent.
+    """
     parent = document
     for part in parts[:-1]:
         child = parent.get(part)
         if child is None:
+            if not create_missing:
+                return None
             child = tomlkit.table()
             parent[part] = child
         if not hasattr(child, "get") or not hasattr(child, "__setitem__"):
@@ -206,21 +246,27 @@ def main() -> None:
     desired_mode = parse_mode(module, module.params.get("mode"))
 
     try:
-        document = load_document(module, tomlkit, parse_error, path)
+        document, removed_legacy_block = load_document(
+            module, tomlkit, parse_error, path
+        )
     except OSError as exc:
         module.fail_json(msg="Failed to read TOML file %s: %s" % (path, exc))
     log_operation(module, "toml_file", "read", path)
-    parent = get_parent(module, tomlkit, document, parts)
+    state = module.params["state"]
+    if state == "present":
+        parent = get_parent(module, tomlkit, document, parts, create_missing=True)
+    else:
+        parent = get_parent(module, tomlkit, document, parts, create_missing=False)
     leaf = parts[-1]
-    changed_value = False
-    if module.params["state"] == "present":
+    changed_value = removed_legacy_block
+    if state == "present":
         if module.params.get("value") is None:
             module.fail_json(msg="value is required when state=present")
         value = module.params.get("value")
         if parent.get(leaf) != value:
             parent[leaf] = value
             changed_value = True
-    elif leaf in parent:
+    elif parent is not None and leaf in parent:
         del parent[leaf]
         changed_value = True
 
@@ -248,7 +294,7 @@ def main() -> None:
         changed=(changed_value or changed_mode),
         path=path,
         key=module.params["key"],
-        value=parent.get(leaf) if module.params["state"] == "present" else None,
+        value=parent.get(leaf) if state == "present" else None,
     )
 
 

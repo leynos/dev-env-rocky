@@ -161,6 +161,7 @@ trust_stderr:
 
 
 def resolve_binary(module: AnsibleModule, value: str) -> str:
+    """Resolve and return the path to a named Bun binary."""
     path = module.get_bin_path(value, required=False)
     if path:
         return path
@@ -173,17 +174,20 @@ def run(
     env: dict[str, str] | None = None,
     cwd: str | None = None,
 ):
+    """Run a command using the Ansible module runner and return its output."""
     rc, stdout, stderr = module.run_command(cmd, environ_update=env or {}, cwd=cwd)
     return rc, stdout, stderr
 
 
 def package_json_path(global_dir: str, package_name: str) -> str:
+    """Return the package.json path for a global Bun package."""
     return os.path.join(
         global_dir, "node_modules", *package_name.split("/"), "package.json"
     )
 
 
 def read_installed_version(pkg_json: str) -> str | None:
+    """Read the installed version from a package.json file."""
     if not os.path.exists(pkg_json):
         return None
     with open(pkg_json, "r", encoding="utf-8") as fh:
@@ -192,6 +196,7 @@ def read_installed_version(pkg_json: str) -> str | None:
 
 
 def is_trusted_dependency(global_dir: str, package_name: str) -> bool:
+    """Return True if the package is listed as a trusted dependency."""
     pkg_json = os.path.join(global_dir, "package.json")
     if not os.path.exists(pkg_json):
         return False
@@ -204,6 +209,7 @@ def is_trusted_dependency(global_dir: str, package_name: str) -> bool:
 
 
 def main():
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

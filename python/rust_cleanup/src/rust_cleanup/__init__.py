@@ -2,10 +2,10 @@
 
 from rust_cleanup.cleanup import (
     CACHEDIR_TAG,
-    CleanupError,
     CUTOFF_SECONDS,
     SKIP_DIRS,
     TARGET_DIR,
+    CleanupError,
     cleanup_target_dirs,
     delete_directory,
     find_target_dirs,

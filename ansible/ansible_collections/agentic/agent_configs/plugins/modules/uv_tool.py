@@ -139,6 +139,7 @@ UV_LIST_RE = re.compile(r"^(?P<name>\S+)\s+v(?P<version>\S+)(?:\s|$)")
 
 
 def resolve_binary(module: AnsibleModule, value: str) -> str:
+    """Resolve and return the path to a named uv binary."""
     path = module.get_bin_path(value, required=False)
     if path:
         return path
@@ -146,11 +147,13 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
 
 
 def run(module: AnsibleModule, cmd: list[str]):
+    """Run a command using the Ansible module runner and return its output."""
     rc, stdout, stderr = module.run_command(cmd)
     return rc, stdout, stderr
 
 
 def read_installed_tools(module: AnsibleModule, uv_bin: str) -> dict[str, str]:
+    """Return a mapping of installed uv tool names to their versions."""
     rc, stdout, stderr = run(module, [uv_bin, "tool", "list"])
     if rc != 0:
         module.fail_json(
@@ -171,6 +174,7 @@ def read_installed_tools(module: AnsibleModule, uv_bin: str) -> dict[str, str]:
 
 
 def main():
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

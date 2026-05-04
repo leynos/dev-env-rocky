@@ -144,6 +144,7 @@ path:
 """
 
 def build_frontmatter(module: AnsibleModule) -> dict:
+    """Build Factory Droid front matter from module parameters."""
     params = module.params
     if params["state"] == "present" and not params["body"].strip():
         module.fail_json(msg="body must be non-empty when state=present")
@@ -161,6 +162,7 @@ def build_frontmatter(module: AnsibleModule) -> dict:
 
 
 def resolve_path(module: AnsibleModule) -> str:
+    """Resolve the managed Factory Droid file path."""
     if module.params.get("path"):
         return module.params["path"]
     slug = module.params.get("slug") or slugify(module.params["name"])
@@ -177,6 +179,7 @@ def resolve_path(module: AnsibleModule) -> str:
 
 
 def main() -> None:
+    """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

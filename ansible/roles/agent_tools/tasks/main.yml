@@ -109,17 +109,6 @@
     - not ansible_check_mode
     - not ssh_key_stat.stat.exists
 
-- name: Clone df12-readme-skill repository via SSH
-  ansible.builtin.git:
-    repo: git@github.com:leynos/df12-readme-skill.git
-    dest: "{{ ansible_env.HOME }}/git/df12-readme-skill"
-    version: HEAD
-    depth: 1
-    single_branch: true
-    key_file: "{{ ansible_env.HOME }}/.ssh/id_ed25519"
-    accept_hostkey: true
-  when: ssh_key_stat.stat.exists
-
 - name: Clone df12-documentation-skills repository via SSH
   ansible.builtin.git:
     repo: git@github.com:leynos/df12-documentation-skills.git
@@ -143,11 +132,32 @@
     state: directory
     mode: '0755'
 
+- name: Check Codex skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.codex/skills"
+  register: codex_skills_directory
+
 - name: Ensure Claude skills directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.claude/skills"
     state: directory
     mode: '0755'
+
+- name: Check Claude skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.claude/skills"
+  register: claude_skills_directory
+
+- name: Ensure Cursor skills directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.cursor/skills"
+    state: directory
+    mode: '0755'
+
+- name: Check Cursor skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.cursor/skills"
+  register: cursor_skills_directory
 
 - name: Install Codex agent instructions
   ansible.builtin.copy:
@@ -184,6 +194,21 @@
     remote_src: true
   loop: "{{ agent_helper_skills.files }}"
 
+- name: Install agent-helper-scripts skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ agent_helper_skills.files }}"
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: agent_helper_scripts_cursor_install_result
+
+- name: Debug agent-helper-scripts Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ agent_helper_scripts_cursor_install_result.results | length }} files"
+  when: agent_helper_scripts_cursor_install_result is changed
+
 - name: Find skills in nextest-skill
   ansible.builtin.find:
     paths: "{{ ansible_env.HOME }}/git/nextest-skill"
@@ -206,6 +231,21 @@
     mode: 'preserve'
     remote_src: true
   loop: "{{ nextest_skills.files }}"
+
+- name: Install nextest-skill skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ nextest_skills.files }}"
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: nextest_cursor_install_result
+
+- name: Debug nextest-skill Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ nextest_cursor_install_result.results | length }} files"
+  when: nextest_cursor_install_result is changed
 
 - name: Find skills in vidai-mock-skill
   ansible.builtin.find:
@@ -230,6 +270,21 @@
     remote_src: true
   loop: "{{ vidai_skills.files }}"
 
+- name: Install vidai-mock-skill skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ vidai_skills.files }}"
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: vidai_cursor_install_result
+
+- name: Debug vidai-mock-skill Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ vidai_cursor_install_result.results | length }} files"
+  when: vidai_cursor_install_result is changed
+
 - name: Find skills in rust-skill
   ansible.builtin.find:
     paths: "{{ ansible_env.HOME }}/git/rust-skill/skills"
@@ -253,31 +308,20 @@
     remote_src: true
   loop: "{{ rust_skills.files }}"
 
-- name: Find skills in df12-readme-skill
-  ansible.builtin.find:
-    paths: "{{ ansible_env.HOME }}/git/df12-readme-skill"
-    file_type: directory
-    depth: 1
-  register: df12_readme_skills
-  when: ssh_key_stat.stat.exists
-
-- name: Install df12-readme-skill skills to Codex
+- name: Install rust-skill skills to Cursor
   ansible.builtin.copy:
     src: "{{ item.path }}/"
-    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item.path | basename }}"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
     mode: 'preserve'
     remote_src: true
-  loop: "{{ df12_readme_skills.files }}"
-  when: ssh_key_stat.stat.exists
+  loop: "{{ rust_skills.files }}"
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: rust_cursor_install_result
 
-- name: Install df12-readme-skill skills to Claude
-  ansible.builtin.copy:
-    src: "{{ item.path }}/"
-    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item.path | basename }}"
-    mode: 'preserve'
-    remote_src: true
-  loop: "{{ df12_readme_skills.files }}"
-  when: ssh_key_stat.stat.exists
+- name: Debug rust-skill Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ rust_cursor_install_result.results | length }} files"
+  when: rust_cursor_install_result is changed
 
 - name: Find skills in df12-documentation-skills
   ansible.builtin.find:
@@ -310,6 +354,64 @@
   when:
     - ssh_key_stat.stat.exists
     - df12_documentation_skills_dir.stat.isdir | default(false)
+
+- name: Install df12-documentation-skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ item.path }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"
+    mode: 'preserve'
+    remote_src: true
+  loop: "{{ df12_documentation_skills.files | default([]) }}"
+  when:
+    - ssh_key_stat.stat.exists
+    - df12_documentation_skills_dir.stat.isdir | default(false)
+    - not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
+  register: df12_documentation_cursor_install_result
+
+- name: Debug df12-documentation-skills Cursor skill install
+  ansible.builtin.debug:
+    msg: "Installed {{ df12_documentation_cursor_install_result.results | length }} files"
+  when: df12_documentation_cursor_install_result is changed
+
+# Install private repo skills (not available in upstream repositories)
+- name: Install private repo skills to Codex
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../agent-skills/{{ item }}/"
+    dest: "{{ ansible_env.HOME }}/.codex/skills/{{ item }}"
+    mode: 'preserve'
+  loop:
+    - compressed-authority
+    - grepai
+    - interface-design
+    - nanobanana
+    - rebase
+  when: not ansible_check_mode or (codex_skills_directory.stat.isdir | default(false))
+
+- name: Install private repo skills to Claude
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../agent-skills/{{ item }}/"
+    dest: "{{ ansible_env.HOME }}/.claude/skills/{{ item }}"
+    mode: 'preserve'
+  loop:
+    - compressed-authority
+    - grepai
+    - interface-design
+    - nanobanana
+    - rebase
+  when: not ansible_check_mode or (claude_skills_directory.stat.isdir | default(false))
+
+- name: Install private repo skills to Cursor
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../agent-skills/{{ item }}/"
+    dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item }}"
+    mode: 'preserve'
+  loop:
+    - compressed-authority
+    - grepai
+    - interface-design
+    - nanobanana
+    - rebase
+  when: not ansible_check_mode or (cursor_skills_directory.stat.isdir | default(false))
 
 # Install context_pack tool for agent communication
 - name: Install context_pack tool
@@ -593,6 +695,69 @@
         - -lc
         - npx @playwright/mcp@latest --no-sandbox
 
+# Configure Cursor CLI MCP servers using collection module. Cursor CLI does
+# not currently support stop hooks, so this role only installs skills and MCPs.
+- name: Configure Cursor CLI MCP servers
+  agentic.agent_configs.cursor_cli_mcp:
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    scope: user
+    transport: "{{ item.transport }}"
+    command: "{{ item.command | default(omit) }}"
+    args: "{{ item.args | default(omit) }}"
+    env: "{{ item.env | default(omit) }}"
+  loop:
+    - name: context_pack
+      transport: stdio
+      command: mcp-context-pack
+      env:
+        CONTEXT_PACK_ROOT: "{{ ansible_env.HOME }}/.local/state/context-pack"
+        CONTEXT_PACK_SOURCE_ROOT: "__SESSION_CWD__"
+        CONTEXT_PACK_LOG: "mcp_context_pack=info"
+        CONTEXT_PACK_INITIALIZE_TIMEOUT_MS: "20000"
+        CONTEXT_PACK_MAX_PACK_BYTES: "524288"
+        CONTEXT_PACK_MAX_SOURCE_BYTES: "2097152"
+        CONTEXT_PACK_EXPIRED_GRACE_SECONDS: "900"
+    - name: playwright
+      transport: stdio
+      command: podman
+      args:
+        - run
+        - --rm
+        - -i
+        - --network=host
+        - -e
+        - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+        - -e
+        - PLAYWRIGHT_SKIP_BROWSER_GC=1
+        - -e
+        - PLAYWRIGHT_MCP_BROWSER=chromium
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/ms-playwright:/ms-playwright:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/google-chrome:/opt/google/chrome:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/cache/npm:/root/.npm:z"
+        - -v
+        - "{{ ansible_env.HOME }}/.local/state/playwright/work:/work:z"
+        - -w
+        - /work
+        - mcr.microsoft.com/playwright:latest
+        - bash
+        - -lc
+        - npx @playwright/mcp@latest --no-sandbox
+
+- name: Configure Cursor CLI Firecrawl MCP server
+  agentic.agent_configs.cursor_cli_mcp:
+    name: firecrawl
+    state: present
+    scope: user
+    transport: stdio
+    command: firecrawl-mcp
+    env:
+      FIRECRAWL_API_KEY: "{{ firecrawl_api_key }}"
+  no_log: true
+
 # Create context directory for agent communication
 - name: Ensure context directory exists
   ansible.builtin.file:
@@ -631,6 +796,12 @@
     path: "{{ ansible_env.HOME }}/.factory/skills"
     state: directory
     mode: '0755'
+  when: dev_env_enable_droid | bool
+
+- name: Check Factory Droid skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.factory/skills"
+  register: factory_droid_skills_directory
   when: dev_env_enable_droid | bool
 
 - name: Ensure Factory Droid hooks directory exists
@@ -690,17 +861,6 @@
   loop: "{{ rust_skills.files }}"
   when: dev_env_enable_droid | bool
 
-- name: Install df12-readme-skill to Factory Droid
-  ansible.builtin.copy:
-    src: "{{ item.path }}/"
-    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item.path | basename }}"
-    mode: 'preserve'
-    remote_src: true
-  loop: "{{ df12_readme_skills.files }}"
-  when:
-    - dev_env_enable_droid | bool
-    - ssh_key_stat.stat.exists
-
 - name: Install df12-documentation-skills to Factory Droid
   ansible.builtin.copy:
     src: "{{ item.path }}/"
@@ -712,6 +872,21 @@
     - dev_env_enable_droid | bool
     - ssh_key_stat.stat.exists
     - df12_documentation_skills_dir.stat.isdir | default(false)
+
+- name: Install private repo skills to Factory Droid
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../agent-skills/{{ item }}/"
+    dest: "{{ ansible_env.HOME }}/.factory/skills/{{ item }}"
+    mode: 'preserve'
+  loop:
+    - compressed-authority
+    - grepai
+    - interface-design
+    - nanobanana
+    - rebase
+  when:
+    - dev_env_enable_droid | bool
+    - not ansible_check_mode or (factory_droid_skills_directory.stat.isdir | default(false))
 
 # Configure Factory Droid hooks using collection module
 - name: Configure Factory Droid hooks
@@ -775,6 +950,22 @@
         - bash
         - -lc
         - npx @playwright/mcp@latest --no-sandbox
+  when: dev_env_enable_droid | bool
+
+- name: Configure Factory Droid DeepSeek custom models
+  agentic.agent_configs.factory_droid_model:
+    model: "{{ item.model }}"
+    state: present
+    display_name: "{{ item.display_name }}"
+    provider: anthropic
+    base_url: https://api.deepseek.com/anthropic
+    api_key: "{{ deepseek_api_key }}"
+  loop:
+    - model: deepseek-v4-pro[1m]
+      display_name: DeepSeek V4 Pro 1M
+    - model: deepseek-v4-pro
+      display_name: DeepSeek V4 Pro
+  no_log: true
   when: dev_env_enable_droid | bool
 
 # Droid daemon systemd user service
@@ -844,6 +1035,7 @@
       [Service]
       Type=simple
       ExecStart=%h/.bun/bin/lody start
+      Environment=PATH={{ ansible_env.HOME }}/.local/bin:{{ ansible_env.HOME }}/.cargo/bin:{{ ansible_env.HOME }}/.bun/bin:{{ ansible_env.HOME }}/go/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin
       Restart=on-failure
       RestartSec=5
 

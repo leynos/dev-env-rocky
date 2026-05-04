@@ -1,26 +1,13 @@
+"""Manage Cursor CLI Model Context Protocol server definitions.
+
+This Ansible module creates, updates, or removes Cursor MCP server
+configuration in user-scoped ``~/.cursor/mcp.json`` files or project-scoped
+``.cursor/mcp.json`` files. Cursor CLI uses the same MCP configuration as the
+editor, so these entries are discovered by the ``agent`` binary.
+"""
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""Manage Factory Droid Model Context Protocol server definitions.
-
-This Ansible module creates, updates, or removes Factory Droid MCP server
-entries in user-scoped ``~/.factory/mcp.json`` files or project-scoped
-``.factory/mcp.json`` files. Use it to provision repeatable stdio or HTTP MCP
-integrations with parameters such as ``name``, ``scope``, ``transport``,
-``command``, ``args``, ``env``, ``url``, ``headers``, ``disabled``,
-``disabled_tools``, and ``extra``.
-
-Example playbook task::
-
-    - name: Configure a project Factory Droid stdio MCP server
-      agentic.agent_configs.factory_droid_mcp:
-        name: repo-tools
-        scope: project
-        project_dir: /srv/my-repo
-        transport: stdio
-        command: /usr/local/bin/repo-tools-mcp
-        args:
-          - --stdio
-"""
 # Copyright: (c) 2026, Leynos
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
@@ -28,11 +15,12 @@ from __future__ import annotations
 
 DOCUMENTATION = r"""
 ---
-module: factory_droid_mcp
-short_description: Manage Factory Droid MCP server definitions
+module: cursor_cli_mcp
+short_description: Manage Cursor CLI MCP server definitions
 version_added: "1.0.0"
 description:
-  - Manage Factory Droid MCP server definitions in C(~/.factory/mcp.json) or C(.factory/mcp.json).
+  - Manage Cursor MCP servers in C(~/.cursor/mcp.json) or project C(.cursor/mcp.json) files.
+  - Cursor CLI discovers the same MCP configuration as the Cursor editor.
 options:
   name:
     description:
@@ -64,7 +52,7 @@ options:
     description:
       - MCP transport type.
     type: str
-    choices: [stdio, http]
+    choices: [stdio, http, sse]
   command:
     description:
       - Executable used for C(stdio) servers.
@@ -82,22 +70,13 @@ options:
     default: {}
   url:
     description:
-      - URL for C(http) servers.
+      - URL for C(http) or C(sse) servers.
     type: str
   headers:
     description:
-      - Headers for C(http) servers.
+      - HTTP headers for C(http) or C(sse) servers.
     type: dict
     default: {}
-  disabled:
-    description:
-      - Whether the server is disabled.
-    type: bool
-  disabled_tools:
-    description:
-      - Optional deny-list of tools.
-    type: list
-    elements: str
   extra:
     description:
       - Additional raw keys to merge into the MCP server definition.
@@ -108,26 +87,31 @@ author:
 """
 
 EXAMPLES = r"""
-- name: Configure a project Factory Droid stdio MCP server
-  agentic.agent_configs.factory_droid_mcp:
+- name: Configure a user Cursor stdio MCP server
+  agentic.agent_configs.cursor_cli_mcp:
     name: repo-tools
-    scope: project
-    project_dir: /srv/my-repo
+    scope: user
     transport: stdio
     command: /usr/local/bin/repo-tools-mcp
-    args: [--stdio]
+    args:
+      - --stdio
+    env:
+      LOG_LEVEL: info
 
-- name: Configure a user Factory Droid HTTP MCP server
-  agentic.agent_configs.factory_droid_mcp:
+- name: Configure a project Cursor HTTP MCP server
+  agentic.agent_configs.cursor_cli_mcp:
     name: internal-api
-    scope: user
+    scope: project
+    project_dir: /srv/my-repo
     transport: http
     url: https://mcp.internal.example/v1
+    headers:
+      Authorization: "Bearer ${env:INTERNAL_MCP_TOKEN}"
 """
 
 RETURN = r"""
 path:
-  description: Managed configuration path.
+  description: Managed Cursor MCP config path.
   returned: always
   type: str
 server:
@@ -146,8 +130,16 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 )
 
 
+_SENSITIVE_KEYS = {"env", "headers"}
+
+
+def _redact_server(server: dict) -> dict:
+    """Return a copy of the server dict with sensitive keys replaced by 'REDACTED'."""
+    return {k: ("REDACTED" if k in _SENSITIVE_KEYS and v else v) for k, v in server.items()}
+
+
 def build_server_definition(module: AnsibleModule) -> dict:
-    """Build the Factory Droid MCP server definition from module parameters."""
+    """Build the Cursor MCP server definition from module parameters."""
     params = module.params
     transport = params.get("transport")
     extra = params.get("extra") or {}
@@ -160,7 +152,6 @@ def build_server_definition(module: AnsibleModule) -> dict:
         if not command:
             module.fail_json(msg="command is required when transport=stdio")
         desired = {
-            "type": "stdio",
             "command": command,
             "args": params.get("args") or [],
             "env": params.get("env") or {},
@@ -168,21 +159,13 @@ def build_server_definition(module: AnsibleModule) -> dict:
     else:
         url = params.get("url")
         if not url:
-            module.fail_json(msg="url is required when transport=http")
+            module.fail_json(msg="url is required when transport is http or sse")
         desired = {
-            "type": "http",
+            "type": transport,
             "url": url,
             "headers": params.get("headers") or {},
         }
 
-    desired.update(
-        clean_dict(
-            {
-                "disabled": params.get("disabled"),
-                "disabledTools": params.get("disabled_tools"),
-            }
-        )
-    )
     desired.update(extra)
     return clean_dict(desired)
 
@@ -192,18 +175,20 @@ def main() -> None:
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},
-            "state": {"type": "str", "choices": ["present", "absent"], "default": "present"},
+            "state": {
+                "type": "str",
+                "choices": ["present", "absent"],
+                "default": "present",
+            },
             "scope": {"type": "str", "choices": ["user", "project"], "default": "user"},
             "project_dir": {"type": "path"},
             "path": {"type": "path"},
-            "transport": {"type": "str", "choices": ["stdio", "http"]},
+            "transport": {"type": "str", "choices": ["stdio", "http", "sse"]},
             "command": {"type": "str"},
             "args": {"type": "list", "elements": "str", "default": []},
             "env": {"type": "dict", "default": {}},
             "url": {"type": "str"},
             "headers": {"type": "dict", "default": {}},
-            "disabled": {"type": "bool"},
-            "disabled_tools": {"type": "list", "elements": "str"},
             "extra": {"type": "dict", "default": {}},
         },
         supports_check_mode=True,
@@ -214,8 +199,8 @@ def main() -> None:
             path=module.params.get("path"),
             scope=module.params["scope"],
             project_dir=module.params.get("project_dir"),
-            user_path="~/.factory/mcp.json",
-            project_relative_path=os.path.join(".factory", "mcp.json"),
+            user_path="~/.cursor/mcp.json",
+            project_relative_path=os.path.join(".cursor", "mcp.json"),
         )
     except ValueError as exc:
         module.fail_json(msg=str(exc))
@@ -240,7 +225,8 @@ def main() -> None:
         "name": module.params["name"],
     }
     if module.params["state"] == "present":
-        result["server"] = data.get("mcpServers", {}).get(module.params["name"], desired)
+        server = data.get("mcpServers", {}).get(module.params["name"], desired)
+        result["server"] = _redact_server(server)
 
     module.exit_json(**result)
 

@@ -1,8 +1,7 @@
 """Regression tests for agent tool role task definitions."""
 
-from pathlib import Path
 import re
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENT_TOOLS_TASKS = REPO_ROOT / "ansible/roles/agent_tools/tasks/main.yml"
@@ -23,7 +22,7 @@ def test_skill_directory_copies_use_trailing_slash() -> None:
         "agent_tools skill copy tasks must use a trailing slash so Ansible "
         "copies skill directory contents instead of nesting the directory"
     )
-    assert content.count('src: "{{ item.path }}/"') == 18, (
+    assert content.count('src: "{{ item.path }}/"') == 20, (
         "expected every agent_tools skill copy task to copy directory contents"
     )
 
@@ -58,4 +57,51 @@ def test_firecrawl_mcp_uses_vaulted_api_key_without_logging() -> None:
     )
     assert "no_log: true" in task, (
         "agent_tools must suppress task output because the MCP env contains a secret"
+    )
+
+
+def test_cursor_cli_gets_skills_mcps_and_no_stop_hook() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+    task = extract_task(content, "Configure Cursor CLI Firecrawl MCP server")
+    skill_task = extract_task(content, "Install agent-helper-scripts skills to Cursor")
+
+    assert "agentic.agent_configs.cursor_cli_mcp" in content, (
+        "agent_tools must configure Cursor MCPs through the Cursor-specific module"
+    )
+    assert (
+        'dest: "{{ ansible_env.HOME }}/.cursor/skills/{{ item.path | basename }}"'
+        in content
+    ), "agent_tools must install reusable skills into Cursor's skill directory"
+    assert 'FIRECRAWL_API_KEY: "{{ firecrawl_api_key }}"' in task, (
+        "Cursor Firecrawl MCP must use the vaulted API key"
+    )
+    assert "no_log: true" in task, (
+        "Cursor Firecrawl MCP must suppress secret-bearing task output"
+    )
+    assert "cursor_skills_directory.stat.isdir" in skill_task, (
+        "Cursor skill copy tasks must skip safely in check mode when the new "
+        "directory is only predicted, not created"
+    )
+    assert "cursor_cli_hook" not in content.lower(), (
+        "Cursor CLI does not currently support stop hooks, so agent_tools must not install them"
+    )
+
+
+def test_droid_gets_deepseek_custom_models_without_logging_token() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+    task = extract_task(content, "Configure Factory Droid DeepSeek custom models")
+
+    assert "agentic.agent_configs.factory_droid_model" in task, (
+        "agent_tools must configure Droid custom models through the Factory Droid model module"
+    )
+    assert "https://api.deepseek.com/anthropic" in task, (
+        "DeepSeek custom models must use the Anthropic-compatible endpoint"
+    )
+    assert "deepseek-v4-pro[1m]" in task
+    assert "deepseek-v4-pro" in task
+    assert 'api_key: "{{ deepseek_api_key }}"' in task, (
+        "DeepSeek custom models must use the vaulted API key"
+    )
+    assert "no_log: true" in task, (
+        "DeepSeek custom model task must suppress token-bearing output"
     )
