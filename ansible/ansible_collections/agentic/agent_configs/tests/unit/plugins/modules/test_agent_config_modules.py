@@ -795,6 +795,7 @@ def test_toml_file_check_mode_toml_legacy_block_reports_changed(
         lambda _module: (toml_file.CheckModeToml, tomllib.TOMLDecodeError),
     )
 
+    contents_before = path.read_text()
     result = _run_module(
         toml_file,
         {
@@ -806,6 +807,9 @@ def test_toml_file_check_mode_toml_legacy_block_reports_changed(
     )
 
     assert result["changed"] is True
+    assert path.read_text() == contents_before, (
+        "check mode must not write to disk"
+    )
 
 
 def test_toml_file_check_mode_toml_absent_missing_key_reports_no_change(
@@ -821,6 +825,7 @@ def test_toml_file_check_mode_toml_absent_missing_key_reports_no_change(
         lambda _module: (toml_file.CheckModeToml, tomllib.TOMLDecodeError),
     )
 
+    contents_before = path.read_text()
     result = _run_module(
         toml_file,
         {
@@ -832,6 +837,9 @@ def test_toml_file_check_mode_toml_absent_missing_key_reports_no_change(
     )
 
     assert result["changed"] is False
+    assert path.read_text() == contents_before, (
+        "check mode must not write to disk"
+    )
 
 
 @pytest.mark.parametrize(
