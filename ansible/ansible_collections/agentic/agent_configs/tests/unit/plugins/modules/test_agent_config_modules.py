@@ -776,6 +776,64 @@ def test_toml_file_absent_with_legacy_block_and_missing_key_reports_change(
     )
 
 
+def test_toml_file_check_mode_toml_legacy_block_reports_changed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify the CheckModeToml path reports changed=True when a legacy block is present."""
+    path = tmp_path / "config.toml"
+    path.write_text(
+        '[env]\nPATH = "/usr/bin"\n\n'
+        "# BEGIN ANSIBLE MANAGED BLOCK - sccache env\n"
+        "[env]\n"
+        'SCCACHE_DIR = "/old/cache"\n'
+        "# END ANSIBLE MANAGED BLOCK - sccache env\n"
+    )
+    monkeypatch.setattr(
+        toml_file,
+        "import_tomlkit",
+        lambda _module: (toml_file.CheckModeToml, tomllib.TOMLDecodeError),
+    )
+
+    result = _run_module(
+        toml_file,
+        {
+            "_ansible_check_mode": True,
+            "path": str(path),
+            "key": "env.SCCACHE_DIR",
+            "value": "/home/leynos/.cache/sccache",
+        },
+    )
+
+    assert result["changed"] is True
+
+
+def test_toml_file_check_mode_toml_absent_missing_key_reports_no_change(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify the CheckModeToml path reports changed=False when state=absent and key is absent."""
+    path = tmp_path / "config.toml"
+    path.write_text("[features]\ncodex_hooks = true\n")
+    monkeypatch.setattr(
+        toml_file,
+        "import_tomlkit",
+        lambda _module: (toml_file.CheckModeToml, tomllib.TOMLDecodeError),
+    )
+
+    result = _run_module(
+        toml_file,
+        {
+            "_ansible_check_mode": True,
+            "path": str(path),
+            "key": "env.SCCACHE_DIR",
+            "state": "absent",
+        },
+    )
+
+    assert result["changed"] is False
+
+
 @pytest.mark.parametrize(
     ("module", "filename", "initial_content", "expected_value"),
     [

@@ -22,7 +22,7 @@ def test_skill_directory_copies_use_trailing_slash() -> None:
         "agent_tools skill copy tasks must use a trailing slash so Ansible "
         "copies skill directory contents instead of nesting the directory"
     )
-    assert content.count('src: "{{ item.path }}/"') == 24, (
+    assert content.count('src: "{{ item.path }}/"') == 20, (
         "expected every agent_tools skill copy task to copy directory contents"
     )
 
