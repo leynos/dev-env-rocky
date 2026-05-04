@@ -45,7 +45,7 @@ environment so the daemon is not dependent on shell startup files such as
 `~/.bashrc`.
 
 ```text
-PATH=/home/leynos/.local/bin:/home/leynos/.cargo/bin:/home/leynos/.bun/bin:/home/leynos/go/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin
+PATH=$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.bun/bin:$HOME/go/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin
 ```
 
 ## System Packages
