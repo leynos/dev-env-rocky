@@ -132,11 +132,21 @@
     state: directory
     mode: '0755'
 
+- name: Check Codex skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.codex/skills"
+  register: codex_skills_directory
+
 - name: Ensure Claude skills directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.claude/skills"
     state: directory
     mode: '0755'
+
+- name: Check Claude skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.claude/skills"
+  register: claude_skills_directory
 
 - name: Ensure Cursor skills directory exists
   ansible.builtin.file:
@@ -375,6 +385,7 @@
     - interface-design
     - nanobanana
     - rebase
+  when: not ansible_check_mode or (codex_skills_directory.stat.isdir | default(false))
 
 - name: Install private repo skills to Claude
   ansible.builtin.copy:
@@ -387,6 +398,7 @@
     - interface-design
     - nanobanana
     - rebase
+  when: not ansible_check_mode or (claude_skills_directory.stat.isdir | default(false))
 
 - name: Install private repo skills to Cursor
   ansible.builtin.copy:
@@ -786,6 +798,12 @@
     mode: '0755'
   when: dev_env_enable_droid | bool
 
+- name: Check Factory Droid skills directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.factory/skills"
+  register: factory_droid_skills_directory
+  when: dev_env_enable_droid | bool
+
 - name: Ensure Factory Droid hooks directory exists
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.factory/hooks"
@@ -866,7 +884,9 @@
     - interface-design
     - nanobanana
     - rebase
-  when: dev_env_enable_droid | bool
+  when:
+    - dev_env_enable_droid | bool
+    - not ansible_check_mode or (factory_droid_skills_directory.stat.isdir | default(false))
 
 # Configure Factory Droid hooks using collection module
 - name: Configure Factory Droid hooks
