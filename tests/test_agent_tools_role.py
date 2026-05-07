@@ -60,6 +60,19 @@ def test_firecrawl_mcp_uses_vaulted_api_key_without_logging() -> None:
     )
 
 
+def test_codex_goals_feature_uses_toml_module() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+    task = extract_task(content, "Enable Codex goals feature")
+
+    assert "agentic.agent_configs.toml_file" in task, (
+        "agent_tools must manage Codex config.toml through the toml_file module"
+    )
+    assert 'path: "{{ ansible_env.HOME }}/.codex/config.toml"' in task
+    assert "key: features.goals" in task
+    assert "value: true" in task
+    assert "mode: '0644'" in task
+
+
 def test_cursor_cli_gets_skills_mcps_and_no_stop_hook() -> None:
     content = AGENT_TOOLS_TASKS.read_text()
     task = extract_task(content, "Configure Cursor CLI Firecrawl MCP server")
