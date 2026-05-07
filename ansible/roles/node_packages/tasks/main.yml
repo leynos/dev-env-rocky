@@ -21,15 +21,22 @@
     - name: "@biomejs/biome"
     - name: "markdownlint-cli2"
     - name: "@asyncapi/cli"
+      trust_postinstall: true
     - name: "@redocly/cli"
     - name: "@mermaid-js/mermaid-cli"
     - name: "@anthropic-ai/claude-code"
+      trust_postinstall: true
     - name: "@openai/codex"
     - name: "firecrawl-mcp"
     - name: "@ataraxy-labs/sem"
       trust_postinstall: true
     - name: "droid"
+      trust_postinstall: true
       enabled: "{{ (dev_env_enable_droid | default(false) | bool) and (dev_env_install_droid_cli | default(false) | bool) }}"
+    - name: "puppeteer"
+      trust_postinstall: true
+    - name: "acp-extension-codex-linux-x64"
+      trust_postinstall: true
     - name: "pnpm"
     - name: "typescript-language-server"
     - name: "@typescript/native-preview"
