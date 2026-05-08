@@ -4,7 +4,7 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
  `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
 and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: IN PROGRESS
 
 ## Purpose / big picture
 
@@ -104,11 +104,26 @@ behaviour is that if a native Claude launcher is installed later in
   the ordering bug when sourced with a contaminated PATH. With `.bun/bin` and
   `.local/bin` already present, it outputs
   `/home/leynos/go/bin:/home/leynos/.cargo/bin:/home/leynos/.bun/bin:/home/leynos/.local/bin:...`.
-- [ ] Add focused regression tests for managed PATH normalisation.
-- [ ] Update the path template and local `setup-paths` generator.
-- [ ] Add a managed `.bash_profile` EOF hook so the normaliser runs after
-  legacy Bun installer blocks.
-- [ ] Run local gates.
+- [x] 2026-05-08 13:59 BST: Added focused regression tests in
+  `tests/test_paths_role.py`. The initial focused run failed as expected
+  because the template left `.bun/bin` ahead of `.local/bin`, `setup-paths`
+  still generated skip-only logic, and the `.bash_profile` EOF hook did not
+  exist.
+- [x] 2026-05-08 14:02 BST: Updated the path template and local `setup-paths`
+  generator to remove duplicate managed entries before prepending each managed
+  directory once in the documented order.
+- [x] 2026-05-08 14:02 BST: Added a managed `.bash_profile` EOF hook so the
+  normaliser runs after legacy Bun installer blocks.
+- [x] 2026-05-08 14:03 BST: Re-ran the focused tests with
+  `UV_CACHE_DIR=.uv-cache UV_TOOL_DIR=.uv-tools uv run --with pytest pytest -v tests/test_paths_role.py`;
+  all three focused tests passed.
+- [x] 2026-05-08 14:08 BST: Ran `make fmt`; Python formatting and import
+  sorting succeeded, but `mdformat-all` failed on pre-existing Markdown issues
+  in `agent-prompts/` and `agent-skills/`. Reverted unrelated formatter rewrites
+  and kept only task-scoped files.
+- [x] 2026-05-08 14:10 BST: Ran local gates successfully:
+  `make check-fmt`, `make lint`, `make typecheck`, `make test`,
+  `make markdownlint`, `make nixie`, and `git diff --check`.
 - [ ] Apply the role to `vendetta.df12.net` and `rohga.df12.net`.
 - [ ] Verify login-shell PATH and `claude` resolution on both hosts.
 
@@ -117,6 +132,10 @@ behaviour is that if a native Claude launcher is installed later in
 - The original local caveat is valid on this machine, but the same immediate
   `claude` failure does not reproduce on the two managed hosts. Their Bun
   launchers work today.
+- During implementation, `grepai workspace status Projects` confirmed that the
+  `dev-env-rocky` project is registered, but semantic searches failed because
+  the local Qdrant endpoint at `127.0.0.1:6334` refused connections. Exact
+  repository reads are being used as the fallback.
 - The two managed hosts do not have `/home/leynos/.local/bin/claude`, so PATH
   precedence cannot currently make them choose a native Claude launcher.
 - Both managed hosts have legacy Bun installer blocks in `~/.bash_profile` that
@@ -126,6 +145,14 @@ behaviour is that if a native Claude launcher is installed later in
 - `vendetta.df12.net` has an extra `export PATH=/root/.bun/bin:${PATH}` line in
   `~/.bashrc`. The plan should avoid deleting it automatically, but the final
   normaliser must make it harmless for managed user bin precedence.
+- Running `bin/setup-paths` inside a test needed the inherited tool PATH so its
+  `/usr/bin/env -S uv run --script` shebang can find `uv`; the test still
+  overwrites `PATH` before sourcing the generated file to keep the
+  normalisation assertion deterministic.
+- `make fmt` still scans Markdown outside the Makefile's `MARKDOWN_PATHS` list
+  through `mdformat-all` and fails on unrelated prompt/skill files. The focused
+  Markdown gate, `make markdownlint`, passes for the repository's declared
+  Markdown gate set.
 
 ## Decision Log
 

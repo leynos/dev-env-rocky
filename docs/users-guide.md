@@ -32,10 +32,21 @@ installer:
 curl https://cursor.com/install --retry 3 --connect-timeout 10 -fsS | bash
 ```
 
-The installer creates the `cursor-agent` binary under `~/.local/bin`. The role runs
-before `agent_tools` so Cursor exists before MCPs and skills are configured.
-Cursor CLI does not currently support stop hooks, so this repository does not
-install Cursor stop-hook configuration.
+The installer creates the `cursor-agent` binary under `~/.local/bin`. The role
+runs before `agent_tools` so Cursor exists before MCPs and skills are
+configured. Cursor CLI does not currently support stop hooks, so this
+repository does not install Cursor stop-hook configuration.
+
+## Login Shell PATH
+
+The `paths` role writes `~/.bashrc.d/00-paths` and appends managed source hooks
+to `~/.bashrc` and `~/.bash_profile`. Login shells therefore normalise
+duplicate managed entries and keep user-local commands ahead of package-manager
+shims:
+
+```text
+PATH=$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.bun/bin:$HOME/go/bin:...
+```
 
 ## Lody Daemon PATH
 
