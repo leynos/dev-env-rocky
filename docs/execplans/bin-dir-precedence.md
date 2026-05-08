@@ -4,7 +4,7 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
  `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
 and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: BLOCKED
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -124,11 +124,15 @@ behaviour is that if a native Claude launcher is installed later in
 - [x] 2026-05-08 14:10 BST: Ran local gates successfully:
   `make check-fmt`, `make lint`, `make typecheck`, `make test`,
   `make markdownlint`, `make nixie`, and `git diff --check`.
-- [ ] Apply the role to `vendetta.df12.net` and `rohga.df12.net`. Blocked:
-  `make site` failed before reaching the `paths` role because
-  `node_packages` treats `bun pm trust @zed-industries/codex-acp-linux-x64`
-  returning "0 scripts ran" as fatal on both hosts.
-- [ ] Verify login-shell PATH and `claude` resolution on both hosts.
+- [x] 2026-05-08 14:26 BST: Unblocked `make site` by making Bun trust
+  idempotent for "0 scripts ran" results and by exposing the Bun global binary
+  directory to package lifecycle scripts. `css-view` then installed globally on
+  both hosts and downloaded Playwright Chromium binaries.
+- [x] 2026-05-08 14:26 BST: Applied the full site play to `vendetta.df12.net`
+  and `rohga.df12.net`; recap reported zero failed hosts.
+- [x] 2026-05-08 14:27 BST: Verified login-shell PATH and `claude` resolution
+  on both hosts. The owner-user PATH starts with the documented managed prefix,
+  and `claude --version` exits 0.
 
 ## Surprises & Discoveries
 
@@ -160,6 +164,16 @@ behaviour is that if a native Claude launcher is installed later in
   `agent_tools`, `sccache_user`, `rust_cleanup`, or `weave`. The failure
   occurred in `node_packages` for both hosts after earlier roles had already
   made unrelated package-tool updates.
+- The `node_packages` unblock had two parts. First, Bun can return a non-zero
+  status for `bun pm trust` when no package scripts need running, so the module
+  now treats Bun's "0 scripts ran" already-trusted/no-script result as
+  idempotent. Second, packages such as `css-view` may run lifecycle scripts that
+  call `bunx`, so the module now prepends the resolved Bun global binary
+  directory to the subprocess `PATH`.
+- The css-view global install confirmed the lifecycle-script fix. On both
+  managed hosts, `css-view --help` works, Playwright cache directories include
+  `chromium-1217` and `chromium_headless_shell-1217`, and a Chromium-backed
+  capture against `https://example.org` returned JSON output.
 
 ## Decision Log
 
@@ -184,30 +198,38 @@ behaviour is that if a native Claude launcher is installed later in
   leaving it with skip-only path handling would preserve the bug outside
   Ansible-managed hosts.
 
-- Decision: Stop before using a narrower playbook invocation or hand-editing
-  remote profile files. Rationale: the plan's host-apply tolerance says to stop
-  if `make site` cannot apply to both hosts, and the approved apply path failed
-  before the `paths` role.
+- Decision: Fix the blocking `node_packages` behaviour and continue with the
+  full `make site` apply rather than using a narrower playbook invocation or
+  hand-editing remote profile files. Rationale: preserving the normal
+  repository apply path gave evidence that the PATH change works with the full
+  managed-host configuration.
 
 ## Outcomes & Retrospective
 
-Implementation is committed locally in `a95b84e`, but host rollout is blocked.
-Local tests prove the generated shell normalises contaminated PATH input into
-the documented order, and all required local gates passed. The managed hosts
-have not yet received the `paths` role update through the approved `make site`
-apply path because `node_packages` failed first.
+Implementation is committed locally in `a95b84e`, and the supporting
+`node_packages` unblocks are committed in `6a7d7e3` and `83b5fef`. Local tests
+prove the generated shell normalises contaminated PATH input into the documented
+order, and all required local gates passed. The full `make site` apply then
+completed successfully on both managed hosts.
 
-Options to unblock rollout:
+Final host evidence:
 
-- Fix `node_packages` so `bun pm trust` treats "0 scripts ran" as idempotent
-  for packages that have no current postinstall script or are already trusted,
-  then rerun `make site`.
-- Temporarily disable trusted postinstall for
-  `@zed-industries/codex-acp-linux-x64` if the package genuinely has no
-  postinstall script to trust, then rerun `make site`.
-- Approve a narrower Ansible invocation that runs only the `paths` role on the
-  two hosts, accepting that this deviates from the plan's preferred full apply
-  path.
+- `rohga.df12.net` owner-user PATH begins with
+  `/home/leynos/.local/bin:/home/leynos/.cargo/bin:/home/leynos/.bun/bin:/home/leynos/go/bin:`.
+  `claude` resolves to `/home/leynos/.bun/bin/claude` because no native
+  `/home/leynos/.local/bin/claude` exists, and `claude --version` reports
+  `2.1.133 (Claude Code)`.
+- `vendetta.df12.net` owner-user PATH begins with
+  `/home/leynos/.local/bin:/home/leynos/.cargo/bin:/home/leynos/.bun/bin:/home/leynos/go/bin:`.
+  A legacy `/root/.bun/bin` entry remains later in PATH, but it no longer
+  outranks managed user bins. `claude` resolves to
+  `/home/leynos/.bun/bin/claude` because no native
+  `/home/leynos/.local/bin/claude` exists, and `claude --version` reports
+  `2.1.133 (Claude Code)`.
+
+The original operational goal is satisfied: future launchers installed in
+`~/.local/bin` will take precedence over Bun shims without deleting legacy
+profile content.
 
 ## Implementation plan
 
