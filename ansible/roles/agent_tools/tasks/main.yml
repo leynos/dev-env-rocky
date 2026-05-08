@@ -30,6 +30,7 @@
     mode: '0700'
     remote_src: true
   loop:
+    - markdownlint
     - mdformat-all
     - notdeadyet
 

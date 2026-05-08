@@ -45,6 +45,17 @@ def test_helper_executable_directory_exists_before_copy_task() -> None:
     assert "mode: '0755'" in directory_task
 
 
+def test_markdown_helper_shims_are_installed_as_executables() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+    task = extract_task(content, "Install agent-helper-scripts helper executables")
+
+    assert 'src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/{{ item }}"' in task
+    assert 'dest: "{{ ansible_env.HOME }}/.local/bin/{{ item }}"' in task
+    assert "mode: '0700'" in task
+    assert re.search(r"(?m)^    - markdownlint$", task)
+    assert re.search(r"(?m)^    - mdformat-all$", task)
+
+
 def test_firecrawl_mcp_uses_vaulted_api_key_without_logging() -> None:
     content = AGENT_TOOLS_TASKS.read_text()
     task = extract_task(content, "Configure Codex CLI Firecrawl MCP server")

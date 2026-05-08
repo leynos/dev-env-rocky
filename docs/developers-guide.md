@@ -42,10 +42,11 @@ Use `pathlib.Path` for new path manipulation in module utility helpers. The
 explicit `Path` operations make relative path handling, parent lookup, and
 cross-platform path semantics easier to review than equivalent `os.path` chains.
 
-The `agent_tools` role installs two helper executables into `~/.local/bin`:
-`mdformat-all` and `notdeadyet`. That directory must be created before any copy
-task writes those helpers, otherwise a fresh managed host can fail before later
-roles have had a chance to create the user-local binary path.
+The `agent_tools` role installs helper executables into `~/.local/bin`,
+including `markdownlint`, `mdformat-all`, and `notdeadyet`. That directory must
+be created before any copy task writes those helpers, otherwise a fresh managed
+host can fail before later roles have had a chance to create the user-local
+binary path.
 
 `codex_cli_subagent` coordinates a subagent TOML file and its registry entry in
 `config.toml`. If a registry write fails after the subagent file has changed,
