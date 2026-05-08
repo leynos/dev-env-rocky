@@ -1,8 +1,6 @@
 # Fix managed user bin directory precedence
 
-This ExecPlan (execution plan) is a living document. The sections `Constraints`,
- `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
-and `Outcomes & Retrospective` must be kept up to date as work proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
 Status: COMPLETE
 
@@ -64,25 +62,25 @@ behaviour is that if a native Claude launcher is installed later in
 
 - Risk: Login profiles source files in different orders on different shells.
   Severity: medium. Likelihood: medium. Mitigation: validate with
-  `sudo -iu {{ owner_user }} bash -lc ...` on both hosts, because that
+  `sudo -iu {{ owner_user }} bash -lc ...` on both hosts because that
   reproduces the owner-user login path used during the investigation.
 
 - Risk: Existing `~/.bash_profile` files contain repeated Bun installer blocks
   that run after `.bashrc`. Severity: high. Likelihood: high. Mitigation: add
   an Ansible-managed EOF block in `.bash_profile` that re-sources the managed
-  path normaliser after legacy profile content, instead of deleting the legacy
+  path normalizer after legacy profile content, instead of deleting the legacy
   blocks.
 
 - Risk: The current path helper only skips existing entries, so it cannot move
   an existing `~/.local/bin` entry ahead of `~/.bun/bin`. Severity: high.
   Likelihood: high. Mitigation: replace skip-only path handling with a
-  normalising helper that removes managed entries from `PATH` and then re-adds
+  normalizing helper that removes managed entries from `PATH` and then re-adds
   them once in the desired order.
 
 - Risk: `bin/setup-paths` and `ansible/roles/paths/templates/00-paths.j2`
   drift apart. Severity: medium. Likelihood: medium. Mitigation: update both
   generated shell templates in the same commit and add focused tests that
-  exercise the normalisation behaviour.
+  exercise the normalization behaviour.
 
 ## Progress
 
@@ -112,8 +110,8 @@ behaviour is that if a native Claude launcher is installed later in
 - [x] 2026-05-08 14:02 BST: Updated the path template and local `setup-paths`
   generator to remove duplicate managed entries before prepending each managed
   directory once in the documented order.
-- [x] 2026-05-08 14:02 BST: Added a managed `.bash_profile` EOF hook so the
-  normaliser runs after legacy Bun installer blocks.
+- [x] 2026-05-08 14:02 BST: Added a managed `.bash_profile` EOF hook, so the
+  normalizer runs after legacy Bun installer blocks.
 - [x] 2026-05-08 14:03 BST: Re-ran the focused tests with
   `UV_CACHE_DIR=.uv-cache UV_TOOL_DIR=.uv-tools uv run --with pytest pytest -v tests/test_paths_role.py`;
   all three focused tests passed.
@@ -136,9 +134,9 @@ behaviour is that if a native Claude launcher is installed later in
 
 ## Surprises & Discoveries
 
-- The original local caveat is valid on this machine, but the same immediate
-  `claude` failure does not reproduce on the two managed hosts. Their Bun
-  launchers work today.
+- The original local caveat about PATH/Bun launcher differences is valid on
+  this machine, but the same immediate `claude` failure does not reproduce on
+  the two managed hosts. Their Bun launchers work today.
 - During implementation, `grepai workspace status Projects` confirmed that the
   `dev-env-rocky` project is registered, but semantic searches failed because
   the local Qdrant endpoint at `127.0.0.1:6334` refused connections. Exact
@@ -147,15 +145,15 @@ behaviour is that if a native Claude launcher is installed later in
   precedence cannot currently make them choose a native Claude launcher.
 - Both managed hosts have legacy Bun installer blocks in `~/.bash_profile` that
   run after `.bashrc` is sourced. This means fixing only `~/.bashrc.d/00-paths`
-  is not enough for login shells unless the normaliser also runs at the end of
+  is not enough for login shells unless the normalizer also runs at the end of
   `.bash_profile`.
 - `vendetta.df12.net` has an extra `export PATH=/root/.bun/bin:${PATH}` line in
   `~/.bashrc`. The plan should avoid deleting it automatically, but the final
-  normaliser must make it harmless for managed user bin precedence.
+  normalizer must make it harmless for managed user bin precedence.
 - Running `bin/setup-paths` inside a test needed the inherited tool PATH so its
   `/usr/bin/env -S uv run --script` shebang can find `uv`; the test still
   overwrites `PATH` before sourcing the generated file to keep the
-  normalisation assertion deterministic.
+  normalization assertion deterministic.
 - `make fmt` still scans Markdown outside the Makefile's `MARKDOWN_PATHS` list
   through `mdformat-all` and fails on unrelated prompt/skill files. The focused
   Markdown gate, `make markdownlint`, passes for the repository's declared
@@ -177,7 +175,7 @@ behaviour is that if a native Claude launcher is installed later in
 
 ## Decision Log
 
-- Decision: Treat this as a deterministic PATH normalisation bug, not as a
+- Decision: Treat this as a deterministic PATH normalization bug, not as a
   Claude Code package installation bug on the managed hosts. Rationale: The Bun
   Claude launchers on both hosts work, but PATH order is still unstable and
   contrary to the intended local-first contract.
@@ -190,7 +188,7 @@ behaviour is that if a native Claude launcher is installed later in
 
 - Decision: Add an EOF managed hook to `.bash_profile` instead of deleting
   repeated Bun installer blocks. Rationale: The legacy profile content is
-  user-owned state. Re-running the normaliser at EOF fixes observable PATH
+  user-owned state. Re-running the normalizer at EOF fixes observable PATH
   order without destructive cleanup.
 
 - Decision: Update `bin/setup-paths` together with the Ansible template.
@@ -208,7 +206,7 @@ behaviour is that if a native Claude launcher is installed later in
 
 Implementation is committed locally in `a95b84e`, and the supporting
 `node_packages` unblocks are committed in `6a7d7e3` and `83b5fef`. Local tests
-prove the generated shell normalises contaminated PATH input into the documented
+prove the generated shell normalizes contaminated PATH input into the documented
 order, and all required local gates passed. The full `make site` apply then
 completed successfully on both managed hosts.
 
@@ -243,7 +241,7 @@ the documented order. A representative assertion should prove that this input:
 /home/example/.bun/bin:/home/example/.local/bin:/usr/bin
 ```
 
-normalises to this prefix:
+normalizes to this prefix:
 
 ```plaintext
 /home/example/.local/bin:/home/example/.cargo/bin:/home/example/.bun/bin:/home/example/go/bin:/usr/bin
@@ -257,7 +255,7 @@ template directly is awkward, render the relevant static shell through a small
 test helper rather than invoking Ansible.
 
 Second, update `ansible/roles/paths/templates/00-paths.j2`. Replace the current
-`pathmunge` helper with a normalising helper that removes every occurrence of a
+`pathmunge` helper with a normalizing helper that removes every occurrence of a
 managed directory from `PATH`, then prepends that directory if it exists. Apply
 the managed directories in reverse order so the final visible order is:
 
@@ -268,16 +266,16 @@ ${HOME}/.bun/bin
 ${HOME}/go/bin
 ```
 
-The shell should not use arrays, because it may be sourced by POSIX-ish profile
+The shell should not use arrays because it may be sourced by POSIX-ish profile
 paths even though the user shell is Bash. A simple colon-splitting loop is
 acceptable if it preserves unrelated entries and handles empty `PATH` safely.
 
 Third, update `bin/setup-paths` so the generated local bootstrap file uses the
-same normalising helper and directory order. Keep the script's existing Python
+same normalizing helper and directory order. Keep the script's existing Python
 dependencies and command interface unchanged.
 
 Fourth, update `ansible/roles/paths/tasks/main.yml` to ensure `.bash_profile`
-sources the managed normaliser after any existing profile content. Use
+sources the managed normalizer after any existing profile content. Use
 `ansible.builtin.blockinfile` with a clearly named marker, append at EOF, and
 source only `~/.bashrc.d/00-paths` if it exists. Do not remove existing Bun
 installer blocks in this milestone. The managed block should be safe to run
@@ -286,7 +284,7 @@ more than once.
 Fifth, update documentation if the implementation changes the user-visible
 contract. At minimum, check `docs/users-guide.md` and confirm that its
 documented PATH order remains correct. If the guide does not mention that the
-role normalises duplicate managed entries, add one concise sentence.
+role normalizes duplicate managed entries, add one concise sentence.
 
 Sixth, run local validation with logs:
 
