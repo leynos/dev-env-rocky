@@ -10,13 +10,14 @@ defines a Codex `wyvern` subagent. The missing work is orchestration: deciding
 who owns the planning request, how the `context_pack` evidence bundle is
 created, and how Claude receives the final planning result.
 
-This RFC proposes three implementation paths:
+This RFC proposes three primary implementation paths plus one fallback:
 
 - Register Codex as a Claude Code MCP server and let Claude call Codex through
   MCP.
 - Add a Claude-launched background wrapper around `codex exec`.
 - Add a local orchestration MCP server that packages context, launches Codex,
   tracks status, and returns artefacts.
+- Use Claude Code experimental agent teams as a fallback (Proposal D).
 
 The recommended path is to prototype Codex-as-MCP first, then use the
 orchestration MCP server if Codex's MCP surface does not expose a reliable
@@ -82,7 +83,8 @@ External documentation confirms the integration points:
 Local command checks add two caveats:
 
 - The installed Codex command is `codex-cli 0.129.0`, and
-  `codex mcp-server --help` confirms the stdio MCP entrypoint.
+  `codex mcp-server --help` confirms the stdio MCP entrypoint (verified
+  2026-05-08).
 - The local `claude` shim currently fails before printing help because its
   native binary has not been installed. This blocks an end-to-end local smoke
   test until the Claude Code install is repaired.
@@ -95,7 +97,7 @@ can run subagents. What is not yet proven is the strongest version of the
 workflow: Claude invoking Codex over MCP and causing Codex to spawn a `wyvern`
 team for a planning task without any wrapper.
 
-That uncertainty leads to three viable proposals.
+That uncertainty leads to three primary proposals plus one fallback.
 
 ## Proposal A: Codex as a Claude Code MCP Server
 

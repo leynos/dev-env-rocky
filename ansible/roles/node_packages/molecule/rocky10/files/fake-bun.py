@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Fake Bun executable used by the node_packages Molecule scenario."""
 
-from __future__ import annotations
-
 import json
 import os
 import stat
@@ -14,6 +12,20 @@ LOG_PATH = Path("/tmp/bun-commands.jsonl")
 
 
 def package_from_target(target: str) -> tuple[str, str]:
+    """Parse an npm target string into a package name and version.
+
+    Parameters
+    ----------
+    target : str
+        Package target passed to ``bun install -g``.
+
+    Returns
+    -------
+    tuple[str, str]
+        Package name and version. Defaults to ``"0.0.0"`` when no version is
+        found, treats ``git+https`` css-view targets as ``css-view``, and
+        preserves scoped package names that start with ``@``.
+    """
     if target.startswith("git+https://github.com/leynos/css-view"):
         return "css-view", "0.0.0"
 
@@ -30,15 +42,57 @@ def package_from_target(target: str) -> tuple[str, str]:
 
 
 def package_json_path(global_dir: Path, package_name: str) -> Path:
+    """Build the fake global package metadata path.
+
+    Parameters
+    ----------
+    global_dir : Path
+        Bun global installation directory.
+    package_name : str
+        Package name to locate under ``node_modules``.
+
+    Returns
+    -------
+    Path
+        Path to the package's ``package.json`` file, including scoped package
+        path components.
+    """
     return global_dir / "node_modules" / Path(*package_name.split("/")) / "package.json"
 
 
 def write_json(path: Path, data: dict[str, object]) -> None:
+    """Write formatted JSON after creating parent directories.
+
+    Parameters
+    ----------
+    path : Path
+        Destination file path.
+    data : dict[str, object]
+        JSON-serializable mapping to write.
+
+    Returns
+    -------
+    None
+        The function writes the file and returns no value.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
 def append_log(argv: list[str]) -> None:
+    """Append a fake Bun invocation record to the JSONL command log.
+
+    Parameters
+    ----------
+    argv : list[str]
+        Command-line arguments passed to the fake Bun executable.
+
+    Returns
+    -------
+    None
+        The function appends one JSON object to ``LOG_PATH`` and returns no
+        value.
+    """
     entry = {
         "argv": argv,
         "cwd": os.getcwd(),
@@ -51,6 +105,20 @@ def append_log(argv: list[str]) -> None:
 
 
 def install_package(argv: list[str]) -> int:
+    """Install a fake global package and executable shim.
+
+    Parameters
+    ----------
+    argv : list[str]
+        Bun install arguments, with the target package specifier as the last
+        item.
+
+    Returns
+    -------
+    int
+        Process exit code. Returns ``0`` after writing package metadata and
+        executable shims.
+    """
     target = argv[-1]
     package_name, version = package_from_target(target)
     global_dir = Path(os.environ["BUN_INSTALL_GLOBAL_DIR"])
@@ -80,6 +148,19 @@ def install_package(argv: list[str]) -> int:
 
 
 def trust_package(argv: list[str]) -> int:
+    """Mark a fake package as trusted for postinstall scripts.
+
+    Parameters
+    ----------
+    argv : list[str]
+        Bun trust arguments, with the package name as the last item.
+
+    Returns
+    -------
+    int
+        Process exit code. Returns ``0`` after updating trusted dependency
+        metadata and creating css-view browser cache markers when applicable.
+    """
     package_name = argv[-1]
     global_dir = Path(os.environ["BUN_INSTALL_GLOBAL_DIR"])
     package_json = global_dir / "package.json"
@@ -102,6 +183,18 @@ def trust_package(argv: list[str]) -> int:
 
 
 def main() -> int:
+    """Dispatch supported fake Bun subcommands.
+
+    Parameters
+    ----------
+    None
+        Reads command-line arguments from ``sys.argv``.
+
+    Returns
+    -------
+    int
+        Process exit code. Returns ``2`` for unsupported fake Bun invocations.
+    """
     argv = sys.argv[1:]
     append_log(argv)
 

@@ -282,6 +282,7 @@ make check-fmt
 make lint
 make typecheck
 make test
+make check
 make markdownlint
 git diff --check
 PACKAGING_MODULES=./ansible/ansible_collections/packaging/tools/plugins/modules
