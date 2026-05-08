@@ -78,10 +78,14 @@ def test_codex_goals_feature_uses_toml_module() -> None:
     assert "agentic.agent_configs.toml_file" in task, (
         "agent_tools must manage Codex config.toml through the toml_file module"
     )
-    assert 'path: "{{ ansible_env.HOME }}/.codex/config.toml"' in task
-    assert "key: features.goals" in task
-    assert "value: true" in task
-    assert "mode: '0644'" in task
+    assert 'path: "{{ ansible_env.HOME }}/.codex/config.toml"' in task, (
+        "Codex goals task must write to ~/.codex/config.toml"
+    )
+    assert "key: features.goals" in task, (
+        "Codex goals task must set the features.goals key"
+    )
+    assert "value: true" in task, "Codex goals task must enable the goals feature"
+    assert "mode: '0644'" in task, "Codex goals task must write config.toml as 0644"
 
 
 def test_cursor_cli_gets_skills_mcps_and_no_stop_hook() -> None:
