@@ -70,8 +70,14 @@ def test_trusted_bun_packages_document_postinstall_reason() -> None:
     assert trusted_packages, "expected at least one trusted Bun package"
     for package_name in trusted_packages:
         package = extract_loop_item(task, package_name)
-        assert "trust_postinstall_reason:" in package, (
-            f"{package_name} must explain why postinstall scripts are trusted"
+        reason_match = re.search(
+            r"^      trust_postinstall_reason: (?P<reason>.+)$",
+            package,
+            re.MULTILINE,
+        )
+        reason = reason_match.group("reason").strip() if reason_match else None
+        assert isinstance(reason, str) and reason.strip("\"'").strip(), (
+            f"{package_name} trust_postinstall_reason must be a non-empty string"
         )
         version_is_pinned = re.search(
             r'^      version: "[^"]+"$', package, re.MULTILINE
