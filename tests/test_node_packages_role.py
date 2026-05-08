@@ -73,8 +73,16 @@ def test_trusted_bun_packages_document_postinstall_reason() -> None:
         assert "trust_postinstall_reason:" in package, (
             f"{package_name} must explain why postinstall scripts are trusted"
         )
-        assert re.search(r'^      version: "[^"]+"$', package, re.MULTILINE), (
-            f"{package_name} must pin the trusted package version"
+        version_is_pinned = re.search(
+            r'^      version: "[^"]+"$', package, re.MULTILINE
+        )
+        git_spec_is_pinned = re.search(
+            r'^      spec: "git\+https://[^"]+#[0-9a-f]{40}"$',
+            package,
+            re.MULTILINE,
+        )
+        assert version_is_pinned or git_spec_is_pinned, (
+            f"{package_name} must pin the trusted package version or git commit"
         )
 
 
@@ -87,6 +95,29 @@ def test_bun_trust_postinstall_uses_boolean_filter() -> None:
         in task
     )
     assert 'version: "{{ item.version | default(omit) }}"' in task
+    assert 'spec: "{{ item.spec | default(omit) }}"' in task
+
+
+def test_css_view_installs_from_pinned_git_spec_with_browser_postinstall() -> None:
+    tasks_content = NODE_PACKAGES_TASKS.read_text()
+    package_list = BUN_PACKAGES_INF.read_text()
+    task = extract_task(tasks_content, "Install Node packages globally via bun")
+    css_view = extract_loop_item(task, "css-view")
+
+    assert (
+        "git+https://github.com/leynos/css-view#26b79e8ab739b7a8bcd80341ae7fc2d18600ce85"
+        in css_view
+    ), "css-view must install from the pinned Leynos GitHub repository commit"
+    assert "trust_postinstall: true" in css_view, (
+        "css-view postinstall must be trusted so Playwright downloads browsers"
+    )
+    assert "Chromium" in css_view, (
+        "css-view trust reason must document the Chromium browser download"
+    )
+    assert (
+        "git+https://github.com/leynos/css-view#26b79e8ab739b7a8bcd80341ae7fc2d18600ce85"
+        in package_list
+    ), "bun-packages.inf must document the css-view global package"
 
 
 def test_optional_browser_and_acp_packages_are_gated() -> None:

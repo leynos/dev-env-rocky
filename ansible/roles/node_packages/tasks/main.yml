@@ -16,6 +16,7 @@
   bun_global:
     name: "{{ item.name }}"
     bun_path: "{{ ansible_env.HOME }}/.bun/bin/bun"
+    spec: "{{ item.spec | default(omit) }}"
     trust_postinstall: "{{ item.trust_postinstall | default(false) | bool }}"
     version: "{{ item.version | default(omit) }}"
   loop:
@@ -33,6 +34,10 @@
       trust_postinstall_reason: "Installs the Claude Code command wrapper."
     - name: "@openai/codex"
     - name: "firecrawl-mcp"
+    - name: "css-view"
+      spec: "git+https://github.com/leynos/css-view#26b79e8ab739b7a8bcd80341ae7fc2d18600ce85"
+      trust_postinstall: true
+      trust_postinstall_reason: "Downloads Playwright browser binaries, including Chromium."
     - name: "@ataraxy-labs/sem"
       version: "0.5.3"
       trust_postinstall: true

@@ -133,6 +133,19 @@ To rotate the Firecrawl key:
 4. Verify that `~/.codex/config.toml` and `~/.cursor/mcp.json` contain the
    `firecrawl` MCP server and that `~/.local/bin/firecrawl-mcp` is executable.
 
+## css-view
+
+The `node_packages` role installs `css-view` globally from the Leynos GitHub
+repository through Bun. The package is pinned to a repository commit and trusts
+its post-install script so Playwright downloads the browser binaries needed by
+the command, including Chromium.
+
+Run `css-view` from the managed shell PATH:
+
+```bash
+css-view https://example.org --browser chromium --pretty
+```
+
 ## Sccache Environment
 
 The `sccache_user` role writes these environment values for Codex and Claude:

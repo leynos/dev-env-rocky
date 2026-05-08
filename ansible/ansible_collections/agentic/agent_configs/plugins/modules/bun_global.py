@@ -5,7 +5,7 @@
 
 The bun_global Ansible module installs, updates, and removes Bun global
 packages while preserving idempotence through installed package metadata. Use
-``name``, ``version``, ``state``, ``global_dir``, ``global_bin_dir``, and
+``name``, ``spec``, ``version``, ``state``, ``global_dir``, ``global_bin_dir``, and
 ``trust_postinstall`` to control the requested package, the Bun installation
 paths, and selective post-install script trust.
 
@@ -47,6 +47,12 @@ options:
     description:
       - Exact package version to install.
       - When omitted, any installed version satisfies C(state=present).
+    type: str
+  spec:
+    description:
+      - Explicit package specifier to pass to C(bun install -g).
+      - Use this for git URLs or tarballs whose installed package name differs from the install target.
+      - Mutually exclusive with C(version).
     type: str
   state:
     description:
@@ -208,11 +214,19 @@ def is_trusted_dependency(global_dir: str, package_name: str) -> bool:
     )
 
 
+def trust_result_is_idempotent(stderr: str) -> bool:
+    """Return True for Bun trust output that means no work was needed."""
+    return "0 scripts ran" in stderr and (
+        "already trusted" in stderr or "don't have scripts to run" in stderr
+    )
+
+
 def main():
     """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},
+            "spec": {"type": "str", "required": False, "default": None},
             "version": {"type": "str", "required": False, "default": None},
             "state": {
                 "type": "str",
@@ -225,6 +239,7 @@ def main():
             "ignore_scripts": {"type": "bool", "default": False},
             "trust_postinstall": {"type": "bool", "default": False},
         },
+        mutually_exclusive=[("spec", "version")],
         supports_check_mode=True,
     )
 
@@ -302,7 +317,7 @@ def main():
             global_bin_dir=global_bin_dir,
         )
 
-    target = (
+    target = params["spec"] or (
         f"{params['name']}@{params['version']}" if params["version"] else params["name"]
     )
     cmd = [bun_bin, "install", "-g"]
@@ -346,7 +361,7 @@ def main():
         trust_rc, trust_stdout, trust_stderr = run(
             module, trust_cmd, env=bun_env, cwd=global_dir
         )
-        if trust_rc != 0:
+        if trust_rc != 0 and not trust_result_is_idempotent(trust_stderr):
             module.fail_json(
                 msg=f"Failed to trust Bun post-install scripts for package {params['name']}",
                 rc=trust_rc,
