@@ -221,6 +221,16 @@ def trust_result_is_idempotent(stderr: str) -> bool:
     )
 
 
+def build_bun_env(global_dir: str, global_bin_dir: str) -> dict[str, str]:
+    """Return the environment needed by Bun and Bun-run package scripts."""
+    path = os.environ.get("PATH", "")
+    return {
+        "BUN_INSTALL_GLOBAL_DIR": global_dir,
+        "BUN_INSTALL_BIN": global_bin_dir,
+        "PATH": f"{global_bin_dir}:{path}" if path else global_bin_dir,
+    }
+
+
 def main():
     """Run the Ansible module."""
     module = AnsibleModule(
@@ -248,10 +258,7 @@ def main():
 
     global_dir = resolve_global_dir(params["global_dir"])
     global_bin_dir = resolve_global_bin_dir(params["global_bin_dir"])
-    bun_env = {
-        "BUN_INSTALL_GLOBAL_DIR": global_dir,
-        "BUN_INSTALL_BIN": global_bin_dir,
-    }
+    bun_env = build_bun_env(global_dir, global_bin_dir)
     pkg_json = package_json_path(global_dir, params["name"])
     installed_version = read_installed_version(pkg_json)
 

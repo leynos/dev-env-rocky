@@ -86,6 +86,18 @@ def test_bun_is_trusted_dependency(tmp_path: Path) -> None:
     )
 
 
+def test_bun_build_env_adds_global_bin_dir_to_path(tmp_path: Path) -> None:
+    global_bin_dir = str(tmp_path / "bin")
+
+    env = bun_global.build_bun_env(str(tmp_path / "global"), global_bin_dir)
+
+    assert_equal(
+        env["PATH"],
+        f"{global_bin_dir}:{os.environ.get('PATH', '')}",
+        "bun_global should expose Bun shims to package lifecycle scripts",
+    )
+
+
 def test_bun_expand_home_uses_home_for_tilde(monkeypatch: pytest.MonkeyPatch) -> None:
     home = "/tmp/test-home"
     monkeypatch.setenv("HOME", home)
@@ -366,6 +378,7 @@ def test_bun_global_install_passes_resolved_env(
         {
             "BUN_INSTALL_GLOBAL_DIR": global_dir,
             "BUN_INSTALL_BIN": global_bin_dir,
+            "PATH": f"{global_bin_dir}:{os.environ.get('PATH', '')}",
         },
         "bun_global should pass resolved Bun paths to subprocess environment",
     )
@@ -422,6 +435,7 @@ def test_bun_global_trusts_installed_package_without_reinstalling(
         {
             "BUN_INSTALL_GLOBAL_DIR": str(global_dir),
             "BUN_INSTALL_BIN": global_bin_dir,
+            "PATH": f"{global_bin_dir}:{os.environ.get('PATH', '')}",
         },
         "bun_global should pass resolved Bun paths to trust command",
     )
