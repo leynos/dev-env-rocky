@@ -22,21 +22,34 @@
     - name: "markdownlint-cli2"
     - name: "@asyncapi/cli"
       trust_postinstall: true
+      trust_postinstall_reason: "Runs CLI package setup during Bun global install."
     - name: "@redocly/cli"
     - name: "@mermaid-js/mermaid-cli"
     - name: "@anthropic-ai/claude-code"
       trust_postinstall: true
+      trust_postinstall_reason: "Installs the Claude Code command wrapper."
     - name: "@openai/codex"
     - name: "firecrawl-mcp"
     - name: "@ataraxy-labs/sem"
       trust_postinstall: true
+      trust_postinstall_reason: "Installs the sem command wrapper."
     - name: "droid"
       trust_postinstall: true
+      trust_postinstall_reason: "Installs the Factory Droid command wrapper."
       enabled: "{{ (dev_env_enable_droid | default(false) | bool) and (dev_env_install_droid_cli | default(false) | bool) }}"
     - name: "puppeteer"
       trust_postinstall: true
+      trust_postinstall_reason: "Installs browser automation assets."
+      enabled: "{{ dev_env_install_puppeteer | default(false) | bool }}"
     - name: "acp-extension-codex-linux-x64"
       trust_postinstall: true
+      trust_postinstall_reason: "Installs the Linux x86_64 Codex ACP extension."
+      enabled: >-
+        {{
+          (dev_env_install_acp_extension_codex | default(false) | bool)
+          and (ansible_facts['system'] == 'Linux')
+          and (ansible_facts['architecture'] == 'x86_64')
+        }}
     - name: "pnpm"
     - name: "typescript-language-server"
     - name: "@typescript/native-preview"

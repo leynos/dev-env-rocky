@@ -5,6 +5,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NODE_PACKAGES_TASKS = REPO_ROOT / "ansible/roles/node_packages/tasks/main.yml"
+NODE_PACKAGES_DEFAULTS = REPO_ROOT / "ansible/roles/node_packages/defaults/main.yml"
 BUN_PACKAGES_INF = REPO_ROOT / "bun-packages.inf"
 
 
@@ -13,6 +14,16 @@ def extract_task(content: str, name: str) -> str:
         rf"(?ms)^- name: {re.escape(name)}\n(?P<body>.*?)(?=^- name: |\Z)", content
     )
     assert match, f"expected task named {name!r} to exist"
+    return match.group("body")
+
+
+def extract_loop_item(content: str, package_name: str) -> str:
+    match = re.search(
+        rf'(?ms)^    - name: "{re.escape(package_name)}"\n'
+        rf"(?P<body>.*?)(?=^    - name: |\Z)",
+        content,
+    )
+    assert match, f"expected package {package_name!r} to exist in the Bun loop"
     return match.group("body")
 
 
@@ -44,3 +55,40 @@ def test_firecrawl_mcp_is_linked_into_local_bin() -> None:
     assert "force: true" in task, (
         "node_packages must repair an existing incorrect firecrawl-mcp path"
     )
+
+
+def test_trusted_bun_packages_document_postinstall_reason() -> None:
+    tasks_content = NODE_PACKAGES_TASKS.read_text()
+    task = extract_task(tasks_content, "Install Node packages globally via bun")
+
+    trusted_packages = re.findall(
+        r'(?ms)^    - name: "([^"]+)"\n(?:(?!^    - name: ).)*?'
+        r"^      trust_postinstall: true$",
+        task,
+    )
+
+    assert trusted_packages, "expected at least one trusted Bun package"
+    for package_name in trusted_packages:
+        package = extract_loop_item(task, package_name)
+        assert "trust_postinstall_reason:" in package, (
+            f"{package_name} must explain why postinstall scripts are trusted"
+        )
+
+
+def test_optional_browser_and_acp_packages_are_gated() -> None:
+    tasks_content = NODE_PACKAGES_TASKS.read_text()
+    defaults_content = NODE_PACKAGES_DEFAULTS.read_text()
+
+    puppeteer = extract_loop_item(tasks_content, "puppeteer")
+    acp_extension = extract_loop_item(tasks_content, "acp-extension-codex-linux-x64")
+
+    assert "dev_env_install_puppeteer: false" in defaults_content
+    assert "dev_env_install_acp_extension_codex: false" in defaults_content
+    assert 'enabled: "{{ dev_env_install_puppeteer | default(false) | bool }}"' in (
+        puppeteer
+    )
+    assert "dev_env_install_acp_extension_codex | default(false) | bool" in (
+        acp_extension
+    )
+    assert "ansible_facts['system'] == 'Linux'" in acp_extension
+    assert "ansible_facts['architecture'] == 'x86_64'" in acp_extension
