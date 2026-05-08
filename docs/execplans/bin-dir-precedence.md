@@ -4,7 +4,7 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
  `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
 and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: IN PROGRESS
+Status: BLOCKED
 
 ## Purpose / big picture
 
@@ -124,7 +124,10 @@ behaviour is that if a native Claude launcher is installed later in
 - [x] 2026-05-08 14:10 BST: Ran local gates successfully:
   `make check-fmt`, `make lint`, `make typecheck`, `make test`,
   `make markdownlint`, `make nixie`, and `git diff --check`.
-- [ ] Apply the role to `vendetta.df12.net` and `rohga.df12.net`.
+- [ ] Apply the role to `vendetta.df12.net` and `rohga.df12.net`. Blocked:
+  `make site` failed before reaching the `paths` role because
+  `node_packages` treats `bun pm trust @zed-industries/codex-acp-linux-x64`
+  returning "0 scripts ran" as fatal on both hosts.
 - [ ] Verify login-shell PATH and `claude` resolution on both hosts.
 
 ## Surprises & Discoveries
@@ -153,6 +156,10 @@ behaviour is that if a native Claude launcher is installed later in
   through `mdformat-all` and fails on unrelated prompt/skill files. The focused
   Markdown gate, `make markdownlint`, passes for the repository's declared
   Markdown gate set.
+- `make site` did not reach `go_packages`, `paths`, `cursor_cli`,
+  `agent_tools`, `sccache_user`, `rust_cleanup`, or `weave`. The failure
+  occurred in `node_packages` for both hosts after earlier roles had already
+  made unrelated package-tool updates.
 
 ## Decision Log
 
@@ -177,11 +184,30 @@ behaviour is that if a native Claude launcher is installed later in
   leaving it with skip-only path handling would preserve the bug outside
   Ansible-managed hosts.
 
+- Decision: Stop before using a narrower playbook invocation or hand-editing
+  remote profile files. Rationale: the plan's host-apply tolerance says to stop
+  if `make site` cannot apply to both hosts, and the approved apply path failed
+  before the `paths` role.
+
 ## Outcomes & Retrospective
 
-This section is intentionally empty in the draft. During implementation, record
-the final host PATH outputs, the selected `claude` executable on each host, the
-gate results, and any profile-order lessons learned.
+Implementation is committed locally in `a95b84e`, but host rollout is blocked.
+Local tests prove the generated shell normalises contaminated PATH input into
+the documented order, and all required local gates passed. The managed hosts
+have not yet received the `paths` role update through the approved `make site`
+apply path because `node_packages` failed first.
+
+Options to unblock rollout:
+
+- Fix `node_packages` so `bun pm trust` treats "0 scripts ran" as idempotent
+  for packages that have no current postinstall script or are already trusted,
+  then rerun `make site`.
+- Temporarily disable trusted postinstall for
+  `@zed-industries/codex-acp-linux-x64` if the package genuinely has no
+  postinstall script to trust, then rerun `make site`.
+- Approve a narrower Ansible invocation that runs only the `paths` role on the
+  two hosts, accepting that this deviates from the plan's preferred full apply
+  path.
 
 ## Implementation plan
 
