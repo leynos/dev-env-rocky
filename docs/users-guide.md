@@ -40,7 +40,7 @@ repository does not install Cursor stop-hook configuration.
 ## Login Shell PATH
 
 The `paths` role writes `~/.bashrc.d/00-paths` and appends managed source hooks
-to `~/.bashrc` and `~/.bash_profile`. Login shells therefore normalise
+to `~/.bashrc` and `~/.bash_profile`. Login shells therefore normalize
 duplicate managed entries and keep user-local commands ahead of package-manager
 shims:
 
