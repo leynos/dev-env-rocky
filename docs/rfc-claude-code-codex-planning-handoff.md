@@ -73,7 +73,7 @@ External documentation confirms the integration points:
   for other tools to connect to.[^codex-cli-reference]
 - Codex supports MCP server configuration in `~/.codex/config.toml`, including
   stdio commands and environment variables.[^codex-mcp]
-- Codex subagents are intended for parallel specialised work while the main
+- Codex subagents are intended for parallel specialized work while the main
   agent remains focused on decisions and final synthesis.[^codex-subagents]
 - The context-pack MCP package is designed for high-signal multi-agent handoff:
   agents create packs, add file anchors and comments, then return a `pack_id`
@@ -279,7 +279,7 @@ teammates are Claude Code sessions rather than Codex subagents.
 All proposals need the same groundwork:
 
 - Repair the local Claude Code installation before any end-to-end validation.
-- Centralise repeated MCP definitions as already planned in roadmap step 2.2.
+- Centralize repeated MCP definitions as already planned in roadmap step 2.2.
 - Configure Codex `wyvern` with `context_pack` MCP access.
 - Define a context-pack contract:
   - pack owner and TTL;
