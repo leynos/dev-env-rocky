@@ -73,6 +73,20 @@ def test_trusted_bun_packages_document_postinstall_reason() -> None:
         assert "trust_postinstall_reason:" in package, (
             f"{package_name} must explain why postinstall scripts are trusted"
         )
+        assert re.search(r'^      version: "[^"]+"$', package, re.MULTILINE), (
+            f"{package_name} must pin the trusted package version"
+        )
+
+
+def test_bun_trust_postinstall_uses_boolean_filter() -> None:
+    tasks_content = NODE_PACKAGES_TASKS.read_text()
+    task = extract_task(tasks_content, "Install Node packages globally via bun")
+
+    assert (
+        'trust_postinstall: "{{ item.trust_postinstall | default(false) | bool }}"'
+        in task
+    )
+    assert 'version: "{{ item.version | default(omit) }}"' in task
 
 
 def test_optional_browser_and_acp_packages_are_gated() -> None:

@@ -16,32 +16,39 @@
   bun_global:
     name: "{{ item.name }}"
     bun_path: "{{ ansible_env.HOME }}/.bun/bin/bun"
-    trust_postinstall: "{{ item.trust_postinstall | default(false) }}"
+    trust_postinstall: "{{ item.trust_postinstall | default(false) | bool }}"
+    version: "{{ item.version | default(omit) }}"
   loop:
     - name: "@biomejs/biome"
     - name: "markdownlint-cli2"
     - name: "@asyncapi/cli"
+      version: "6.0.0"
       trust_postinstall: true
       trust_postinstall_reason: "Runs CLI package setup during Bun global install."
     - name: "@redocly/cli"
     - name: "@mermaid-js/mermaid-cli"
     - name: "@anthropic-ai/claude-code"
+      version: "2.1.133"
       trust_postinstall: true
       trust_postinstall_reason: "Installs the Claude Code command wrapper."
     - name: "@openai/codex"
     - name: "firecrawl-mcp"
     - name: "@ataraxy-labs/sem"
+      version: "0.5.3"
       trust_postinstall: true
       trust_postinstall_reason: "Installs the sem command wrapper."
     - name: "droid"
+      version: "0.121.0"
       trust_postinstall: true
       trust_postinstall_reason: "Installs the Factory Droid command wrapper."
       enabled: "{{ (dev_env_enable_droid | default(false) | bool) and (dev_env_install_droid_cli | default(false) | bool) }}"
     - name: "puppeteer"
+      version: "24.43.0"
       trust_postinstall: true
       trust_postinstall_reason: "Installs browser automation assets."
       enabled: "{{ dev_env_install_puppeteer | default(false) | bool }}"
     - name: "@zed-industries/codex-acp-linux-x64"
+      version: "0.13.0"
       trust_postinstall: true
       trust_postinstall_reason: "Installs the Linux x86_64 Codex ACP extension."
       enabled: >-
