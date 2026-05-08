@@ -1,22 +1,24 @@
 """Shared helpers for Bun global package Ansible modules."""
 
-from __future__ import annotations
-
 import json
 import os
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ansible.module_utils.basic import AnsibleModule
 
 
-def resolve_binary(module: Any, value: str) -> str:
+def resolve_binary(module: "AnsibleModule", value: str) -> str:
     """Resolve and return the path to a named Bun binary."""
     path = module.get_bin_path(value, required=False)
     if path:
         return path
     module.fail_json(msg=f"Could not find executable: {value}")
+    raise SystemExit
 
 
 def run(
-    module: Any,
+    module: "AnsibleModule",
     cmd: list[str],
     env: dict[str, str] | None = None,
     cwd: str | None = None,

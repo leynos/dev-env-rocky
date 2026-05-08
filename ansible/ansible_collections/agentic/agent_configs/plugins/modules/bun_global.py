@@ -156,6 +156,8 @@ trust_stderr:
   type: str
 """
 
+from typing import Any  # noqa: E402
+
 from ansible.module_utils.basic import AnsibleModule  # noqa: E402
 from ansible_collections.agentic.agent_configs.plugins.module_utils.bun_common import (  # noqa: E402
     build_bun_env,
@@ -172,82 +174,67 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.bun_paths im
 )
 
 
-def main():
-    """Run the Ansible module."""
-    module = AnsibleModule(
-        argument_spec={
-            "name": {"type": "str", "required": True},
-            "spec": {"type": "str", "required": False, "default": None},
-            "version": {"type": "str", "required": False, "default": None},
-            "state": {
-                "type": "str",
-                "choices": ["present", "absent"],
-                "default": "present",
-            },
-            "bun_path": {"type": "str", "default": "bun"},
-            "global_dir": {"type": "path", "required": False, "default": None},
-            "global_bin_dir": {"type": "path", "required": False, "default": None},
-            "ignore_scripts": {"type": "bool", "default": False},
-            "trust_postinstall": {"type": "bool", "default": False},
-        },
-        mutually_exclusive=[("spec", "version")],
-        supports_check_mode=True,
-    )
-
-    params = module.params
+def ensure_absent(module: AnsibleModule, params: dict[str, Any]) -> None:
+    """Ensure a Bun global package is absent."""
     bun_bin = resolve_binary(module, params["bun_path"])
-
     global_dir = resolve_global_dir(params["global_dir"])
     global_bin_dir = resolve_global_bin_dir(params["global_bin_dir"])
     bun_env = build_bun_env(global_dir, global_bin_dir)
     pkg_json = package_json_path(global_dir, params["name"])
     installed_version = read_installed_version(pkg_json)
 
-    if params["state"] == "absent":
-        if installed_version is None:
-            module.exit_json(
-                changed=False,
-                name=params["name"],
-                state="absent",
-                global_dir=global_dir,
-                global_bin_dir=global_bin_dir,
-            )
+    if installed_version is None:
+        module.exit_json(
+            changed=False,
+            name=params["name"],
+            state="absent",
+            global_dir=global_dir,
+            global_bin_dir=global_bin_dir,
+        )
 
-        cmd = [bun_bin, "remove", "-g", params["name"]]
+    cmd = [bun_bin, "remove", "-g", params["name"]]
 
-        if module.check_mode:
-            module.exit_json(
-                changed=True,
-                name=params["name"],
-                state="absent",
-                global_dir=global_dir,
-                global_bin_dir=global_bin_dir,
-                cmd=cmd,
-            )
-
-        rc, stdout, stderr = run(module, cmd, env=bun_env)
-        if rc != 0:
-            module.fail_json(
-                msg=f"Failed to remove Bun global package {params['name']}",
-                rc=rc,
-                stdout=stdout,
-                stderr=stderr,
-                cmd=cmd,
-            )
-
+    if module.check_mode:
         module.exit_json(
             changed=True,
             name=params["name"],
             state="absent",
-            previous_version=installed_version,
             global_dir=global_dir,
             global_bin_dir=global_bin_dir,
             cmd=cmd,
-            stdout=stdout,
-            stderr=stderr,
         )
 
-    # state == present
+    rc, stdout, stderr = run(module, cmd, env=bun_env)
+    if rc != 0:
+        module.fail_json(
+            msg=f"Failed to remove Bun global package {params['name']}",
+            rc=rc,
+            stdout=stdout,
+            stderr=stderr,
+            cmd=cmd,
+        )
+
+    module.exit_json(
+        changed=True,
+        name=params["name"],
+        state="absent",
+        previous_version=installed_version,
+        global_dir=global_dir,
+        global_bin_dir=global_bin_dir,
+        cmd=cmd,
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+
+def ensure_present(module: AnsibleModule, params: dict[str, Any]) -> None:
+    """Ensure a Bun global package is present."""
+    bun_bin = resolve_binary(module, params["bun_path"])
+    global_dir = resolve_global_dir(params["global_dir"])
+    global_bin_dir = resolve_global_bin_dir(params["global_bin_dir"])
+    bun_env = build_bun_env(global_dir, global_bin_dir)
+    pkg_json = package_json_path(global_dir, params["name"])
+    installed_version = read_installed_version(pkg_json)
     desired_version = params["version"]
     needs_install = installed_version is None or (
         desired_version is not None and installed_version != desired_version
@@ -344,6 +331,34 @@ def main():
         )
 
     module.exit_json(**result)
+
+
+def main():
+    """Run the Ansible module."""
+    module = AnsibleModule(
+        argument_spec={
+            "name": {"type": "str", "required": True},
+            "spec": {"type": "str", "required": False, "default": None},
+            "version": {"type": "str", "required": False, "default": None},
+            "state": {
+                "type": "str",
+                "choices": ["present", "absent"],
+                "default": "present",
+            },
+            "bun_path": {"type": "str", "default": "bun"},
+            "global_dir": {"type": "path", "required": False, "default": None},
+            "global_bin_dir": {"type": "path", "required": False, "default": None},
+            "ignore_scripts": {"type": "bool", "default": False},
+            "trust_postinstall": {"type": "bool", "default": False},
+        },
+        mutually_exclusive=[("spec", "version")],
+        supports_check_mode=True,
+    )
+
+    if module.params["state"] == "absent":
+        ensure_absent(module, module.params)
+    else:
+        ensure_present(module, module.params)
 
 
 if __name__ == "__main__":
