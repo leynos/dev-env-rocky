@@ -80,10 +80,13 @@ def test_optional_browser_and_acp_packages_are_gated() -> None:
     defaults_content = NODE_PACKAGES_DEFAULTS.read_text()
 
     puppeteer = extract_loop_item(tasks_content, "puppeteer")
-    acp_extension = extract_loop_item(tasks_content, "acp-extension-codex-linux-x64")
+    acp_extension = extract_loop_item(
+        tasks_content, "@zed-industries/codex-acp-linux-x64"
+    )
 
     assert "dev_env_install_puppeteer: false" in defaults_content
     assert "dev_env_install_acp_extension_codex: false" in defaults_content
+    assert "acp-extension-codex-linux-x64" not in tasks_content
     assert 'enabled: "{{ dev_env_install_puppeteer | default(false) | bool }}"' in (
         puppeteer
     )

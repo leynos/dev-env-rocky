@@ -220,9 +220,9 @@ The `node_packages` role keeps trusted lifecycle-script execution explicit.
 Any package with `trust_postinstall: true` must include a
 `trust_postinstall_reason` entry in the same loop item. Optional packages that
 trust postinstall scripts, such as `puppeteer` and
-`acp-extension-codex-linux-x64`, are disabled by role defaults and enabled by
-host profile variables only where needed. The ACP extension is additionally
-restricted to Linux x86_64 hosts.
+`@zed-industries/codex-acp-linux-x64`, are disabled by role defaults and
+enabled by host profile variables only where needed. The ACP extension is
+additionally restricted to Linux x86_64 hosts.
 
 Key parameters:
 

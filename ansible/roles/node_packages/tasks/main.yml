@@ -41,7 +41,7 @@
       trust_postinstall: true
       trust_postinstall_reason: "Installs browser automation assets."
       enabled: "{{ dev_env_install_puppeteer | default(false) | bool }}"
-    - name: "acp-extension-codex-linux-x64"
+    - name: "@zed-industries/codex-acp-linux-x64"
       trust_postinstall: true
       trust_postinstall_reason: "Installs the Linux x86_64 Codex ACP extension."
       enabled: >-
