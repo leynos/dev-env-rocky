@@ -333,7 +333,7 @@ def ensure_present(module: AnsibleModule, params: dict[str, Any]) -> None:
     module.exit_json(**result)
 
 
-def main():
+def main() -> None:
     """Run the Ansible module."""
     module = AnsibleModule(
         argument_spec={

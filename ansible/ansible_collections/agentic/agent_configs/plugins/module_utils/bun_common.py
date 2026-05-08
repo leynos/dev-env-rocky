@@ -39,7 +39,7 @@ def read_installed_version(pkg_json: str) -> str | None:
     """Read the installed version from a package.json file."""
     if not os.path.exists(pkg_json):
         return None
-    with open(pkg_json, "r", encoding="utf-8") as fh:
+    with open(pkg_json, encoding="utf-8") as fh:
         data = json.load(fh)
     return data.get("version")
 
@@ -49,7 +49,7 @@ def is_trusted_dependency(global_dir: str, package_name: str) -> bool:
     pkg_json = os.path.join(global_dir, "package.json")
     if not os.path.exists(pkg_json):
         return False
-    with open(pkg_json, "r", encoding="utf-8") as fh:
+    with open(pkg_json, encoding="utf-8") as fh:
         data = json.load(fh)
     trusted_dependencies = data.get("trustedDependencies", [])
     return (
