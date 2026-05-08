@@ -33,5 +33,5 @@
 
     - name: Remove previous fake Bun command log
       ansible.builtin.file:
-        path: /tmp/bun-commands.jsonl
+        path: /tmp/fake-bun-0
         state: absent

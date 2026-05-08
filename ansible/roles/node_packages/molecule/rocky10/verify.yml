@@ -11,8 +11,8 @@
           - -c
           - >-
             import json, pathlib;
-            path = pathlib.Path('/tmp/bun-commands.jsonl');
-            print(json.dumps([json.loads(line) for line in path.read_text().splitlines() if line]))
+            paths = sorted(pathlib.Path('/tmp/fake-bun-0').glob('bun-commands-*.jsonl'));
+            print(json.dumps([json.loads(line) for path in paths for line in path.read_text().splitlines() if line]))
       changed_when: false
       register: bun_command_log
 

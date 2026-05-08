@@ -44,41 +44,41 @@ orchestration MCP server if Codex's MCP surface does not expose a reliable
 The local role already contains most of the substrate:
 
 - `agent_tools` installs `context_pack` from the upstream installer and expects
-  `~/.local/bin/context_pack` to exist afterwards.[^local-context-pack-install]
+  `~/.local/bin/context_pack` to exist afterwards.[^1]
 - The same role registers a `context_pack` stdio MCP server for:
-  - Codex.[^local-codex-context-pack]
-  - Claude Code and Cursor CLI.[^local-claude-context-pack]
-  - Factory Droid.[^local-factory-context-pack]
+  - Codex.[^2]
+  - Claude Code and Cursor CLI.[^3]
+  - Factory Droid.[^4]
 - The registered context-pack environment uses a shared storage root under
   `~/.local/state/context-pack` and sets `CONTEXT_PACK_SOURCE_ROOT` to
-  `__SESSION_CWD__`.[^local-codex-context-pack]
+  `__SESSION_CWD__`.[^2]
 - The role already defines a Codex `wyvern` subagent for fast, read-only
-  reconnaissance.[^local-wyvern]
+  reconnaissance.[^5]
 - The `codex_cli_subagent` module supports an `mcp_servers` list in generated
   Codex subagent TOML files, although the current role does not pass that field
-  to `wyvern`.[^local-subagent-mcp]
+  to `wyvern`.[^6]
 - The roadmap already identifies duplicated MCP registration as work to extract
-  into a shared MCP definition contract.[^local-roadmap-mcp]
+  into a shared MCP definition contract.[^7]
 
 External documentation confirms the integration points:
 
 - Claude Code supports stdio MCP servers and stores MCP configuration at local,
-  project, user, or managed scopes.[^claude-mcp]
+  project, user, or managed scopes.[^8]
 - Claude Code hooks can run shell commands, HTTP calls, prompts, or agents at
-  lifecycle events. Command hooks can run asynchronously.[^claude-hooks]
+  lifecycle events. Command hooks can run asynchronously.[^9]
 - Claude Code agent teams are experimental, disabled by default, and require
   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Teammates load the same project
   context as a regular Claude Code session, including MCP servers and skills.
-  [^claude-agent-teams]
+  [^10]
 - Codex supports `codex mcp-server`, which starts Codex as a stdio MCP server
-  for other tools to connect to.[^codex-cli-reference]
+  for other tools to connect to.[^11]
 - Codex supports MCP server configuration in `~/.codex/config.toml`, including
-  stdio commands and environment variables.[^codex-mcp]
+  stdio commands and environment variables.[^12]
 - Codex subagents are intended for parallel specialized work while the main
-  agent remains focused on decisions and final synthesis.[^codex-subagents]
+  agent remains focused on decisions and final synthesis.[^13]
 - The context-pack MCP package is designed for high-signal multi-agent handoff:
   agents create packs, add file anchors and comments, then return a `pack_id`
-  plus a short summary to the orchestrator.[^context-pack]
+  plus a short summary to the orchestrator.[^14]
 
 Local command checks add two caveats:
 
@@ -337,30 +337,24 @@ and durable evidence.
 
 ## References
 
-[^local-context-pack-install]: `ansible/roles/agent_tools/tasks/main.yml`,
-    lines 417-422.
-[^local-codex-context-pack]: `ansible/roles/agent_tools/tasks/main.yml`, lines
-    444-464.
-[^local-claude-context-pack]: `ansible/roles/agent_tools/tasks/main.yml`, lines
-    655-677.
-[^local-factory-context-pack]: `ansible/roles/agent_tools/tasks/main.yml`,
-    lines 912-933.
-[^local-wyvern]: `ansible/roles/agent_tools/tasks/main.yml`, lines 505-537.
-[^local-subagent-mcp]:
+[^1]: `ansible/roles/agent_tools/tasks/main.yml`, lines 417-422.
+[^2]: `ansible/roles/agent_tools/tasks/main.yml`, lines 444-464.
+[^3]: `ansible/roles/agent_tools/tasks/main.yml`, lines 655-677.
+[^4]: `ansible/roles/agent_tools/tasks/main.yml`, lines 912-933.
+[^5]: `ansible/roles/agent_tools/tasks/main.yml`, lines 505-537.
+[^6]:
     `ansible/ansible_collections/agentic/agent_configs/plugins/modules/codex_cli_subagent.py`,
     lines 109-113 and 181-190.
-[^local-roadmap-mcp]: `docs/roadmap.md`, lines 126-153.
-[^claude-mcp]: Claude Code documentation, "Model Context Protocol (MCP)",
+[^7]: `docs/roadmap.md`, lines 126-153.
+[^8]: Claude Code documentation, "Model Context Protocol (MCP)",
     <https://code.claude.com/docs/en/mcp>.
-[^claude-hooks]: Claude Code documentation, "Hooks",
-    <https://code.claude.com/docs/en/hooks>.
-[^claude-agent-teams]: Claude Code documentation, "Orchestrate teams of Claude
-    Code sessions", <https://code.claude.com/docs/en/agent-teams>.
-[^codex-cli-reference]: OpenAI Codex CLI reference,
+[^9]: Claude Code documentation, "Hooks", <https://code.claude.com/docs/en/hooks>.
+[^10]: Claude Code documentation, "Orchestrate teams of Claude Code sessions",
+    <https://code.claude.com/docs/en/agent-teams>.
+[^11]: OpenAI Codex CLI reference,
     <https://developers.openai.com/codex/cli/reference>.
-[^codex-mcp]: OpenAI Codex MCP documentation,
-    <https://developers.openai.com/codex/mcp>.
-[^codex-subagents]: OpenAI Codex subagent documentation,
+[^12]: OpenAI Codex MCP documentation, <https://developers.openai.com/codex/mcp>.
+[^13]: OpenAI Codex subagent documentation,
     <https://developers.openai.com/codex/concepts/subagents>.
-[^context-pack]: LobeHub MCP listing for `AmirTlinov/context_pack`,
+[^14]: LobeHub MCP listing for `AmirTlinov/context_pack`,
     <https://lobehub.com/bg/mcp/amirtlinov-context_pack>.

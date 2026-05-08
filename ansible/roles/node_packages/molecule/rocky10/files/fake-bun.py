@@ -5,10 +5,35 @@ import json
 import os
 import stat
 import sys
+import tempfile
 from pathlib import Path
 
 
-LOG_PATH = Path("/tmp/bun-commands.jsonl")
+def _default_log_path() -> Path:
+    runtime_dir = Path(os.environ.get("XDG_RUNTIME_DIR", tempfile.gettempdir()))
+    return runtime_dir / f"fake-bun-{os.getuid()}" / f"bun-commands-{os.getpid()}.jsonl"
+
+
+def _resolve_log_path() -> Path:
+    requested = os.environ.get("BUN_FAKE_LOG") or os.environ.get("BUN_LOG_PATH")
+    return Path(requested) if requested else _default_log_path()
+
+
+def _append_log_line(log_path: Path, line: str) -> None:
+    parent = log_path.parent
+    parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if log_path.is_symlink():
+        msg = f"refusing to write fake Bun log through symlink: {log_path}"
+        raise RuntimeError(msg)
+
+    flags = os.O_APPEND | os.O_WRONLY | os.O_CREAT
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = os.open(log_path, flags, 0o600)
+    with os.fdopen(fd, "a", encoding="utf-8") as log:
+        log.write(line)
 
 
 def package_from_target(target: str) -> tuple[str, str]:
@@ -90,8 +115,8 @@ def append_log(argv: list[str]) -> None:
     Returns
     -------
     None
-        The function appends one JSON object to ``LOG_PATH`` and returns no
-        value.
+        The function appends one JSON object to the resolved log path and
+        returns no value.
     """
     entry = {
         "argv": argv,
@@ -100,8 +125,7 @@ def append_log(argv: list[str]) -> None:
         "BUN_INSTALL_BIN": os.environ.get("BUN_INSTALL_BIN"),
         "PATH": os.environ.get("PATH"),
     }
-    with LOG_PATH.open("a", encoding="utf-8") as log:
-        log.write(json.dumps(entry, sort_keys=True) + "\n")
+    _append_log_line(_resolve_log_path(), json.dumps(entry, sort_keys=True) + "\n")
 
 
 def install_package(argv: list[str]) -> int:
