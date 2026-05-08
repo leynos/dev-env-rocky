@@ -301,3 +301,16 @@ uv run --with pytest --with 'ansible-core==2.18.6' --with tomlkit \
 pytest -q \
   ansible/ansible_collections/agentic/agent_configs/tests/unit/plugins/modules/test_agent_config_modules.py
 ```
+
+Run the Molecule role scenarios when editing role behaviour that depends on the
+managed host shell or package-install environment:
+
+```bash
+MOLECULE='uv run --with ansible-core --with molecule --with molecule-plugins[podman] molecule' \
+make molecule
+```
+
+The Molecule scenarios use Podman with the `quay.io/rockylinux/rockylinux:10`
+image. They cover the `node_packages` role's Bun global install flow with a
+fake Bun fixture, including trusted postinstall handling for `css-view`, and
+the `paths` role's managed PATH precedence for login shells.

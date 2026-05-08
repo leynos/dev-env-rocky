@@ -1,0 +1,13 @@
+---
+- name: Converge node_packages
+  hosts: all
+  gather_facts: true
+
+  vars:
+    dev_env_enable_lody: false
+    dev_env_install_acp_extension_codex: false
+    dev_env_install_droid_cli: false
+    dev_env_install_puppeteer: false
+
+  roles:
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"

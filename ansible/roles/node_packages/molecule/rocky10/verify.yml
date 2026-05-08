@@ -1,0 +1,79 @@
+---
+- name: Verify node_packages
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Read fake Bun command log
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - >-
+            import json, pathlib;
+            path = pathlib.Path('/tmp/bun-commands.jsonl');
+            print(json.dumps([json.loads(line) for line in path.read_text().splitlines() if line]))
+      changed_when: false
+      register: bun_command_log
+
+    - name: Decode fake Bun command log JSON
+      ansible.builtin.set_fact:
+        bun_command_entries: "{{ bun_command_log.stdout | from_json }}"
+
+    - name: Locate css-view install command
+      ansible.builtin.set_fact:
+        css_view_installs: >-
+          {{
+            bun_command_entries
+            | selectattr('argv', 'equalto', [
+                'install',
+                '-g',
+                'git+https://github.com/leynos/css-view#26b79e8ab739b7a8bcd80341ae7fc2d18600ce85',
+              ])
+            | list
+          }}
+
+    - name: Locate css-view trust command
+      ansible.builtin.set_fact:
+        css_view_trusts: >-
+          {{
+            bun_command_entries
+            | selectattr('argv', 'equalto', ['pm', 'trust', 'css-view'])
+            | list
+          }}
+
+    - name: Assert css-view installed from pinned git spec and trusted with Bun PATH
+      ansible.builtin.assert:
+        that:
+          - css_view_installs | length == 1
+          - css_view_trusts | length == 1
+          - css_view_trusts[0].BUN_INSTALL_GLOBAL_DIR == '/root/.bun/install/global'
+          - css_view_trusts[0].BUN_INSTALL_BIN == '/root/.bun/bin'
+          - css_view_trusts[0].PATH is match('^/root/\\.bun/bin:')
+        fail_msg: "css-view was not installed and trusted with the expected Bun environment"
+
+    - name: Check Chromium browser fixture directories
+      ansible.builtin.stat:
+        path: "/root/.cache/ms-playwright/{{ item }}"
+      loop:
+        - chromium-1217
+        - chromium_headless_shell-1217
+      register: chromium_fixture_dirs
+
+    - name: Assert Chromium browser fixtures were installed
+      ansible.builtin.assert:
+        that:
+          - chromium_fixture_dirs.results | map(attribute='stat.exists') | list is all
+        fail_msg: "css-view trust did not create the expected Chromium fixture directories"
+
+    - name: Check firecrawl-mcp local shim
+      ansible.builtin.stat:
+        path: /root/.local/bin/firecrawl-mcp
+      register: firecrawl_mcp_shim
+
+    - name: Assert firecrawl-mcp local shim exists
+      ansible.builtin.assert:
+        that:
+          - firecrawl_mcp_shim.stat.islnk
+          - firecrawl_mcp_shim.stat.lnk_source == '/root/.bun/bin/firecrawl-mcp'
+        fail_msg: "firecrawl-mcp was not linked into /root/.local/bin"

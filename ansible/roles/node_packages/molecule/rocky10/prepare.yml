@@ -1,0 +1,37 @@
+---
+- name: Prepare fake Bun fixture
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Ensure Bun binary directory exists
+      ansible.builtin.file:
+        path: /root/.bun/bin
+        state: directory
+        mode: '0755'
+
+    - name: Install fake Bun executable
+      ansible.builtin.copy:
+        src: fake-bun.py
+        dest: /root/.bun/bin/bun
+        mode: '0755'
+
+    - name: Expose fake Bun on PATH for the role's which check
+      ansible.builtin.file:
+        src: /root/.bun/bin/bun
+        dest: /usr/local/bin/bun
+        state: link
+        force: true
+
+    - name: Install minimal which command for Rocky container fixture
+      ansible.builtin.copy:
+        dest: /usr/bin/which
+        mode: '0755'
+        content: |
+          #!/usr/bin/env sh
+          command -v "$1"
+
+    - name: Remove previous fake Bun command log
+      ansible.builtin.file:
+        path: /tmp/bun-commands.jsonl
+        state: absent
