@@ -6,13 +6,13 @@
     mode: '0755'
 
 - name: Configure weave merge driver name
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: merge.weave.name
     value: "Entity-level semantic merge"
     scope: global
 
 - name: Configure weave merge driver command
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: merge.weave.driver
     value: "weave-driver %O %A %B %L %P"
     scope: global

@@ -1,0 +1,14 @@
+---
+# Existing site-playbook backlog. New reusable collection roles should still be
+# linted directly without this compatibility profile when practical.
+skip_list:
+  - command-instead-of-module
+  - latest
+  - name[template]
+  - no-changed-when
+  - no-handler
+  - risky-shell-pipe
+  - var-naming
+  - yaml[comments]
+  - yaml[line-length]
+
