@@ -42,8 +42,8 @@ def assert_is(actual: Any, expected: Any, context: str) -> None:
 
 def test_bun_package_json_path_handles_scoped_packages() -> None:
     assert_equal(
-        bun_global.package_json_path("/global", "@scope/tool"),
-        "/global/node_modules/@scope/tool/package.json",
+        bun_global.package_json_path(Path("/global"), "@scope/tool"),
+        Path("/global/node_modules/@scope/tool/package.json"),
         "bun_global.package_json_path should handle scoped package paths",
     )
 
@@ -52,7 +52,7 @@ def test_bun_read_installed_version(tmp_path: Path) -> None:
     package_json = tmp_path / "package.json"
 
     assert_is(
-        bun_global.read_installed_version(str(package_json)),
+        bun_global.read_installed_version(package_json),
         None,
         "bun_global.read_installed_version should return None for missing metadata",
     )
@@ -60,7 +60,7 @@ def test_bun_read_installed_version(tmp_path: Path) -> None:
     package_json.write_text(json.dumps({"version": "1.2.3"}))
 
     assert_equal(
-        bun_global.read_installed_version(str(package_json)),
+        bun_global.read_installed_version(package_json),
         "1.2.3",
         "bun_global.read_installed_version should read package version",
     )
@@ -72,7 +72,7 @@ def test_bun_is_trusted_dependency(tmp_path: Path) -> None:
     package_json = global_dir / "package.json"
 
     assert_is(
-        bun_global.is_trusted_dependency(str(global_dir), "@scope/tool"),
+        bun_global.is_trusted_dependency(global_dir, "@scope/tool"),
         False,
         "bun_global.is_trusted_dependency should return False without package metadata",
     )
@@ -80,20 +80,20 @@ def test_bun_is_trusted_dependency(tmp_path: Path) -> None:
     package_json.write_text(json.dumps({"trustedDependencies": ["@scope/tool"]}))
 
     assert_is(
-        bun_global.is_trusted_dependency(str(global_dir), "@scope/tool"),
+        bun_global.is_trusted_dependency(global_dir, "@scope/tool"),
         True,
         "bun_global.is_trusted_dependency should detect trusted package",
     )
 
 
 def test_bun_build_env_adds_global_bin_dir_to_path(tmp_path: Path) -> None:
-    global_bin_dir = str(tmp_path / "bin")
+    global_bin_dir = tmp_path / "bin"
 
-    env = bun_global.build_bun_env(str(tmp_path / "global"), global_bin_dir)
+    env = bun_global.build_bun_env(tmp_path / "global", global_bin_dir)
 
     assert_equal(
         env["PATH"],
-        f"{global_bin_dir}:{os.environ.get('PATH', '')}",
+        f"{global_bin_dir!s}:{os.environ.get('PATH', '')}",
         "bun_global should expose Bun shims to package lifecycle scripts",
     )
 
