@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""Fake Bun executable used by the node_packages Molecule scenario."""
+"""Fake Bun executable used by the node_packages Molecule scenario.
+
+The fixture simulates the Bun commands that the role needs for deterministic
+tests: global installs, package trust metadata, command logging, and the
+Chromium cache markers created by the css-view post-install path.
+
+Molecule installs this script as ``/root/.bun/bin/bun`` and calls it through
+Ansible tasks. For local checks, provide the same environment variables the
+module sets, for example:
+
+    BUN_INSTALL_GLOBAL_DIR=/tmp/bun/global BUN_INSTALL_BIN=/tmp/bun/bin \
+        BUN_FAKE_LOG=/tmp/fake-bun-log/bun-commands.jsonl \
+        python fake-bun.py install -g markdownlint-cli2
+
+The Rocky 10 Molecule tests rely on the JSONL command log and the generated
+package metadata to assert install, trust, PATH, and browser-cache behaviour.
+"""
 
 import json
 import os
@@ -24,7 +40,8 @@ def _append_log_line(log_path: Path, line: str) -> None:
     parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if log_path.is_symlink():
         msg = f"refusing to write fake Bun log through symlink: {log_path}"
-        raise RuntimeError(msg)
+        print(msg, file=sys.stderr)
+        raise SystemExit(2)
 
     flags = os.O_APPEND | os.O_WRONLY | os.O_CREAT
     if hasattr(os, "O_CLOEXEC"):

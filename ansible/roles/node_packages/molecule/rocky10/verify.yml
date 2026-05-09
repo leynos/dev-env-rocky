@@ -10,6 +10,16 @@
     BUN_FAKE_LOG: "{{ fake_bun_log_dir }}/bun-commands.jsonl"
 
   tasks:
+    - name: Check fake Bun command log exists
+      ansible.builtin.stat:
+        path: "{{ fake_bun_log_dir }}/bun-commands.jsonl"
+      register: bun_command_log_stat
+
+    - name: Fail when fake Bun command log is missing
+      ansible.builtin.fail:
+        msg: "fake Bun command log was not produced at {{ fake_bun_log_dir }}/bun-commands.jsonl"
+      when: not bun_command_log_stat.stat.exists
+
     - name: Read fake Bun command log
       ansible.builtin.command:
         argv:
@@ -21,6 +31,7 @@
             print(json.dumps([json.loads(line) for line in path.read_text().splitlines() if line]))
       changed_when: false
       register: bun_command_log
+      when: bun_command_log_stat.stat.exists
 
     - name: Decode fake Bun command log JSON
       ansible.builtin.set_fact:
