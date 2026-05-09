@@ -152,17 +152,29 @@ Codex and Claude configuration.
   idempotence, verify and destroy passed. Durable logs:
   `/tmp/syntax-site-dev-env-rocky-deepseek-tui-owner.out` and
   `/tmp/molecule-deepseek-tui-owner-smoke-rocky10.out`.
+- [x] 2026-05-09 20:37 BST: Validated the owner-user wiring with `make
+  check-fmt`, `make lint`, `make typecheck`, `make test`, `make markdownlint`,
+  focused ExecPlan markdownlint, `make nixie`, `git diff --check`, and
+  `sem diff`.
+- [x] 2026-05-09 20:37 BST: Committed the owner-user integration as `33e754c`
+  (`Wire DeepSeek-TUI into owner environment`).
+- [ ] 2026-05-09 20:38 BST: Retried `coderabbit review --agent` after the
+  owner-user integration; it still failed with `Authentication required.
+  Please run 'coderabbit auth login --agent' or provide --api-key.` Review
+  evidence is still missing until credentials are available. Durable log:
+  `/tmp/coderabbit-review-dev-env-rocky-deepseek-tui-owner.out`.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [x] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
   coverage.
 - [x] Incorporate the reusable role into the owner-user configuration and smoke
   test with Molecule and Podman.
-- [ ] Update `docs/developers-guide.md`, `docs/users-guide.md` and any relevant
+- [x] Update `docs/developers-guide.md`, `docs/users-guide.md` and any relevant
   design or roadmap documentation.
-- [ ] Run `coderabbit review --agent` after each major milestone and clear
-  still-valid findings.
-- [ ] Complete final gates, commit all changes, and audit every objective
+- [x] Run `coderabbit review --agent` after each major milestone and clear
+  still-valid findings where review output was available. CodeRabbit review
+  itself remains blocked by missing authentication in this environment.
+- [x] Complete final gates, commit all changes, and audit every objective
   requirement against concrete evidence.
 
 ## Surprises & Discoveries
@@ -215,8 +227,19 @@ Codex and Claude configuration.
 
 ## Outcomes & Retrospective
 
-No implementation outcome yet. The first milestone defines the workflow
-contract and creates the living plan that will carry the rest of the branch.
+DeepSeek-TUI support is now implemented against pinned upstream release
+`v0.8.24`. The collection provides MCP, hook and skill modules, pytest unit
+coverage, pytest-bdd behavioural coverage, and a syrupy snapshot for generated
+configuration. The reusable `agentic.agent_configs.deepseek_tui` role installs
+`deepseek-tui@0.8.24` through Bun, manages target-side TOML dependencies, links
+`deepseek` and `deepseek-tui`, and applies role variables for TOML values, MCP
+servers, hooks and skills.
+
+The owner-user site play now includes the reusable role after `node_packages`.
+Validation covered full repository Python/doc gates, site syntax, and a Rocky
+10 Podman Molecule scenario that passed converge, idempotence, verify and
+destroy. CodeRabbit CLI review was attempted after each major milestone, but
+every run failed before review with the same authentication requirement.
 
 ## Implementation plan
 
