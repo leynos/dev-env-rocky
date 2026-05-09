@@ -13,7 +13,6 @@ Example invocation::
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -93,14 +92,19 @@ def test_bun_is_trusted_dependency(tmp_path: Path) -> None:
     )
 
 
-def test_bun_build_env_adds_global_bin_dir_to_path(tmp_path: Path) -> None:
+def test_bun_build_env_adds_global_bin_dir_to_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controlled_path = "/usr/local/bin:/usr/bin"
+    monkeypatch.setenv("PATH", controlled_path)
     global_bin_dir = tmp_path / "bin"
 
     env = bun_global.build_bun_env(tmp_path / "global", global_bin_dir)
 
     assert_equal(
         env["PATH"],
-        f"{global_bin_dir!s}:{os.environ.get('PATH', '')}",
+        f"{global_bin_dir!s}:{controlled_path}",
         "bun_global should expose Bun shims to package lifecycle scripts",
     )
 
@@ -232,6 +236,8 @@ def test_bun_global_trusts_installed_package_without_reinstalling(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    controlled_path = "/usr/local/bin:/usr/bin"
+    monkeypatch.setenv("PATH", controlled_path)
     recorded: dict[str, Any] = {}
 
     def fake_run(
@@ -278,7 +284,7 @@ def test_bun_global_trusts_installed_package_without_reinstalling(
         {
             "BUN_INSTALL_GLOBAL_DIR": str(global_dir),
             "BUN_INSTALL_BIN": global_bin_dir,
-            "PATH": f"{global_bin_dir}:{os.environ.get('PATH', '')}",
+            "PATH": f"{global_bin_dir}:{controlled_path}",
         },
         "bun_global should pass resolved Bun paths to trust command",
     )

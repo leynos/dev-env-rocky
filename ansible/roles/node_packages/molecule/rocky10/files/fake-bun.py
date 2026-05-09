@@ -86,7 +86,7 @@ def package_from_target(target: str) -> tuple[str, str]:
         return target, "0.0.0"
 
     package_part, separator, version = target.rpartition("@")
-    if separator and package_part:
+    if separator and package_part and version:
         return package_part, version
     return target, "0.0.0"
 

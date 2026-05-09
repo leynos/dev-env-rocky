@@ -367,7 +367,7 @@ def main() -> None:
         supports_check_mode=True,
     )
 
-    params = cast(BunModuleParams, module.params)
+    params = cast("BunModuleParams", module.params)
     if params["state"] == "absent":
         ensure_absent(module, params)
     else:
