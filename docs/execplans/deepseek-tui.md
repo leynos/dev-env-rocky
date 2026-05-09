@@ -110,6 +110,12 @@ Codex and Claude configuration.
   pytest, focused Ruff, `make check-fmt`, `make lint`, `make typecheck`,
   `make test`, `make markdownlint`, focused markdownlint for the ExecPlan and
   collection README, `make nixie`, `git diff --check`, and `sem diff`.
+- [x] 2026-05-09 19:24 BST: Committed the module milestone as `a760ab8`
+  (`Add DeepSeek-TUI config modules`).
+- [ ] 2026-05-09 19:24 BST: Tried `coderabbit review --agent`; it failed with
+  `Authentication required. Please run 'coderabbit auth login --agent' or
+  provide --api-key.` Review evidence is missing until credentials are
+  available.
 - [ ] Add behavioural and snapshot tests for the mirrored DeepSeek-TUI module
   capabilities.
 - [ ] Finish `agentic.agent_configs` module support by adding behavioural and
@@ -144,6 +150,8 @@ Codex and Claude configuration.
 - DeepSeek-TUI `v0.8.24` has runtime slash commands and runtime sub-agent
   orchestration, but no stable static command-file directory or declarative
   subagent registry equivalent to Claude Code commands or Codex subagents.
+- `coderabbit review --agent` is installed but not authenticated in this
+  environment, so CodeRabbit milestone review cannot currently run.
 
 ## Decision Log
 
@@ -159,6 +167,9 @@ Codex and Claude configuration.
   release exposes durable file formats for MCP, hooks and skills, while slash
   commands and sub-agents are runtime features without a declarative file
   surface to manage.
+- Decision: Continue after the CodeRabbit authentication failure while keeping
+  the missing review evidence visible in the plan. Rationale: the configured
+  tolerance permits continuing only after documenting the command failure.
 
 ## Outcomes & Retrospective
 
