@@ -1,0 +1,169 @@
+# Add DeepSeek-TUI deployment support
+
+This ExecPlan (execution plan) is a living document. The sections
+`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
+`Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
+proceeds.
+
+Status: APPROVED
+
+## Purpose / big picture
+
+This branch adds first-class DeepSeek-TUI support to the local Ansible
+automation. DeepSeek-TUI is a terminal user interface for DeepSeek that is
+moving quickly, so this work will use release `v0.8.24` of
+`Hmbown/DeepSeek-TUI` as the reference implementation instead of relying only
+on live documentation.
+
+After the change, the `agentic.agent_configs` collection should expose reusable
+modules for the DeepSeek-TUI configuration capabilities that can reasonably
+mirror the existing Codex and Claude support. A reusable collection role should
+install and configure DeepSeek-TUI with Molecule and Podman coverage. The owner
+user role or playbook wiring should then include that role, so the normal site
+configuration can deploy DeepSeek-TUI for the managed owner user.
+
+Observable success means a maintainer can run the documented pytest,
+pytest-bdd, syrupy, Molecule, Podman and `ansible-lint` gates, see them pass,
+and inspect generated DeepSeek-TUI configuration in the same style as existing
+Codex and Claude configuration.
+
+## Constraints
+
+- Start by correcting this repository's AGENTS guidance so it accurately
+  describes the intended Ansible development workflow.
+- Use `docs/execplans/deepseek-tui.md` as the living plan for this branch.
+- Keep the plan current as discoveries, decisions and validation evidence
+  change.
+- Use release `v0.8.24` of
+  `https://github.com/Hmbown/DeepSeek-TUI` as the capability reference.
+- Use `grepai` as the primary semantic search tool when it is available. If it
+  fails because the index or service is unavailable, record that and fall back
+  to `leta`, exact text search and direct file reads.
+- Use `leta` for symbol-oriented code navigation and `sem` for reviewing
+  semantic change shape before commits.
+- Use British English with Oxford spelling in documentation.
+- Prefer Makefile targets over raw command suites where the Makefile exposes a
+  suitable target.
+- Run gates sequentially and write durable logs under `/tmp` with `tee`.
+- Do not use `/tmp` as a build target.
+- Do not kill other agents' or users' processes.
+- Commit each complete, gated change as an atomic commit.
+- Run `coderabbit review --agent` after each major milestone and clear all
+  still-valid concerns before moving to the next milestone.
+
+## Tolerances
+
+- If DeepSeek-TUI `v0.8.24` does not expose a capability equivalent to an
+  existing Codex or Claude module, document the gap and do not invent a false
+  abstraction.
+- If implementing a mirrored capability requires more than three new Ansible
+  modules beyond the initial capability set, stop and update the plan before
+  expanding scope.
+- If a Molecule scenario cannot run because Podman is unavailable or a base
+  image cannot be pulled, record the exact error and stop for direction.
+- If `coderabbit review --agent` is unavailable, record the command failure
+  and continue only after documenting the missing review evidence.
+- If a full gate fails twice for reasons unrelated to this branch, stop and
+  document the blocker instead of weakening validation.
+- If the owner-user integration requires changing inventory or secrets, stop
+  before editing those surfaces.
+
+## Risks
+
+- Risk: DeepSeek-TUI configuration semantics may have changed after `v0.8.24`.
+  Mitigation: pin the reference investigation to that release and document the
+  exact evidence used.
+- Risk: Codex, Claude and DeepSeek-TUI do not share identical concepts.
+  Mitigation: mirror only real capabilities and explicitly document unsupported
+  gaps.
+- Risk: Ansible collection tests may need additional dependencies such as
+  `pytest-bdd` or `syrupy`. Mitigation: add them through local test commands or
+  project dependency files in a small, gated change.
+- Risk: Molecule with Podman can be sensitive to host container configuration.
+  Mitigation: follow existing role scenarios and the `ansible-testing` skill,
+  and keep logs for each scenario.
+- Risk: Owner-user integration can accidentally turn a reusable role into
+  host-specific policy. Mitigation: keep reusable defaults in the collection
+  role and keep local enablement in owner-user wiring.
+
+## Progress
+
+- [x] 2026-05-09 18:51 BST: Confirmed the current branch is `deepseek-tui` and
+  the worktree is clean.
+- [x] 2026-05-09 18:51 BST: Loaded the required `execplans`,
+  `ansible-testing`, `leta`, `sem` and `en-gb-oxendict-style` skills.
+- [x] 2026-05-09 18:51 BST: Tried `grepai search`; it failed because the local
+  Qdrant endpoint on `127.0.0.1:6334` refused connections, so this plan records
+  the approved fallback to `leta`, exact text search and direct reads.
+- [x] 2026-05-09 18:52 BST: Added the Ansible development workflow correction
+  to `AGENTS.md` before implementation work.
+- [x] 2026-05-09 18:52 BST: Created this living ExecPlan for the branch.
+- [ ] Investigate DeepSeek-TUI `v0.8.24` and record the exact supported
+  configuration capabilities.
+- [ ] Add `agentic.agent_configs` module support for the mirrored DeepSeek-TUI
+  capabilities with unit, behavioural and snapshot tests.
+- [ ] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
+  coverage.
+- [ ] Incorporate the reusable role into the owner-user configuration and smoke
+  test with Molecule and Podman.
+- [ ] Update `docs/developers-guide.md`, `docs/users-guide.md` and any relevant
+  design or roadmap documentation.
+- [ ] Run `coderabbit review --agent` after each major milestone and clear
+  still-valid findings.
+- [ ] Complete final gates, commit all changes, and audit every objective
+  requirement against concrete evidence.
+
+## Surprises & Discoveries
+
+- `grepai` is registered for the workspace pattern, but the local Qdrant
+  service is currently unavailable. This is an approved fallback case under the
+  repository instructions.
+- The repository did not already contain `docs/execplans/deepseek-tui.md`.
+  The existing `docs/execplans/bin-dir-precedence.md` plan is complete and
+  unrelated to this branch's objective.
+
+## Decision Log
+
+- Decision: Treat this task as already approved for execution. Rationale: the
+  active thread objective explicitly asks to continue working toward the goal,
+  and the developer instruction says to choose the next concrete action rather
+  than wait for a fresh approval round.
+- Decision: Update `AGENTS.md` and add the branch plan as the first atomic
+  change. Rationale: the objective explicitly requires AGENTS inconsistencies
+  to be corrected before beginning DeepSeek-TUI implementation.
+
+## Outcomes & Retrospective
+
+No implementation outcome yet. The first milestone defines the workflow
+contract and creates the living plan that will carry the rest of the branch.
+
+## Implementation plan
+
+First, correct local guidance and create this plan. Validate the Markdown-only
+change with `make markdownlint`, `make nixie` and `git diff --check`, review
+the change shape with `sem diff`, then commit.
+
+Second, investigate DeepSeek-TUI `v0.8.24`. Clone or fetch the release tag into
+a scratch location, inspect the code paths that load configuration, and record
+which surfaces map to Codex or Claude capabilities. The expected outputs are a
+plan update and a capability matrix in the relevant developer documentation.
+
+Third, add the smallest useful `agentic.agent_configs` module set for
+DeepSeek-TUI. Write failing tests first. Use `pytest` for module units,
+`pytest-bdd` for operator-facing behaviour, and `syrupy` for generated
+configuration snapshots. Keep each module idempotent and consistent with the
+existing shared helpers in `agent_config_common.py`.
+
+Fourth, add a reusable collection role that installs and configures
+DeepSeek-TUI. The role should expose defaults suitable for reuse, avoid
+host-specific secrets, and include a Molecule scenario using Podman. Validate
+the role with `ansible-lint` and Molecule before committing.
+
+Fifth, wire the reusable role into the owner-user configuration. Add smoke
+coverage that proves the owner-user path exercises the role without embedding
+local-only policy into the reusable role. Validate with `ansible-lint` and
+Molecule.
+
+Sixth, run the full repository gates sequentially with durable logs, run
+`coderabbit review --agent`, clear still-valid concerns, perform the completion
+audit, and commit the final documentation or validation updates.
