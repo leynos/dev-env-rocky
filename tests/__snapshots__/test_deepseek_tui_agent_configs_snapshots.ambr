@@ -1,0 +1,46 @@
+# serializer version: 1
+# name: test_deepseek_tui_generated_configuration_matches_snapshot
+  dict({
+    'config.toml': '''
+      [hooks]
+      enabled = true
+      
+      [[hooks.hooks]]
+      event = "session_start"
+      command = "printf 'ready\\n'"
+      name = "announce"
+      timeout_secs = 10
+  
+    ''',
+    'mcp.json': '''
+      {
+        "servers": {
+          "repo-tools": {
+            "args": [
+              "--stdio"
+            ],
+            "command": "repo-tools-mcp",
+            "env": {
+              "LOG_LEVEL": "info"
+            },
+            "required": true
+          }
+        }
+      }
+  
+    ''',
+    'skills/repo-reviewer/SKILL.md': '''
+      ---
+      name: "Repo reviewer"
+      description: "Review repository changes."
+      ---
+      
+      Read AGENTS.md before reviewing.
+  
+    ''',
+    'skills/repo-reviewer/references/checklist.md': '''
+      Check tests and docs.
+  
+    ''',
+  })
+# ---

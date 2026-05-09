@@ -75,7 +75,7 @@ lint: ruff lint-uv ## Run Python linters
 typecheck: uv ## Run Python typechecking
 	$(UV_ENV) uv run --directory $(PYTHON_PACKAGE_DIR) --project . --group dev --with ty ty --version
 	$(UV_ENV) uv run --directory $(PYTHON_PACKAGE_DIR) --project . --group dev --with ty ty check src tests
-	$(UV_ENV) uv run --with pytest --with pyyaml --with ty ty check tests
+	PYTHONPATH=ansible $(UV_ENV) uv run --with pytest --with pyyaml --with pytest-bdd --with syrupy --with 'ansible-core==2.18.6' --with tomlkit --with ty ty check tests
 
 markdownlint: $(MDLINT) ## Lint Markdown files
 	$(MDLINT) $(MARKDOWN_PATHS)
@@ -100,7 +100,7 @@ nixie: ## Validate Mermaid diagrams
 
 test: uv ## Run Python tests
 	$(UV_ENV) uv run --project $(PYTHON_PACKAGE_DIR) --group dev pytest -v $(PYTHON_PACKAGE_DIR)/tests
-	$(UV_ENV) uv run --with pytest --with pyyaml pytest -v tests
+	PYTHONPATH=ansible $(UV_ENV) uv run --with pytest --with pyyaml --with pytest-bdd --with syrupy --with 'ansible-core==2.18.6' --with tomlkit pytest -v tests
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \

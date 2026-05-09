@@ -116,9 +116,12 @@ Codex and Claude configuration.
   `Authentication required. Please run 'coderabbit auth login --agent' or
   provide --api-key.` Review evidence is missing until credentials are
   available.
-- [ ] Add behavioural and snapshot tests for the mirrored DeepSeek-TUI module
-  capabilities.
-- [ ] Finish `agentic.agent_configs` module support by adding behavioural and
+- [x] 2026-05-09 19:34 BST: Added root-level pytest-bdd behavioural coverage
+  and syrupy snapshot coverage for DeepSeek-TUI MCP, hook, and skill
+  generation. Updated `make test` to install the required root test
+  dependencies and updated `make typecheck` so the root tests typecheck with
+  the Ansible collection on `PYTHONPATH`.
+- [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [ ] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
   coverage.
