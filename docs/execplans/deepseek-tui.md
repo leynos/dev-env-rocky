@@ -121,6 +121,12 @@ Codex and Claude configuration.
   generation. Updated `make test` to install the required root test
   dependencies and updated `make typecheck` so the root tests typecheck with
   the Ansible collection on `PYTHONPATH`.
+- [x] 2026-05-09 19:36 BST: Committed the behavioural and snapshot milestone as
+  `b738619` (`Cover DeepSeek-TUI modules with BDD snapshots`).
+- [ ] 2026-05-09 19:36 BST: Retried `coderabbit review --agent`; it still
+  failed with `Authentication required. Please run 'coderabbit auth login
+  --agent' or provide --api-key.` Review evidence is still missing until
+  credentials are available.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [ ] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
