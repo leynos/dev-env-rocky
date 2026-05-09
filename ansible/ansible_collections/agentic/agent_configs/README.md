@@ -1,9 +1,9 @@
 # agentic.agent_configs
 
 An Ansible collection for managing filesystem-backed configuration used by
-Claude Code, Codex CLI, and Factory Droid.
+Claude Code, Codex CLI, DeepSeek-TUI, and Factory Droid.
 
-The collection currently includes fifteen modules:
+The collection currently includes eighteen modules:
 
 - `json_file`
 - `toml_file`
@@ -15,6 +15,9 @@ The collection currently includes fifteen modules:
 - `codex_cli_hook`
 - `codex_cli_skill`
 - `codex_cli_subagent`
+- `deepseek_tui_mcp`
+- `deepseek_tui_hook`
+- `deepseek_tui_skill`
 - `factory_droid_mcp`
 - `factory_droid_hook`
 - `factory_droid_skill`
@@ -38,6 +41,13 @@ without raw text blocks.
 `claude_code_mcp` currently manages user and project scopes. It does not
 attempt to manipulate Claude's local per-project MCP storage inside
 `~/.claude.json`.
+
+DeepSeek-TUI modules are based on upstream release `v0.8.24`. They manage the
+file-backed surfaces that release exposes: `~/.deepseek/mcp.json`,
+`~/.deepseek/config.toml`, and DeepSeek-compatible skill directories. Runtime
+slash commands and sub-agent orchestration are not represented as modules
+because that release does not expose a static command-file or subagent registry
+format.
 
 ## Example
 
@@ -94,4 +104,12 @@ attempt to manipulate Claude's local per-project MCP storage inside
         base_url: https://api.deepseek.com/anthropic
         api_key: "{{ deepseek_api_key }}"
       no_log: true
+
+    - name: Configure a DeepSeek-TUI MCP server
+      deepseek_tui_mcp:
+        name: repo-tools
+        transport: stdio
+        command: /usr/local/bin/repo-tools-mcp
+        args:
+          - --stdio
 ```

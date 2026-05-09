@@ -215,6 +215,39 @@ Key parameters:
 - `body`: Markdown body for `SKILL.md`.
 - `scope`: `user` (default) or `project`.
 
+
+## DeepSeek-TUI Modules
+
+DeepSeek-TUI support is based on upstream release `v0.8.24` of
+`Hmbown/DeepSeek-TUI`, pinned at commit `cd27e6c`. The reference release
+documents `~/.deepseek/config.toml`, `~/.deepseek/mcp.json`,
+`~/.deepseek/skills`, workspace `.deepseek/config.toml`, workspace
+`.deepseek/mcp.json`, and preferred workspace `.agents/skills` discovery.
+
+The collection mirrors only the DeepSeek-TUI capabilities that have a real
+declarative file surface in that release:
+
+- `agentic.agent_configs.deepseek_tui_mcp` manages named MCP servers in the
+  native `servers` object inside `~/.deepseek/mcp.json` or
+  `.deepseek/mcp.json`. It supports stdio commands, HTTP URLs, per-server
+  timeouts, required servers, enablement flags, and tool allow/deny lists.
+- `agentic.agent_configs.deepseek_tui_hook` manages lifecycle hooks in
+  `~/.deepseek/config.toml` or `.deepseek/config.toml` under
+  `[[hooks.hooks]]`. It also preserves optional global hook settings such as
+  `[hooks].enabled` and `[hooks].default_timeout_secs`.
+- `agentic.agent_configs.deepseek_tui_skill` manages skill directories under
+  `~/.deepseek/skills/<slug>` for user scope and
+  `.agents/skills/<slug>` for project scope. The project path matches the
+  release's preferred workspace discovery order.
+
+DeepSeek-TUI has built-in slash commands such as `/mcp`, `/hooks` and
+`/config`, but release `v0.8.24` does not expose a static command-file
+directory equivalent to Claude Code commands. It also has first-class runtime
+sub-agent orchestration through tools such as `agent_spawn`, but does not expose
+a Codex-style declarative subagent registry file. Do not add command or
+subagent modules unless a future pinned release adds a stable file format for
+those surfaces.
+
 ## CheckModeToml Adapter
 
 `CheckModeToml` is a class in `toml_file.py` that provides a `tomlkit`

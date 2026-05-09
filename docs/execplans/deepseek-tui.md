@@ -98,10 +98,22 @@ Codex and Claude configuration.
 - [x] 2026-05-09 18:52 BST: Added the Ansible development workflow correction
   to `AGENTS.md` before implementation work.
 - [x] 2026-05-09 18:52 BST: Created this living ExecPlan for the branch.
-- [ ] Investigate DeepSeek-TUI `v0.8.24` and record the exact supported
-  configuration capabilities.
-- [ ] Add `agentic.agent_configs` module support for the mirrored DeepSeek-TUI
-  capabilities with unit, behavioural and snapshot tests.
+- [x] 2026-05-09 19:02 BST: Cloned DeepSeek-TUI `v0.8.24` to
+  `/tmp/deepseek-tui-v0.8.24` and verified the tag resolves to
+  `cd27e6ceefd0f557daca4863be7a5f6461936def`.
+- [x] 2026-05-09 19:07 BST: Investigated DeepSeek-TUI `v0.8.24` and recorded
+  the supported file-backed surfaces in `docs/developers-guide.md`.
+- [x] 2026-05-09 19:15 BST: Added `deepseek_tui_mcp`,
+  `deepseek_tui_hook`, and `deepseek_tui_skill` modules with focused unit
+  coverage in `test_agent_config_modules.py`.
+- [x] 2026-05-09 19:22 BST: Validated the module milestone with focused
+  pytest, focused Ruff, `make check-fmt`, `make lint`, `make typecheck`,
+  `make test`, `make markdownlint`, focused markdownlint for the ExecPlan and
+  collection README, `make nixie`, `git diff --check`, and `sem diff`.
+- [ ] Add behavioural and snapshot tests for the mirrored DeepSeek-TUI module
+  capabilities.
+- [ ] Finish `agentic.agent_configs` module support by adding behavioural and
+  snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [ ] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
   coverage.
 - [ ] Incorporate the reusable role into the owner-user configuration and smoke
@@ -121,6 +133,17 @@ Codex and Claude configuration.
 - The repository did not already contain `docs/execplans/deepseek-tui.md`.
   The existing `docs/execplans/bin-dir-precedence.md` plan is complete and
   unrelated to this branch's objective.
+- DeepSeek-TUI `v0.8.24` has a native `servers` MCP JSON object and accepts
+  `mcpServers` as a compatibility alias. The module writes the native
+  `servers` key.
+- DeepSeek-TUI `v0.8.24` stores hooks in `~/.deepseek/config.toml` under
+  `[[hooks.hooks]]`, not in a separate JSON hook file.
+- DeepSeek-TUI project-scope skill discovery prefers `.agents/skills` over
+  workspace `skills` and global `~/.deepseek/skills`, so the project-scoped
+  skill module writes to `.agents/skills/<slug>`.
+- DeepSeek-TUI `v0.8.24` has runtime slash commands and runtime sub-agent
+  orchestration, but no stable static command-file directory or declarative
+  subagent registry equivalent to Claude Code commands or Codex subagents.
 
 ## Decision Log
 
@@ -131,6 +154,11 @@ Codex and Claude configuration.
 - Decision: Update `AGENTS.md` and add the branch plan as the first atomic
   change. Rationale: the objective explicitly requires AGENTS inconsistencies
   to be corrected before beginning DeepSeek-TUI implementation.
+- Decision: Implement MCP, hook and skill modules first, and explicitly skip
+  command and subagent modules for this milestone. Rationale: the pinned
+  release exposes durable file formats for MCP, hooks and skills, while slash
+  commands and sub-agents are runtime features without a declarative file
+  surface to manage.
 
 ## Outcomes & Retrospective
 

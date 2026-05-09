@@ -33,6 +33,9 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
     codex_cli_subagent,
     cursor_cli_mcp,
     cursor_cli_skill,
+    deepseek_tui_hook,
+    deepseek_tui_mcp,
+    deepseek_tui_skill,
     factory_droid_droid,
     factory_droid_hook,
     factory_droid_mcp,
@@ -202,6 +205,16 @@ def test_markdown_file_modules_create_idempotently_and_remove(
             "SKILL.md",
             "references/release.md",
         ),
+        (
+            deepseek_tui_skill,
+            {
+                "description": "Run the release checklist.",
+                "metadata": {"owner": "release"},
+                "extra_files": {"references/release.md": "Release notes\n"},
+            },
+            "SKILL.md",
+            "references/release.md",
+        ),
     ],
 )
 def test_directory_skill_modules_create_extra_files_and_remove(
@@ -341,6 +354,29 @@ def test_markdown_modules_validate_required_present_fields(tmp_path: Path) -> No
                 "env": {"LOG": "info"},
             },
         ),
+        (
+            deepseek_tui_mcp,
+            {
+                "name": "repo-tools",
+                "transport": "stdio",
+                "command": "mcp-context-pack",
+                "args": ["--stdio"],
+                "env": {"LOG": "info"},
+                "required": True,
+                "enabled_tools": ["status"],
+                "disabled_tools": ["danger"],
+            },
+            "servers",
+            {
+                "command": "mcp-context-pack",
+                "args": ["--stdio"],
+                "env": {"LOG": "info"},
+                "required": True,
+                "enabled_tools": ["status"],
+                "disabled_tools": ["danger"],
+            },
+            None,
+        ),
     ],
 )
 def test_json_mcp_modules_create_idempotently_and_remove(
@@ -460,6 +496,33 @@ def test_cursor_cli_mcp_resolves_cursor_paths(tmp_path: Path) -> None:
                 "type": "http",
                 "url": "https://mcp.example.test",
                 "headers": {},
+            }
+        }
+    }
+
+
+def test_deepseek_tui_mcp_resolves_deepseek_paths(tmp_path: Path) -> None:
+    """Verify DeepSeek-TUI MCP user and project paths match the v0.8.24 schema."""
+    project_dir = tmp_path / "repo"
+    project_dir.mkdir()
+
+    project_result = _run_module(
+        deepseek_tui_mcp,
+        {
+            "name": "repo-tools",
+            "scope": "project",
+            "project_dir": str(project_dir),
+            "transport": "http",
+            "url": "http://localhost:3000/mcp",
+        },
+    )
+
+    assert project_result["path"] == str(project_dir / ".deepseek" / "mcp.json")
+    rendered = json.loads((project_dir / ".deepseek" / "mcp.json").read_text())
+    assert rendered == {
+        "servers": {
+            "repo-tools": {
+                "url": "http://localhost:3000/mcp",
             }
         }
     }
@@ -807,9 +870,7 @@ def test_toml_file_check_mode_toml_legacy_block_reports_changed(
     )
 
     assert result["changed"] is True
-    assert path.read_text() == contents_before, (
-        "check mode must not write to disk"
-    )
+    assert path.read_text() == contents_before, "check mode must not write to disk"
 
 
 def test_toml_file_check_mode_toml_absent_missing_key_reports_no_change(
@@ -837,9 +898,7 @@ def test_toml_file_check_mode_toml_absent_missing_key_reports_no_change(
     )
 
     assert result["changed"] is False
-    assert path.read_text() == contents_before, (
-        "check mode must not write to disk"
-    )
+    assert path.read_text() == contents_before, "check mode must not write to disk"
 
 
 @pytest.mark.parametrize(
@@ -1255,6 +1314,95 @@ def test_json_hook_modules_create_idempotently_and_remove(
     absent_settings = json.loads(path.read_text())
     assert absent_settings == {}, (
         f"expected settings JSON to be empty after removal, got {absent_settings!r}"
+    )
+
+
+def test_deepseek_tui_hook_writes_toml_and_removes_entry(tmp_path: Path) -> None:
+    """Verify DeepSeek-TUI hooks are managed as TOML array-of-table entries."""
+    path = tmp_path / "config.toml"
+    args = {
+        "path": str(path),
+        "event": "shell_env",
+        "name": "aws-creds",
+        "command": "aws-vault export dev --format=env",
+        "condition": {"type": "tool_category", "category": "shell"},
+        "timeout_secs": 15,
+        "enabled": True,
+        "default_timeout_secs": 30,
+    }
+
+    result = _run_module(deepseek_tui_hook, args)
+
+    assert result["changed"] is True
+    assert result["hook"] == {
+        "event": "shell_env",
+        "command": "aws-vault export dev --format=env",
+        "name": "aws-creds",
+        "condition": {"type": "tool_category", "category": "shell"},
+        "timeout_secs": 15,
+    }
+    rendered = path.read_text()
+    parsed = tomllib.loads(rendered)
+    assert parsed == {
+        "hooks": {
+            "enabled": True,
+            "default_timeout_secs": 30,
+            "hooks": [
+                {
+                    "event": "shell_env",
+                    "command": "aws-vault export dev --format=env",
+                    "name": "aws-creds",
+                    "condition": {"type": "tool_category", "category": "shell"},
+                    "timeout_secs": 15,
+                }
+            ],
+        }
+    }
+    assert "[[hooks.hooks]]" in rendered
+
+    rerun_result = _run_module(deepseek_tui_hook, args)
+    assert rerun_result["changed"] is False
+
+    absent = _run_module(
+        deepseek_tui_hook,
+        {
+            "path": str(path),
+            "event": "shell_env",
+            "name": "aws-creds",
+            "command": "aws-vault export dev --format=env",
+            "state": "absent",
+        },
+    )
+    assert absent["changed"] is True
+    assert tomllib.loads(path.read_text()) == {
+        "hooks": {"enabled": True, "default_timeout_secs": 30}
+    }
+
+
+def test_deepseek_tui_skill_resolves_workspace_preferred_path(tmp_path: Path) -> None:
+    """Verify project-scoped DeepSeek-TUI skills use the preferred .agents path."""
+    project_dir = tmp_path / "repo"
+    project_dir.mkdir()
+
+    result = _run_module(
+        deepseek_tui_skill,
+        {
+            "name": "Repository reviewer",
+            "scope": "project",
+            "project_dir": str(project_dir),
+            "description": "Review this repository.",
+            "body": "Read AGENTS.md first.",
+        },
+    )
+
+    expected_dir = project_dir / ".agents" / "skills" / "repository-reviewer"
+    assert result["directory"] == str(expected_dir)
+    assert (
+        (expected_dir / "SKILL.md")
+        .read_text()
+        .startswith(
+            '---\nname: "Repository reviewer"\ndescription: "Review this repository."'
+        )
     )
 
 
