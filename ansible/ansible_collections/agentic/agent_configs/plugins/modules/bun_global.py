@@ -18,8 +18,6 @@ Example task::
         state: present
 """
 
-from __future__ import annotations
-
 DOCUMENTATION = r"""
 ---
 module: bun_global
@@ -156,7 +154,7 @@ trust_stderr:
   type: str
 """
 
-from typing import Any  # noqa: E402
+from typing import Literal, TypedDict, cast  # noqa: E402
 
 from ansible.module_utils.basic import AnsibleModule  # noqa: E402
 from ansible_collections.agentic.agent_configs.plugins.module_utils.bun_common import (  # noqa: E402
@@ -174,7 +172,21 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.bun_paths im
 )
 
 
-def ensure_absent(module: AnsibleModule, params: dict[str, Any]) -> None:
+class BunModuleParams(TypedDict):
+    """Typed parameters accepted by the Bun global module."""
+
+    name: str
+    spec: str | None
+    version: str | None
+    state: Literal["present", "absent"]
+    bun_path: str
+    global_dir: str | None
+    global_bin_dir: str | None
+    ignore_scripts: bool
+    trust_postinstall: bool
+
+
+def ensure_absent(module: AnsibleModule, params: BunModuleParams) -> None:
     """Ensure a Bun global package is absent."""
     bun_bin = resolve_binary(module, params["bun_path"])
     global_dir = resolve_global_dir(params["global_dir"])
@@ -227,7 +239,7 @@ def ensure_absent(module: AnsibleModule, params: dict[str, Any]) -> None:
     )
 
 
-def ensure_present(module: AnsibleModule, params: dict[str, Any]) -> None:
+def ensure_present(module: AnsibleModule, params: BunModuleParams) -> None:
     """Ensure a Bun global package is present."""
     bun_bin = resolve_binary(module, params["bun_path"])
     global_dir = resolve_global_dir(params["global_dir"])
@@ -355,10 +367,11 @@ def main() -> None:
         supports_check_mode=True,
     )
 
-    if module.params["state"] == "absent":
-        ensure_absent(module, module.params)
+    params = cast(BunModuleParams, module.params)
+    if params["state"] == "absent":
+        ensure_absent(module, params)
     else:
-        ensure_present(module, module.params)
+        ensure_present(module, params)
 
 
 if __name__ == "__main__":
