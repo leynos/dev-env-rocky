@@ -40,10 +40,12 @@ that later role extraction work must follow.
 - Follow the local `AGENTS.md` Markdown rules: wrap prose and bullets at 80
   columns, use dashes for list bullets, run Markdown validation for docs
   changes, and run all gates through `tee` logs.
-- Treat `docs/falcon-correlation-id-middleware-design.md` and
-  `docs/complexity-antipatterns-and-refactoring-strategies.md` as unavailable
-  in this checkout unless they appear before implementation starts. They were
-  named in the request but are not present under `docs/`.
+- Treat `docs/falcon-correlation-id-middleware-design.md` as unavailable in
+  this checkout unless it appears before implementation starts. It was named in
+  the request but is not present under `docs/`.
+- Use `docs/complexity-antipatterns-and-refactoring-strategies.md` as a
+  refactoring and complexity signpost when the ADR discusses why role
+  extraction should avoid broad, tangled relocation work.
 - Use `grepai` first for semantic code exploration when it is available. If
   the local Qdrant endpoint is still unavailable, record the fallback to exact
   repository reads in `Surprises & Discoveries`.
@@ -102,9 +104,10 @@ that later role extraction work must follow.
   unless behaviour changes, and still run the required Python and Markdown
   gates.
 
-- Risk: The prompt names two design documents that are absent from the current
-  checkout. Severity: low. Likelihood: high. Mitigation: record their absence
-  and do not cite them as sources of current repository truth.
+- Risk: The prompt names `docs/falcon-correlation-id-middleware-design.md`,
+  which is absent from the current checkout. Severity: low. Likelihood: high.
+  Mitigation: record its absence and do not cite it as a source of current
+  repository truth unless it appears before implementation starts.
 
 ## Relevant documentation and skills
 
@@ -116,6 +119,9 @@ Use these documents as source material while implementing this plan:
   extraction" section.
 - `docs/documentation-style-guide.md` for prose style and secret-handling
   rules.
+- `docs/complexity-antipatterns-and-refactoring-strategies.md`, especially its
+  guidance on cyclomatic complexity, cognitive complexity, and the Bumpy Road
+  antipattern. Use it to justify staged extraction over broad role relocation.
 - `docs/developers-guide.md`, especially "Structured File Modules",
   "Firecrawl MCP", "Tool Package Modules", "Dependencies", and "Validation".
 - `docs/users-guide.md`, especially "Agent Configuration", "System Packages",
@@ -307,6 +313,10 @@ making it because that exceeds this plan's intended scope.
   `Makefile`.
 - [x] 2026-05-09 14:07 BST: Drafted this ExecPlan and left implementation
   blocked pending explicit approval.
+- [x] 2026-05-09 14:18 BST: Confirmed the user added
+  `docs/complexity-antipatterns-and-refactoring-strategies.md`, updated this
+  plan to signpost it, and confirmed
+  `docs/falcon-correlation-id-middleware-design.md` remains absent.
 
 ## Surprises & Discoveries
 
@@ -316,10 +326,12 @@ making it because that exceeds this plan's intended scope.
 - `leta files | head` printed the expected repository overview but then
   aborted on a broken pipe after `head` closed stdout. The repository was still
   added to the `leta` workspace before that happened.
-- The requested signpost files
-  `docs/falcon-correlation-id-middleware-design.md` and
-  `docs/complexity-antipatterns-and-refactoring-strategies.md` are absent from
-  this checkout.
+- The requested signpost file
+  `docs/falcon-correlation-id-middleware-design.md` remains absent from this
+  checkout.
+- The requested signpost file
+  `docs/complexity-antipatterns-and-refactoring-strategies.md` is now present
+  and should inform the ADR's rationale for staged extraction.
 - There is no top-level `pyproject.toml`; Python gates route through the
   `python/rust_cleanup` project and repository test directory as defined in
   `Makefile`.
