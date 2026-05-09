@@ -178,6 +178,13 @@ Codex and Claude configuration.
   `ansible-lint ansible/site.yml`, direct DeepSeek-TUI role `ansible-lint`,
   site syntax-check, `git diff --check`, and `sem diff` all passed. Durable
   logs use the `/tmp/*deepseek-tui-audit-lint*` prefix.
+- [x] 2026-05-09 20:59 BST: Committed and pushed the site lint audit fix as
+  `9d23c49` (`Make site playbook lintable`).
+- [ ] 2026-05-09 21:00 BST: Retried `coderabbit review --agent` after the
+  site lint audit fix; it still failed with `Authentication required. Please
+  run 'coderabbit auth login --agent' or provide --api-key.` Review evidence is
+  still missing until credentials are available. Durable log:
+  `/tmp/coderabbit-review-dev-env-rocky-deepseek-tui-audit-lint.out`.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [x] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
