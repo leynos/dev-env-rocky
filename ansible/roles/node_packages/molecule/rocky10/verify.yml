@@ -3,6 +3,12 @@
   hosts: all
   gather_facts: false
 
+  vars:
+    fake_bun_log_dir: /tmp/fake-bun-log
+
+  environment:
+    BUN_FAKE_LOG: "{{ fake_bun_log_dir }}/bun-commands.jsonl"
+
   tasks:
     - name: Read fake Bun command log
       ansible.builtin.command:
@@ -11,8 +17,8 @@
           - -c
           - >-
             import json, pathlib;
-            paths = sorted(pathlib.Path('/tmp/fake-bun-0').glob('bun-commands-*.jsonl'));
-            print(json.dumps([json.loads(line) for path in paths for line in path.read_text().splitlines() if line]))
+            path = pathlib.Path('{{ fake_bun_log_dir }}/bun-commands.jsonl');
+            print(json.dumps([json.loads(line) for line in path.read_text().splitlines() if line]))
       changed_when: false
       register: bun_command_log
 

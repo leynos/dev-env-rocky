@@ -36,6 +36,14 @@ def _append_log_line(log_path: Path, line: str) -> None:
         log.write(line)
 
 
+def _require_env_path(name: str) -> Path:
+    value = os.environ.get(name)
+    if not value:
+        print(f"fake bun requires {name} to be set", file=sys.stderr)
+        raise SystemExit(2)
+    return Path(value)
+
+
 def package_from_target(target: str) -> tuple[str, str]:
     """Parse an npm target string into a package name and version.
 
@@ -145,8 +153,8 @@ def install_package(argv: list[str]) -> int:
     """
     target = argv[-1]
     package_name, version = package_from_target(target)
-    global_dir = Path(os.environ["BUN_INSTALL_GLOBAL_DIR"])
-    global_bin_dir = Path(os.environ["BUN_INSTALL_BIN"])
+    global_dir = _require_env_path("BUN_INSTALL_GLOBAL_DIR")
+    global_bin_dir = _require_env_path("BUN_INSTALL_BIN")
 
     write_json(
         package_json_path(global_dir, package_name),
@@ -186,7 +194,7 @@ def trust_package(argv: list[str]) -> int:
         metadata and creating css-view browser cache markers when applicable.
     """
     package_name = argv[-1]
-    global_dir = Path(os.environ["BUN_INSTALL_GLOBAL_DIR"])
+    global_dir = _require_env_path("BUN_INSTALL_GLOBAL_DIR")
     package_json = global_dir / "package.json"
 
     if package_json.exists():

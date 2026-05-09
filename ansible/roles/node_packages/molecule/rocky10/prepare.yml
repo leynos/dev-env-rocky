@@ -3,6 +3,9 @@
   hosts: all
   gather_facts: false
 
+  vars:
+    fake_bun_log_dir: /tmp/fake-bun-log
+
   tasks:
     - name: Ensure Bun binary directory exists
       ansible.builtin.file:
@@ -33,5 +36,5 @@
 
     - name: Remove previous fake Bun command log
       ansible.builtin.file:
-        path: /tmp/fake-bun-0
+        path: "{{ fake_bun_log_dir }}"
         state: absent
