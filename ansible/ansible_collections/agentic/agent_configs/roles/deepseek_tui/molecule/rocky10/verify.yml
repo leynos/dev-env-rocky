@@ -1,0 +1,127 @@
+---
+- name: Verify DeepSeek-TUI role
+  hosts: all
+  gather_facts: false
+
+  vars:
+    fake_bun_log_dir: /tmp/fake-bun-log
+
+  tasks:
+    - name: Read fake Bun command log
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - >-
+            import json, pathlib;
+            path = pathlib.Path('{{ fake_bun_log_dir }}/bun-commands.jsonl');
+            print(json.dumps([json.loads(line) for line in path.read_text().splitlines() if line]))
+      changed_when: false
+      register: deepseek_tui_bun_command_log
+
+    - name: Decode fake Bun command log JSON
+      ansible.builtin.set_fact:
+        deepseek_tui_bun_command_entries: "{{ deepseek_tui_bun_command_log.stdout | from_json }}"
+
+    - name: Locate DeepSeek-TUI install command
+      ansible.builtin.set_fact:
+        deepseek_tui_installs: >-
+          {{
+            deepseek_tui_bun_command_entries
+            | selectattr('argv', 'equalto', ['install', '-g', 'deepseek-tui@0.8.24'])
+            | list
+          }}
+
+    - name: Locate DeepSeek-TUI trust command
+      ansible.builtin.set_fact:
+        deepseek_tui_trusts: >-
+          {{
+            deepseek_tui_bun_command_entries
+            | selectattr('argv', 'equalto', ['pm', 'trust', 'deepseek-tui'])
+            | list
+          }}
+
+    - name: Assert DeepSeek-TUI package was installed and trusted
+      ansible.builtin.assert:
+        that:
+          - deepseek_tui_installs | length == 1
+          - deepseek_tui_trusts | length == 1
+          - deepseek_tui_trusts[0].BUN_INSTALL_GLOBAL_DIR == '/root/.bun/install/global'
+          - deepseek_tui_trusts[0].BUN_INSTALL_BIN == '/root/.bun/bin'
+        fail_msg: DeepSeek-TUI was not installed and trusted as expected
+
+    - name: Read DeepSeek-TUI config
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - >-
+            import json, tomllib, pathlib;
+            print(json.dumps(tomllib.loads(pathlib.Path('/root/.deepseek/config.toml').read_text()), sort_keys=True))
+      changed_when: false
+      register: deepseek_tui_config
+
+    - name: Read DeepSeek-TUI MCP config
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - >-
+            import json, pathlib;
+            print(json.dumps(json.loads(pathlib.Path('/root/.deepseek/mcp.json').read_text()), sort_keys=True))
+      changed_when: false
+      register: deepseek_tui_mcp_config
+
+    - name: Decode DeepSeek-TUI configs
+      ansible.builtin.set_fact:
+        deepseek_tui_config_data: "{{ deepseek_tui_config.stdout | from_json }}"
+        deepseek_tui_mcp_data: "{{ deepseek_tui_mcp_config.stdout | from_json }}"
+
+    - name: Assert DeepSeek-TUI config values
+      ansible.builtin.assert:
+        that:
+          - deepseek_tui_config_data.provider == 'deepseek'
+          - deepseek_tui_config_data.default_text_model == 'deepseek-v4-pro'
+          - deepseek_tui_config_data.features.mcp
+          - deepseek_tui_config_data.features.subagents
+          - deepseek_tui_config_data.hooks.enabled
+          - deepseek_tui_config_data.hooks.hooks[0].event == 'shell_env'
+          - deepseek_tui_config_data.hooks.hooks[0].name == 'repo-env'
+        fail_msg: DeepSeek-TUI config.toml did not contain expected role-managed values
+
+    - name: Assert DeepSeek-TUI MCP config values
+      ansible.builtin.assert:
+        that:
+          - deepseek_tui_mcp_data.servers['repo-tools'].command == 'repo-tools-mcp'
+          - deepseek_tui_mcp_data.servers['repo-tools'].args == ['--stdio']
+          - deepseek_tui_mcp_data.servers['repo-tools'].env.LOG_LEVEL == 'info'
+          - deepseek_tui_mcp_data.servers['repo-tools'].required
+        fail_msg: DeepSeek-TUI mcp.json did not contain expected server
+
+    - name: Check DeepSeek-TUI command links
+      ansible.builtin.stat:
+        path: "/root/.local/bin/{{ item }}"
+      loop:
+        - deepseek
+        - deepseek-tui
+      register: deepseek_tui_command_links
+
+    - name: Assert DeepSeek-TUI command links exist
+      ansible.builtin.assert:
+        that:
+          - deepseek_tui_command_links.results | map(attribute='stat.islnk') | list is all
+        fail_msg: DeepSeek-TUI command links were not created in /root/.local/bin
+
+    - name: Check DeepSeek-TUI skill files
+      ansible.builtin.stat:
+        path: "/root/.deepseek/skills/repo-reviewer/{{ item }}"
+      loop:
+        - SKILL.md
+        - references/checklist.md
+      register: deepseek_tui_skill_files
+
+    - name: Assert DeepSeek-TUI skill files exist
+      ansible.builtin.assert:
+        that:
+          - deepseek_tui_skill_files.results | map(attribute='stat.exists') | list is all
+        fail_msg: DeepSeek-TUI skill files were not created

@@ -1,0 +1,38 @@
+---
+deepseek_tui_install: true
+deepseek_tui_package_name: deepseek-tui
+deepseek_tui_version: "0.8.24"
+deepseek_tui_bun_path: "{{ ansible_env.HOME }}/.bun/bin/bun"
+deepseek_tui_bun_bin_dir: "{{ ansible_env.HOME }}/.bun/bin"
+deepseek_tui_local_bin_dir: "{{ ansible_env.HOME }}/.local/bin"
+deepseek_tui_link_commands: true
+
+deepseek_tui_manage_python_dependencies: true
+deepseek_tui_python_system_packages:
+  - python3-packaging
+  - python3-pip
+deepseek_tui_python_pip_packages:
+  - tomlkit
+deepseek_tui_python_pip_extra_args: --break-system-packages
+
+deepseek_tui_config_path: "{{ ansible_env.HOME }}/.deepseek/config.toml"
+deepseek_tui_mcp_path: "{{ ansible_env.HOME }}/.deepseek/mcp.json"
+deepseek_tui_skills_dir: "{{ ansible_env.HOME }}/.deepseek/skills"
+
+deepseek_tui_config_values:
+  - key: provider
+    value: deepseek
+  - key: default_text_model
+    value: deepseek-v4-pro
+  - key: mcp_config_path
+    value: "{{ deepseek_tui_mcp_path }}"
+  - key: skills_dir
+    value: "{{ deepseek_tui_skills_dir }}"
+  - key: features.mcp
+    value: true
+  - key: features.subagents
+    value: true
+
+deepseek_tui_mcp_servers: []
+deepseek_tui_hooks: []
+deepseek_tui_skills: []

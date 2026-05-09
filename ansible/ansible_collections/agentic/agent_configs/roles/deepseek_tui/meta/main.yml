@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: Leynos Project
+  description: Install and configure DeepSeek-TUI.
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.18"
+dependencies: []

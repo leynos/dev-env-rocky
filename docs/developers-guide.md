@@ -248,6 +248,23 @@ a Codex-style declarative subagent registry file. Do not add command or
 subagent modules unless a future pinned release adds a stable file format for
 those surfaces.
 
+The reusable `agentic.agent_configs.deepseek_tui` role composes those modules
+with the existing `bun_global` installer. It installs pinned
+`deepseek-tui@0.8.24`, trusts the package post-install script, links the
+`deepseek` and `deepseek-tui` command shims into `~/.local/bin`, writes TOML
+defaults, and loops over MCP servers, hooks and skills supplied by role
+variables. The role manages target-side Python dependencies by installing
+`python3-pip` and `python3-packaging` through the package manager, then
+installing `tomlkit` through `pip`; disable that with
+`deepseek_tui_manage_python_dependencies: false` only when the managed host
+already provides `tomlkit` to Ansible's Python interpreter.
+
+Role validation lives in
+`ansible/ansible_collections/agentic/agent_configs/roles/deepseek_tui/molecule/rocky10`.
+The scenario uses Podman and a fake Bun executable so it can prove install,
+trust, command linking, config rendering, MCP rendering, skill files and
+idempotence without downloading the real package.
+
 ## CheckModeToml Adapter
 
 `CheckModeToml` is a class in `toml_file.py` that provides a `tomlkit`

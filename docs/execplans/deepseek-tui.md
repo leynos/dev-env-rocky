@@ -127,9 +127,17 @@ Codex and Claude configuration.
   failed with `Authentication required. Please run 'coderabbit auth login
   --agent' or provide --api-key.` Review evidence is still missing until
   credentials are available.
+- [x] 2026-05-09 20:19 BST: Added the reusable
+  `agentic.agent_configs.deepseek_tui` collection role with a Rocky 10
+  Molecule scenario using Podman. The scenario installs a fake Bun fixture,
+  exercises the pinned `deepseek-tui@0.8.24` install path, writes TOML, MCP and
+  skill files, verifies command links, and confirms idempotence.
+- [x] 2026-05-09 20:19 BST: Validated the role scenario with `molecule test -s
+  rocky10`; converge, idempotence, verify and destroy all passed. Durable log:
+  `/tmp/molecule-deepseek-tui-role-rocky10.out`.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
-- [ ] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
+- [x] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
   coverage.
 - [ ] Incorporate the reusable role into the owner-user configuration and smoke
   test with Molecule and Podman.
@@ -161,6 +169,10 @@ Codex and Claude configuration.
   subagent registry equivalent to Claude Code commands or Codex subagents.
 - `coderabbit review --agent` is installed but not authenticated in this
   environment, so CodeRabbit milestone review cannot currently run.
+- The Rocky 10 base image does not provide a `python3-tomlkit` RPM in its
+  enabled repositories. The role therefore installs `python3-pip` and
+  `python3-packaging` through the system package manager, then installs
+  `tomlkit` through target-side `pip`.
 
 ## Decision Log
 
@@ -179,6 +191,10 @@ Codex and Claude configuration.
 - Decision: Continue after the CodeRabbit authentication failure while keeping
   the missing review evidence visible in the plan. Rationale: the configured
   tolerance permits continuing only after documenting the command failure.
+- Decision: Make target-side TOML dependencies part of the reusable
+  DeepSeek-TUI role instead of hiding them in Molecule preparation. Rationale:
+  the role calls TOML-backed modules on the managed host, so production runs
+  need the same dependency path as the test scenario.
 
 ## Outcomes & Retrospective
 

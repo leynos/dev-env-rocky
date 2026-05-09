@@ -1,0 +1,37 @@
+---
+- name: Converge DeepSeek-TUI role
+  hosts: all
+  gather_facts: true
+
+  vars:
+    fake_bun_log_dir: /tmp/fake-bun-log
+    deepseek_tui_mcp_servers:
+      - name: repo-tools
+        transport: stdio
+        command: repo-tools-mcp
+        args:
+          - --stdio
+        env:
+          LOG_LEVEL: info
+        required: true
+    deepseek_tui_hooks:
+      - event: shell_env
+        name: repo-env
+        command: repo-env export
+        condition:
+          type: tool_category
+          category: shell
+        enabled: true
+    deepseek_tui_skills:
+      - name: Repo reviewer
+        description: Review repository changes.
+        body: Read AGENTS.md before reviewing.
+        extra_files:
+          references/checklist.md: |
+            Check tests and docs.
+
+  environment:
+    BUN_FAKE_LOG: "{{ fake_bun_log_dir }}/bun-commands.jsonl"
+
+  roles:
+    - role: agentic.agent_configs.deepseek_tui

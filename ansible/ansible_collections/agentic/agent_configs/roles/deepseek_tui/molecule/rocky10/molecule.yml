@@ -1,0 +1,55 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+platforms:
+  - name: deepseek-tui-rocky10
+    image: quay.io/rockylinux/rockylinux:10
+    pre_build_image: true
+    command: /usr/bin/sleep infinity
+
+scenario:
+  test_sequence:
+    - dependency
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - destroy
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      interpreter_python: /usr/bin/python3
+      roles_path: ../../../../roles
+    connection:
+      pipelining: false
+  env:
+    ANSIBLE_COLLECTIONS_PATH: ${MOLECULE_PROJECT_DIRECTORY}/../../../..:~/.ansible/collections:/usr/share/ansible/collections
+    ANSIBLE_LIBRARY: ${MOLECULE_PROJECT_DIRECTORY}/../../plugins/modules:${MOLECULE_PROJECT_DIRECTORY}/../../../../packaging/tools/plugins/modules
+    ANSIBLE_MODULE_UTILS: ${MOLECULE_PROJECT_DIRECTORY}/../../plugins/module_utils
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+
+verifier:
+  name: ansible
+
+lint: |
+  set -e
+  ANSIBLE_COLLECTIONS_PATH=../../../.. \
+  ANSIBLE_LIBRARY=../../plugins/modules:../../../../packaging/tools/plugins/modules \
+  ANSIBLE_MODULE_UTILS=../../plugins/module_utils \
+    ansible-playbook --syntax-check molecule/rocky10/converge.yml
+  ANSIBLE_COLLECTIONS_PATH=../../../.. \
+  ANSIBLE_LIBRARY=../../plugins/modules:../../../../packaging/tools/plugins/modules \
+  ANSIBLE_MODULE_UTILS=../../plugins/module_utils \
+    ansible-playbook --syntax-check molecule/rocky10/verify.yml

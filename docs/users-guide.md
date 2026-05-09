@@ -30,6 +30,21 @@ written by an `agent_tools` shell task that uses `jq` to write the `hooks.Stop`
 entry. Environment and `PATH` values in the same file are managed through the
 structured `json_file` module in the `sccache_user` role.
 
+DeepSeek-TUI configuration is provided by the reusable
+`agentic.agent_configs.deepseek_tui` collection role. The role installs pinned
+`deepseek-tui@0.8.24` through Bun, links `deepseek` and `deepseek-tui` into the
+owner user's `~/.local/bin`, and writes:
+
+- `~/.deepseek/config.toml`, including DeepSeek provider defaults and feature
+  flags for MCP and subagents.
+- `~/.deepseek/mcp.json`, using DeepSeek-TUI's native `servers` object.
+- `~/.deepseek/skills/<slug>/SKILL.md` and optional support files.
+
+The role also installs the Python packages needed by the TOML-backed Ansible
+modules on the managed host. Override `deepseek_tui_mcp_servers`,
+`deepseek_tui_hooks`, `deepseek_tui_skills` and `deepseek_tui_config_values` to
+add local policy without editing the collection role.
+
 The `cursor_cli` role installs Cursor CLI through the official Linux and WSL
 installer:
 
