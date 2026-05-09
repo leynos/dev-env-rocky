@@ -135,6 +135,13 @@ Codex and Claude configuration.
 - [x] 2026-05-09 20:19 BST: Validated the role scenario with `molecule test -s
   rocky10`; converge, idempotence, verify and destroy all passed. Durable log:
   `/tmp/molecule-deepseek-tui-role-rocky10.out`.
+- [x] 2026-05-09 20:23 BST: Committed the reusable deployment role milestone
+  as `82326b2` (`Add DeepSeek-TUI deployment role`).
+- [ ] 2026-05-09 20:23 BST: Retried `coderabbit review --agent` after the
+  role milestone; it still failed with `Authentication required. Please run
+  'coderabbit auth login --agent' or provide --api-key.` Review evidence is
+  still missing until credentials are available. Durable log:
+  `/tmp/coderabbit-review-dev-env-rocky-deepseek-tui-role.out`.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [x] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
