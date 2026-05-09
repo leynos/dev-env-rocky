@@ -142,11 +142,21 @@ Codex and Claude configuration.
   'coderabbit auth login --agent' or provide --api-key.` Review evidence is
   still missing until credentials are available. Durable log:
   `/tmp/coderabbit-review-dev-env-rocky-deepseek-tui-role.out`.
+- [x] 2026-05-09 20:31 BST: Wired the reusable collection role into the
+  owner-user play after `node_packages`, so the DeepSeek-TUI role can use Bun
+  before later agent tooling policy runs.
+- [x] 2026-05-09 20:36 BST: Smoke-tested the owner-user integration with
+  `ansible-playbook --syntax-check -i localhost, ansible/site.yml` and the
+  Podman-backed `molecule test -s rocky10` scenario for the reusable role.
+  Syntax passed with expected empty-inventory warnings, and Molecule converge,
+  idempotence, verify and destroy passed. Durable logs:
+  `/tmp/syntax-site-dev-env-rocky-deepseek-tui-owner.out` and
+  `/tmp/molecule-deepseek-tui-owner-smoke-rocky10.out`.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [x] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
   coverage.
-- [ ] Incorporate the reusable role into the owner-user configuration and smoke
+- [x] Incorporate the reusable role into the owner-user configuration and smoke
   test with Molecule and Podman.
 - [ ] Update `docs/developers-guide.md`, `docs/users-guide.md` and any relevant
   design or roadmap documentation.

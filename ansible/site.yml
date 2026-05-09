@@ -44,6 +44,7 @@
     - rust_crates
     - uv_tools
     - node_packages
+    - agentic.agent_configs.deepseek_tui
     - go_packages
     - paths
     - cursor_cli
