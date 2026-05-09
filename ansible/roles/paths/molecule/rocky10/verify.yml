@@ -1,0 +1,38 @@
+---
+- name: Verify paths
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Resolve PATH after sourcing generated managed path file
+      ansible.builtin.shell:
+        executable: /usr/bin/bash
+        cmd: |
+          set -euo pipefail
+          export HOME=/root
+          export PATH=/usr/bin:/root/.bun/bin:/bin:/root/.local/bin:/root/.bun/bin:/root/go/bin
+          . /root/.bashrc.d/00-paths
+          printf '%s\n' "$PATH"
+      changed_when: false
+      register: managed_path
+
+    - name: Assert generated managed path file normalises PATH precedence
+      ansible.builtin.assert:
+        that:
+          - managed_path.stdout == '/root/.local/bin:/root/.cargo/bin:/root/.bun/bin:/root/go/bin:/usr/bin:/bin'
+        fail_msg: "managed PATH did not place local, cargo, Bun, and Go bins before legacy entries"
+
+    - name: Resolve PATH through login shell profile
+      ansible.builtin.shell:
+        executable: /usr/bin/bash
+        cmd: |
+          set -euo pipefail
+          HOME=/root /usr/bin/bash -lc 'printf "%s\n" "$PATH"'
+      changed_when: false
+      register: login_path
+
+    - name: Assert login shell keeps managed directories ahead of Bun shims
+      ansible.builtin.assert:
+        that:
+          - login_path.stdout is match('^/root/\\.local/bin:/root/\\.cargo/bin:/root/\\.bun/bin:/root/go/bin:')
+        fail_msg: "login shell PATH did not retain managed bin directory precedence"

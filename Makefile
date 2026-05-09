@@ -1,14 +1,16 @@
 MDLINT ?= markdownlint-cli2
 NIXIE ?= nixie
 MDFORMAT_ALL ?= mdformat-all
+MOLECULE ?= molecule
 PYTHON_PACKAGE_DIR ?= python/rust_cleanup
 PYTHON_PATHS = $(PYTHON_PACKAGE_DIR)/src $(PYTHON_PACKAGE_DIR)/tests tests
 MARKDOWN_PATHS = AGENTS.md .rules/*.md docs/*.md ansible/roles/agent_tools/files/AGENTS.md $(PYTHON_PACKAGE_DIR)/README.md
+ANSIBLE_COLLECTIONS_ROOT = $(CURDIR)/ansible/ansible_collections
 TOOLS = ruff ty $(MDLINT) $(MDFORMAT_ALL) uv
 UV_ENV = PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 UV_CACHE_DIR=.uv-cache UV_TOOL_DIR=.uv-tools
 PYTEST_XDIST_WORKERS ?= 1
 
-.PHONY: help site check lint fmt check-fmt markdownlint nixie test typecheck \
+.PHONY: help site check lint fmt check-fmt markdownlint molecule nixie test typecheck \
         $(TOOLS)
 
 ANSIBLE_COLLECTIONS_PATH ?= ./ansible/ansible_collections
@@ -60,6 +62,14 @@ typecheck: uv ## Run Python typechecking
 
 markdownlint: $(MDLINT) ## Lint Markdown files
 	$(MDLINT) $(MARKDOWN_PATHS)
+
+molecule: ## Run Ansible role Molecule tests
+	cd ansible/roles/node_packages && \
+	  ANSIBLE_COLLECTIONS_PATH=$(ANSIBLE_COLLECTIONS_ROOT):~/.ansible/collections:/usr/share/ansible/collections \
+	  ANSIBLE_LIBRARY=$(ANSIBLE_COLLECTIONS_ROOT)/packaging/tools/plugins/modules:$(ANSIBLE_COLLECTIONS_ROOT)/agentic/agent_configs/plugins/modules \
+	  ANSIBLE_MODULE_UTILS=$(ANSIBLE_COLLECTIONS_ROOT)/agentic/agent_configs/plugins/module_utils \
+	  $(MOLECULE) test -s rocky10
+	cd ansible/roles/paths && $(MOLECULE) test -s rocky10
 
 nixie: ## Validate Mermaid diagrams
 	$(call ensure_tool,$(NIXIE))

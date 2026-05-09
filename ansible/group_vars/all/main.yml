@@ -3,6 +3,8 @@ dev_env_install_droid_cli: true
 dev_env_enable_droid: false
 dev_env_enable_droid_server: false
 dev_env_enable_lody: true
+dev_env_install_acp_extension_codex: true
+dev_env_install_puppeteer: true
 dev_env_authorized_ssh_keys:
   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJwPHz4woB7Ijlh0vuURsccOn4dUAKIh3dxYjkbl4YFV payton@ibara"
   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8YI8fWC7Lo1ZUDf34OrnBP2VWzqJnWBP1pXMH8M/Y6 leynos@ibara"

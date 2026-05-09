@@ -20,6 +20,7 @@ markdownlint-cli2
 @anthropic-ai/claude-code
 @openai/codex
 firecrawl-mcp
+git+https://github.com/leynos/css-view#26b79e8ab739b7a8bcd80341ae7fc2d18600ce85
 
 # Package managers
 # Fast, disk-efficient package manager for Node.js.

@@ -42,10 +42,11 @@ Use `pathlib.Path` for new path manipulation in module utility helpers. The
 explicit `Path` operations make relative path handling, parent lookup, and
 cross-platform path semantics easier to review than equivalent `os.path` chains.
 
-The `agent_tools` role installs two helper executables into `~/.local/bin`:
-`mdformat-all` and `notdeadyet`. That directory must be created before any copy
-task writes those helpers, otherwise a fresh managed host can fail before later
-roles have had a chance to create the user-local binary path.
+The `agent_tools` role installs helper executables into `~/.local/bin`,
+including `markdownlint`, `mdformat-all`, and `notdeadyet`. That directory must
+be created before any copy task writes those helpers, otherwise a fresh managed
+host can fail before later roles have had a chance to create the user-local
+binary path.
 
 `codex_cli_subagent` coordinates a subagent TOML file and its registry entry in
 `config.toml`. If a registry write fails after the subagent file has changed,
@@ -215,6 +216,14 @@ rather than an explicit compatibility guarantee.
 `packaging.tools.bun_global` installs and removes global Node packages via
 Bun.
 
+The `node_packages` role keeps trusted lifecycle-script execution explicit.
+Any package with `trust_postinstall: true` must include a
+`trust_postinstall_reason` entry and an exact `version` pin in the same loop
+item. Optional packages that trust postinstall scripts, such as `puppeteer` and
+`@zed-industries/codex-acp-linux-x64`, are disabled by role defaults and
+enabled by host profile variables only where needed. The ACP extension is
+additionally restricted to Linux x86_64 hosts.
+
 Key parameters:
 
 - `name` (required): Package name, including scoped names such as
@@ -273,6 +282,7 @@ make check-fmt
 make lint
 make typecheck
 make test
+make check
 make markdownlint
 git diff --check
 PACKAGING_MODULES=./ansible/ansible_collections/packaging/tools/plugins/modules
@@ -292,3 +302,16 @@ uv run --with pytest --with 'ansible-core==2.18.6' --with tomlkit \
 pytest -q \
   ansible/ansible_collections/agentic/agent_configs/tests/unit/plugins/modules/test_agent_config_modules.py
 ```
+
+Run the Molecule role scenarios when editing role behaviour that depends on the
+managed host shell or package-install environment:
+
+```bash
+MOLECULE='uv run --with ansible-core --with molecule --with molecule-plugins[podman] molecule' \
+make molecule
+```
+
+The Molecule scenarios use Podman with the `quay.io/rockylinux/rockylinux:10`
+image. They cover the `node_packages` role's Bun global install flow with a
+fake Bun fixture, including trusted postinstall handling for `css-view`, and
+the `paths` role's managed PATH precedence for login shells.

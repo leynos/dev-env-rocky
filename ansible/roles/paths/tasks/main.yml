@@ -25,3 +25,14 @@
       fi
     marker: "# {mark} ANSIBLE MANAGED BLOCK - bashrc.d"
     insertafter: EOF
+
+- name: Ensure .bash_profile re-sources managed PATH at EOF
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.bash_profile"
+    create: true
+    mode: '0644'
+    block: |
+      # Re-apply managed PATH after login profile content.
+      [ -f ~/.bashrc.d/00-paths ] && . ~/.bashrc.d/00-paths
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - managed PATH EOF hook"
+    insertafter: EOF

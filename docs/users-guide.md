@@ -32,10 +32,21 @@ installer:
 curl https://cursor.com/install --retry 3 --connect-timeout 10 -fsS | bash
 ```
 
-The installer creates the `cursor-agent` binary under `~/.local/bin`. The role runs
-before `agent_tools` so Cursor exists before MCPs and skills are configured.
-Cursor CLI does not currently support stop hooks, so this repository does not
-install Cursor stop-hook configuration.
+The installer creates the `cursor-agent` binary under `~/.local/bin`. The role
+runs before `agent_tools` so Cursor exists before MCPs and skills are
+configured. Cursor CLI does not currently support stop hooks, so this
+repository does not install Cursor stop-hook configuration.
+
+## Login Shell PATH
+
+The `paths` role writes `~/.bashrc.d/00-paths` and appends managed source hooks
+to `~/.bashrc` and `~/.bash_profile`. Login shells therefore normalize
+duplicate managed entries and keep user-local commands ahead of package-manager
+shims:
+
+```text
+PATH=$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.bun/bin:$HOME/go/bin:...
+```
 
 ## Lody Daemon PATH
 
@@ -121,6 +132,19 @@ To rotate the Firecrawl key:
 3. Run `make site`, or run a narrower play for the affected host.
 4. Verify that `~/.codex/config.toml` and `~/.cursor/mcp.json` contain the
    `firecrawl` MCP server and that `~/.local/bin/firecrawl-mcp` is executable.
+
+## css-view
+
+The `node_packages` role installs `css-view` globally from the Leynos GitHub
+repository through Bun. The package is pinned to a repository commit and trusts
+its post-install script so Playwright downloads the browser binaries needed by
+the command, including Chromium.
+
+Run `css-view` from the managed shell PATH:
+
+```bash
+css-view https://example.org --browser chromium --pretty
+```
 
 ## Sccache Environment
 

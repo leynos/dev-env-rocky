@@ -45,6 +45,17 @@ def test_helper_executable_directory_exists_before_copy_task() -> None:
     assert "mode: '0755'" in directory_task
 
 
+def test_markdown_helper_shims_are_installed_as_executables() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+    task = extract_task(content, "Install agent-helper-scripts helper executables")
+
+    assert 'src: "{{ ansible_env.HOME }}/git/agent-helper-scripts/{{ item }}"' in task
+    assert 'dest: "{{ ansible_env.HOME }}/.local/bin/{{ item }}"' in task
+    assert "mode: '0700'" in task
+    assert re.search(r"(?m)^    - markdownlint$", task)
+    assert re.search(r"(?m)^    - mdformat-all$", task)
+
+
 def test_firecrawl_mcp_uses_vaulted_api_key_without_logging() -> None:
     content = AGENT_TOOLS_TASKS.read_text()
     task = extract_task(content, "Configure Codex CLI Firecrawl MCP server")
@@ -58,6 +69,23 @@ def test_firecrawl_mcp_uses_vaulted_api_key_without_logging() -> None:
     assert "no_log: true" in task, (
         "agent_tools must suppress task output because the MCP env contains a secret"
     )
+
+
+def test_codex_goals_feature_uses_toml_module() -> None:
+    content = AGENT_TOOLS_TASKS.read_text()
+    task = extract_task(content, "Enable Codex goals feature")
+
+    assert "agentic.agent_configs.toml_file" in task, (
+        "agent_tools must manage Codex config.toml through the toml_file module"
+    )
+    assert 'path: "{{ ansible_env.HOME }}/.codex/config.toml"' in task, (
+        "Codex goals task must write to ~/.codex/config.toml"
+    )
+    assert "key: features.goals" in task, (
+        "Codex goals task must set the features.goals key"
+    )
+    assert "value: true" in task, "Codex goals task must enable the goals feature"
+    assert "mode: '0644'" in task, "Codex goals task must write config.toml as 0644"
 
 
 def test_cursor_cli_gets_skills_mcps_and_no_stop_hook() -> None:

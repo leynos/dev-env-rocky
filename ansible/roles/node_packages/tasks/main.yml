@@ -16,20 +16,52 @@
   bun_global:
     name: "{{ item.name }}"
     bun_path: "{{ ansible_env.HOME }}/.bun/bin/bun"
-    trust_postinstall: "{{ item.trust_postinstall | default(false) }}"
+    spec: "{{ item.spec | default(omit) }}"
+    trust_postinstall: "{{ item.trust_postinstall | default(false) | bool }}"
+    version: "{{ item.version | default(omit) }}"
   loop:
     - name: "@biomejs/biome"
     - name: "markdownlint-cli2"
     - name: "@asyncapi/cli"
+      version: "6.0.0"
+      trust_postinstall: true
+      trust_postinstall_reason: "Runs CLI package setup during Bun global install."
     - name: "@redocly/cli"
     - name: "@mermaid-js/mermaid-cli"
     - name: "@anthropic-ai/claude-code"
+      version: "2.1.133"
+      trust_postinstall: true
+      trust_postinstall_reason: "Installs the Claude Code command wrapper."
     - name: "@openai/codex"
     - name: "firecrawl-mcp"
-    - name: "@ataraxy-labs/sem"
+    - name: "css-view"
+      spec: "git+https://github.com/leynos/css-view#26b79e8ab739b7a8bcd80341ae7fc2d18600ce85"
       trust_postinstall: true
+      trust_postinstall_reason: "Downloads Playwright browser binaries, including Chromium."
+    - name: "@ataraxy-labs/sem"
+      version: "0.5.3"
+      trust_postinstall: true
+      trust_postinstall_reason: "Installs the sem command wrapper."
     - name: "droid"
+      version: "0.121.0"
+      trust_postinstall: true
+      trust_postinstall_reason: "Installs the Factory Droid command wrapper."
       enabled: "{{ (dev_env_enable_droid | default(false) | bool) and (dev_env_install_droid_cli | default(false) | bool) }}"
+    - name: "puppeteer"
+      version: "24.43.0"
+      trust_postinstall: true
+      trust_postinstall_reason: "Installs browser automation assets."
+      enabled: "{{ dev_env_install_puppeteer | default(false) | bool }}"
+    - name: "@zed-industries/codex-acp-linux-x64"
+      version: "0.13.0"
+      trust_postinstall: true
+      trust_postinstall_reason: "Installs the Linux x86_64 Codex ACP extension."
+      enabled: >-
+        {{
+          (dev_env_install_acp_extension_codex | default(false) | bool)
+          and (ansible_facts['system'] == 'Linux')
+          and (ansible_facts['architecture'] == 'x86_64')
+        }}
     - name: "pnpm"
     - name: "typescript-language-server"
     - name: "@typescript/native-preview"

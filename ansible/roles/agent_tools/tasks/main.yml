@@ -30,6 +30,7 @@
     mode: '0700'
     remote_src: true
   loop:
+    - markdownlint
     - mdformat-all
     - notdeadyet
 
@@ -426,6 +427,13 @@
     path: "{{ ansible_env.HOME }}/.codex"
     state: directory
     mode: '0755'
+
+- name: Enable Codex goals feature
+  agentic.agent_configs.toml_file:
+    path: "{{ ansible_env.HOME }}/.codex/config.toml"
+    key: features.goals
+    value: true
+    mode: '0644'
 
 - name: Ensure Codex agents directory exists
   ansible.builtin.file:

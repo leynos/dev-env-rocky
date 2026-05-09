@@ -1,0 +1,31 @@
+---
+- name: Prepare PATH fixture
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Ensure managed tool directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /root/.local/bin
+        - /root/.cargo/bin
+        - /root/.bun/bin
+        - /root/go/bin
+
+    - name: Create existing shell startup files
+      ansible.builtin.copy:
+        dest: "{{ item.path }}"
+        content: "{{ item.content }}"
+        mode: '0644'
+      loop:
+        - path: /root/.bashrc
+          content: |
+            # existing bashrc fixture
+            export PATH=/root/.bun/bin:/usr/bin:/root/.local/bin:/bin
+        - path: /root/.bash_profile
+          content: |
+            # existing bash_profile fixture
+            export PATH=/root/.bun/bin:/usr/bin:/root/.local/bin:/root/go/bin:/bin
