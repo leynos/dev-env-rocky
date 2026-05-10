@@ -42,7 +42,10 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     tasks = CODERABBIT_TASKS.read_text()
     task = extract_task(tasks, "Authenticate CodeRabbit CLI with vaulted API key")
 
-    assert 'coderabbit_cli_api_key: "{{ coderabbit_api_key }}"' in defaults
+    assert (
+        'coderabbit_cli_api_key: "{{ coderabbit_api_keys[inventory_hostname] }}"'
+        in defaults
+    )
     assert "auth" in task
     assert "login" in task
     assert "--api-key" in task

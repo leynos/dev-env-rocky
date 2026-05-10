@@ -134,8 +134,9 @@ user-local bin directory and with `creates: ~/.local/bin/coderabbit`, so the
 install task is idempotent after the binary exists.
 
 The role authenticates the CLI by running `coderabbit auth login --api-key`
-with the host's vaulted `coderabbit_api_key` variable. That command task must
-keep `no_log: true` because the argv contains a secret. The task uses
+with the host's entry in the vaulted `coderabbit_api_keys` mapping. That
+command task must keep `no_log: true` because the argv contains a secret. The
+task uses
 `creates: ~/.coderabbit/auth.json` so an already-authenticated CLI is not
 re-authenticated on every playbook run.
 

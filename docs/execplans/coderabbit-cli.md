@@ -94,8 +94,10 @@ part of the normal role gate.
   `ansible/site.yml`, and added focused Python regression coverage.
 - [x] 2026-05-10: Added deterministic Molecule coverage using a local fake
   CodeRabbit release archive served through `file:///tmp/coderabbit-releases`.
-- [x] 2026-05-10: Added vaulted `coderabbit_api_key` values for
-  `rohga.df12.net` and `vendetta.df12.net` from the provided token files.
+- [x] 2026-05-10: Added vaulted `coderabbit_api_keys` entries for
+  `rohga.df12.net` and `vendetta.df12.net` from the provided token files in the
+  source-of-truth vault file at
+  `../../dev-env-rocky/ansible/group_vars/all/vault.yml`.
 - [x] 2026-05-10: Updated `docs/users-guide.md` and
   `docs/developers-guide.md`.
 - [x] 2026-05-10: Ran CodeRabbit review checkpoints. The unauthenticated run
@@ -154,9 +156,10 @@ match existing role scenarios. The scenario will serve a local fake CodeRabbit
 release archive so the test proves the installer integration without relying on
 the public release service.
 
-2026-05-10: Store the CodeRabbit token as a per-host `coderabbit_api_key`
-variable in each host's vaulted variables. This is simpler than a host-keyed
-mapping because each host only needs its own token at role runtime.
+2026-05-10: Store CodeRabbit tokens in a host-keyed `coderabbit_api_keys`
+mapping in `../../dev-env-rocky/ansible/group_vars/all/vault.yml`, which is
+the deployment source-of-truth vault file. This avoids committing host access
+tokens to the branch, even as inline vault blocks.
 
 2026-05-10: Authenticate CodeRabbit CLI with `coderabbit auth login --api-key`
 rather than exporting `CODERABBIT_API_KEY` in shell startup files. This matches
@@ -173,8 +176,8 @@ Second, add `ansible/roles/coderabbit_cli`. The role creates
 `../../coderabbit-install.sh` to a temporary managed location, runs it as the
 owner user with `CODERABBIT_INSTALL_DIR` set to that bin directory, and declares
 `creates: ~/.local/bin/coderabbit` for idempotence. It then runs
-`coderabbit auth login --api-key` with the host's `coderabbit_api_key` and
-`no_log: true`, using `creates: ~/.coderabbit/auth.json` to avoid repeated
+`coderabbit auth login --api-key` with `coderabbit_api_keys[inventory_hostname]`
+and `no_log: true`, using `creates: ~/.coderabbit/auth.json` to avoid repeated
 authentication.
 
 Third, wire `coderabbit_cli` into the user-environment role list in
@@ -186,7 +189,7 @@ Fourth, add a Molecule `rocky10` scenario under
 `ansible/roles/coderabbit_cli/molecule/rocky10`. The prepare playbook creates a
 fake CodeRabbit release directory containing `latest/VERSION` and a zip archive
 with an executable fake `coderabbit`. Converge points `CODERABBIT_DOWNLOAD_URL`
-at that local release fixture and passes a fake `coderabbit_api_key` value.
+at that local release fixture and passes a fake `coderabbit_api_keys` mapping.
 Verify asserts the `coderabbit` binary, `cr` symlink, auth file, agent review
 fixture, and idempotent second converge result.
 

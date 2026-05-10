@@ -58,22 +58,22 @@ It then authenticates CodeRabbit CLI with:
 coderabbit auth login --api-key <vaulted-key>
 ```
 
-The API key comes from the host's vaulted `coderabbit_api_key` variable, and
-the role suppresses task output while the secret is in use.
+The API key comes from the host-keyed `coderabbit_api_keys` mapping in the
+source-of-truth vault file at `../../dev-env-rocky/ansible/group_vars/all/vault.yml`,
+and the role suppresses task output while the secret is in use.
 
 To rotate a host's CodeRabbit API key:
 
 1. Write the replacement token to the matching local token file:
    `~/__coderabbit_token_rohga` for `rohga.df12.net` or
    `~/__coderabbit_token_vendetta` for `vendetta.df12.net`.
-2. Re-encrypt the value with `ansible-vault encrypt_string --vault-password-file
-   ~/.ansible_vault_pass --stdin-name coderabbit_api_key`.
-3. Replace the `coderabbit_api_key` value in the matching
-   `ansible/host_vars/<host>/vault.yml` file.
-4. Remove `~/.coderabbit/auth.json` on the affected host if CodeRabbit CLI has
+2. Update the `coderabbit_api_keys.<host>` value in
+   `../../dev-env-rocky/ansible/group_vars/all/vault.yml` and re-encrypt that
+   file with `~/.ansible_vault_pass`.
+3. Remove `~/.coderabbit/auth.json` on the affected host if CodeRabbit CLI has
    already been authenticated with the old key.
-5. Run `make site`, or run a narrower play for the affected host.
-6. Verify that `coderabbit review --agent` runs from a git repository as the
+4. Run `make site`, or run a narrower play for the affected host.
+5. Verify that `coderabbit review --agent` runs from a git repository as the
    owner user.
 
 ## Login Shell PATH
