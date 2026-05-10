@@ -1,18 +1,17 @@
 # Record the collection boundary
 
-This ExecPlan (execution plan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
-`Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
-proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`,
+ `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
+and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 ## Purpose / big picture
 
 Roadmap item 1.1.1 needs one accepted architectural decision record (ADR) that
-draws the boundary between reusable Ansible collection behaviour and
-site-local orchestration. An ADR is a short design document that records a
-decision, the context that led to it, and the consequences of following it.
+draws the boundary between reusable Ansible collection behaviour and site-local
+orchestration. An ADR is a short design document that records a decision, the
+context that led to it, and the consequences of following it.
 
 After this change is implemented, a maintainer can read the new ADR and know
 which extraction candidates belong to `agentic.agent_configs`,
@@ -172,8 +171,8 @@ The current candidate classification to validate during implementation is:
 - Extract now: the `agentic.agent_configs` module collection and the
   `packaging.tools` package-manager module collection.
 - Extract later: reusable role patterns in `packages`, `infra_tools`,
-  `rust_crates`, `uv_tools`, and `node_packages`, after role variable
-  contracts and direct role validation are established.
+  `rust_crates`, `uv_tools`, and `node_packages`, after role variable contracts
+  and direct role validation are established.
 - Site-local now: the current `agent_tools` role as a whole, because it mixes
   private repositories, SSH key lifecycle, vaulted secrets, owner-specific MCP
   registration, hooks, custom models, and user services. Later roadmap phases
@@ -188,8 +187,8 @@ Start by rereading this ExecPlan, `docs/roadmap.md`, and
 or roadmap item should change.
 
 Create `docs/adr-002-collection-boundary.md` following the existing ADR style:
-title, `Status: Accepted`, date, `Context`, `Decision`, and `Consequences`.
-The ADR must define the boundary between the two reusable collections and
+title, `Status: Accepted`, date, `Context`, `Decision`, and `Consequences`. The
+ADR must define the boundary between the two reusable collections and
 site-local orchestration in plain language. It must identify collection-owned
 behaviour, site-owned orchestration, and the rule for future extraction slices:
 only behaviour with configurable inputs, no private inventory assumptions, and
@@ -214,8 +213,8 @@ In the ADR decision, classify every requested candidate:
   Molecule coverage, but site-specific symlinks and enablement flags need a
   stable variable contract before role extraction.
 
-Update `docs/developers-guide.md` with a short collection-boundary section.
-It should point to the new ADR and summarise how contributors decide whether a
+Update `docs/developers-guide.md` with a short collection-boundary section. It
+should point to the new ADR and summarise how contributors decide whether a
 future change belongs in `agentic.agent_configs`, `packaging.tools`, or a
 site-local role. Keep this as internal-facing guidance; do not duplicate the
 whole ADR.
@@ -239,8 +238,8 @@ contract cheaply. A suitable test would assert that the ADR contains all six
 candidate names and the three ownership classes. Do not add a test if it would
 force brittle prose matching or require new dependencies. `pytest-bdd`,
 Molecule, end-to-end tests, and Hypothesis are not expected for this
-documentation-only task because no executable behaviour, playbook path,
-network boundary, persistence contract, or input invariant changes.
+documentation-only task because no executable behaviour, playbook path, network
+boundary, persistence contract, or input invariant changes.
 
 Run formatting and validation through `tee` logs under `/tmp`, using the branch
 name in each log path. At minimum run:
@@ -280,8 +279,8 @@ The implementation is successful when all of these are true:
   identifies `agentic.agent_configs`, `packaging.tools`, and site-local
   orchestration ownership.
 - The ADR classifies `agent_tools`, `packages`, `infra_tools`,
-  `rust_crates`, `uv_tools`, and `node_packages` as extract-now,
-  extract-later, or site-local, with rationale.
+  `rust_crates`, `uv_tools`, and `node_packages` as extract-now, extract-later,
+  or site-local, with rationale.
 - `docs/developers-guide.md` links to the ADR and gives contributors a concise
   rule for future collection versus site-local changes.
 - `docs/users-guide.md` remains accurate for current playbook behaviour and
@@ -317,12 +316,24 @@ making it because that exceeds this plan's intended scope.
   `docs/complexity-antipatterns-and-refactoring-strategies.md`, updated this
   plan to signpost it, and confirmed
   `docs/falcon-correlation-id-middleware-design.md` remains absent.
+- [x] 2026-05-10 01:36 BST: Received explicit approval to implement this
+  ExecPlan, re-confirmed the branch name, verified the working tree was clean,
+  and moved this plan to `IN PROGRESS`.
+- [x] 2026-05-10 01:45 BST: Drafted
+  `docs/adr-002-collection-boundary.md`, linked ADR-001 to it, added concise
+  guide signposts, and checked off only roadmap item 1.1.1.
+- [x] 2026-05-10 01:51 BST: Ran the required sequential validation gates. The
+  Python, Markdown, Mermaid, and diff checks passed after the task-scoped
+  documentation changes.
 
 ## Surprises & Discoveries
 
 - `grepai` was unavailable during planning because its Qdrant endpoint at
-  `127.0.0.1:6334` refused connections. Exact repository reads were used as
-  the fallback.
+  `127.0.0.1:6334` refused connections. Exact repository reads were used as the
+  fallback.
+- `grepai` was still unavailable at implementation start on 2026-05-10, with
+  the same refused Qdrant connection. Exact repository reads remain the
+  fallback for documentation context.
 - `leta files | head` printed the expected repository overview but then
   aborted on a broken pipe after `head` closed stdout. The repository was still
   added to the `leta` workspace before that happened.
@@ -341,6 +352,15 @@ making it because that exceeds this plan's intended scope.
 - `packaging.tools` has `galaxy.yml` and module tests but no top-level
   `README.md` or example playbook in the current tree, unlike
   `agentic.agent_configs`.
+- The implementation touched exactly six documentation files, matching the
+  plan tolerance. Adding a new documentation test would have exceeded that
+  tolerance and required new prose-matching decisions for a documentation-only
+  milestone.
+- `make fmt` again failed on pre-existing broad Markdown issues under
+  `agent-prompts/` and `agent-skills/` after completing the Python formatting
+  checks. The formatter also rewrote unrelated Markdown files before failing;
+  those formatter-only rewrites were reverted, and the branch now keeps only
+  the six task-scoped documentation files.
 
 ## Decision Log
 
@@ -350,8 +370,9 @@ making it because that exceeds this plan's intended scope.
   contracts, and role-level validation scaffolding.
 
 - Decision: Draft the future implementation around `ADR-002` rather than
-  editing ADR-001 in place. Rationale: ADR-001 records the public/private split;
-  1.1.1 needs a more specific collection-boundary decision that builds on it.
+  editing ADR-001 in place. Rationale: ADR-001 records the public/private
+  split; 1.1.1 needs a more specific collection-boundary decision that builds
+  on it.
 
 - Decision: Use Wyvern agents for read-only reconnaissance only. Rationale:
   the user requested a Wyvern agent team, while local instructions prohibit
@@ -359,17 +380,56 @@ making it because that exceeds this plan's intended scope.
 
 - Decision: Keep `agent_tools` site-local in the initial classification while
   allowing later extraction of specific slices. Rationale: the current role
-  contains private repository setup, SSH key lifecycle, vaulted secret use,
-  MCP registration, custom models, hooks, and user services; moving it as a
-  whole would blur the boundary the ADR is meant to clarify.
+  contains private repository setup, SSH key lifecycle, vaulted secret use, MCP
+  registration, custom models, hooks, and user services; moving it as a whole
+  would blur the boundary the ADR is meant to clarify.
 
 - Decision: Do not require Molecule, end-to-end, property, or `pytest-bdd`
   tests for the ADR itself. Rationale: this milestone should not change
   executable playbook behaviour. The plan still requires the normal Python and
   Markdown gates and allows focused `pytest` documentation checks if useful.
 
+- Decision: Do not add a focused `pytest` documentation test in this
+  implementation. Rationale: the branch stays within the six-file tolerance,
+  changes no executable behaviour, and validates the accepted ADR through the
+  required Python and Markdown gates.
+
 ## Outcomes & Retrospective
 
 This section is intentionally empty while the plan is in draft. During
 implementation, record the final files changed, validation log paths, commit
 hash, and any lessons that should affect later roadmap items 1.1.2 and 1.1.3.
+
+Implementation completed the documentation contract for roadmap item 1.1.1.
+The change added `docs/adr-002-collection-boundary.md`, linked ADR-001 to the
+new decision, added concise contributor and user-facing signposts, and checked
+off only roadmap item 1.1.1. No Ansible roles, playbook order, modules, or
+managed-host behaviour changed.
+
+Validation evidence:
+
+- `/tmp/fmt-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary.out`:
+  `make fmt` ran Python formatting successfully, then failed on pre-existing
+  broad Markdown issues outside the task scope.
+- `/tmp/check-fmt-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary-impl.out`:
+  `make check-fmt` passed.
+- `/tmp/typecheck-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary-impl.out`:
+  `make typecheck` passed.
+- `/tmp/lint-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary-impl.out`:
+  `make lint` passed.
+- `/tmp/test-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary-impl.out`:
+  `make test` passed.
+- `/tmp/markdownlint-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary-impl.out`:
+  `make markdownlint` passed.
+- `/tmp/markdownlint-execplan-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary-impl.out`:
+  direct Markdown lint for this nested ExecPlan passed.
+- `/tmp/nixie-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary-impl.out`:
+  `make nixie` passed.
+- `/tmp/diff-check-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary-impl.out`:
+  `git diff --check` passed.
+
+The main lesson for roadmap items 1.1.2 and 1.1.3 is that the boundary should
+stay narrow: compatibility rules and role variable contracts should be
+documented before any local role is moved, because the current roles combine
+reusable module calls with site-specific package profiles, secrets, symlinks,
+and owner-service policy.

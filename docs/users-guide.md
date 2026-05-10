@@ -15,6 +15,11 @@ Use `make check` when a dry run is needed before changing a host.
 The `agent_tools` and `sccache_user` roles configure user-scoped agent files
 under the owner user's home directory.
 
+The collection boundary in `docs/adr-002-collection-boundary.md` does not
+change the current playbook commands or generated files. It records which parts
+of this configuration may later become reusable collection roles and which
+parts remain site-local orchestration for the owner's environment.
+
 Codex configuration is written to `~/.codex/config.toml`. Cursor MCP
 configuration is written to `~/.cursor/mcp.json`, and Cursor skills are
 installed under `~/.cursor/skills`. These paths use structured Ansible modules
