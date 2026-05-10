@@ -9,6 +9,8 @@ repository and assert structural correctness without executing Ansible.
 import re
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CODERABBIT_DEFAULTS = REPO_ROOT / "ansible/roles/coderabbit_cli/defaults/main.yml"
 CODERABBIT_TASKS = REPO_ROOT / "ansible/roles/coderabbit_cli/tasks/main.yml"
@@ -33,8 +35,11 @@ def extract_task(content: str, name: str) -> str:
 def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     """Role must copy the checked-in installer and guard with creates:."""
     defaults = CODERABBIT_DEFAULTS.read_text()
-    tasks = CODERABBIT_TASKS.read_text()
-    install_task = extract_task(tasks, "Install CodeRabbit CLI")
+    tasks = yaml.safe_load(CODERABBIT_TASKS.read_text())
+    install_task = next(t for t in tasks if t.get("name") == "Install CodeRabbit CLI")
+    copy_task = next(
+        t for t in tasks if t.get("name") == "Copy CodeRabbit CLI installer"
+    )
 
     assert "../../coderabbit-install.sh" in defaults, (
         "CodeRabbit CLI role must source the already-downloaded installer"
@@ -45,38 +50,41 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     assert "https://cli.coderabbit.ai/releases" in defaults, (
         "CodeRabbit CLI role must pass a real default release URL, not omit"
     )
-    assert 'src: "{{ coderabbit_cli_installer_src }}"' in tasks, (
-        "CodeRabbit CLI role must copy the configured installer source"
+    assert (
+        copy_task["ansible.builtin.copy"]["src"] == "{{ coderabbit_cli_installer_src }}"
     )
-    assert 'creates: "{{ coderabbit_cli_install_dir }}/coderabbit"' in install_task, (
-        "CodeRabbit CLI installer must be idempotent around the installed binary"
+    assert (
+        install_task["args"]["creates"]
+        == "{{ coderabbit_cli_install_dir }}/coderabbit"
     )
-    assert "CODERABBIT_INSTALL_DIR" in install_task, (
-        "CodeRabbit CLI installer must target the managed user-local bin directory"
-    )
-    assert "default(omit)" not in install_task, (
-        "omit must not be used inside task environment because it becomes a string"
-    )
+    env = install_task["environment"]
+    assert "CODERABBIT_INSTALL_DIR" in env
+    assert "default(omit)" not in str(env)
 
 
 def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     """Auth task must use --api-key with the vaulted key and set no_log."""
     defaults = CODERABBIT_DEFAULTS.read_text()
-    tasks = CODERABBIT_TASKS.read_text()
-    task = extract_task(tasks, "Authenticate CodeRabbit CLI with vaulted API key")
+    tasks = yaml.safe_load(CODERABBIT_TASKS.read_text())
+    auth_task = next(
+        t
+        for t in tasks
+        if t.get("name") == "Authenticate CodeRabbit CLI with vaulted API key"
+    )
+    argv = auth_task["ansible.builtin.command"]["argv"]
 
     assert (
         'coderabbit_cli_api_key: "{{ coderabbit_api_keys[inventory_hostname] }}"'
         in defaults
     )
-    assert "auth" in task
-    assert "login" in task
-    assert "--api-key" in task
-    assert "{{ coderabbit_cli_api_key }}" in task
-    assert 'creates: "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"' in task
-    assert "no_log: true" in task, (
-        "CodeRabbit auth task must suppress secret-bearing command output"
+    assert "auth" in argv
+    assert "login" in argv
+    assert "--api-key" in argv
+    assert "{{ coderabbit_cli_api_key }}" in argv
+    assert auth_task["args"]["creates"] == (
+        "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"
     )
+    assert auth_task.get("no_log") is True
 
 
 def test_site_runs_coderabbit_cli_before_agent_tools() -> None:
