@@ -473,59 +473,51 @@ def test_codex_cli_mcp_writes_toml_and_removes_entry(tmp_path: Path) -> None:
     )
 
 
-def test_cursor_cli_mcp_resolves_cursor_paths(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("module", "config_dir", "root_key", "url", "expected_server"),
+    [
+        (
+            cursor_cli_mcp,
+            ".cursor",
+            "mcpServers",
+            "https://mcp.example.test",
+            {"type": "http", "url": "https://mcp.example.test", "headers": {}},
+        ),
+        (
+            deepseek_tui_mcp,
+            ".deepseek",
+            "servers",
+            "http://localhost:3000/mcp",
+            {"url": "http://localhost:3000/mcp"},
+        ),
+    ],
+)
+def test_mcp_module_resolves_project_scoped_path(
+    tmp_path: Path,
+    module,
+    config_dir: str,
+    root_key: str,
+    url: str,
+    expected_server: dict,
+) -> None:
+    """Verify MCP modules resolve project-scoped config paths and write correct JSON."""
     project_dir = tmp_path / "repo"
     project_dir.mkdir()
 
-    project_result = _run_module(
-        cursor_cli_mcp,
+    result = _run_module(
+        module,
         {
             "name": "repo-tools",
             "scope": "project",
             "project_dir": str(project_dir),
             "transport": "http",
-            "url": "https://mcp.example.test",
+            "url": url,
         },
     )
 
-    assert project_result["path"] == str(project_dir / ".cursor" / "mcp.json")
-    rendered = json.loads((project_dir / ".cursor" / "mcp.json").read_text())
-    assert rendered == {
-        "mcpServers": {
-            "repo-tools": {
-                "type": "http",
-                "url": "https://mcp.example.test",
-                "headers": {},
-            }
-        }
-    }
-
-
-def test_deepseek_tui_mcp_resolves_deepseek_paths(tmp_path: Path) -> None:
-    """Verify DeepSeek-TUI MCP user and project paths match the v0.8.24 schema."""
-    project_dir = tmp_path / "repo"
-    project_dir.mkdir()
-
-    project_result = _run_module(
-        deepseek_tui_mcp,
-        {
-            "name": "repo-tools",
-            "scope": "project",
-            "project_dir": str(project_dir),
-            "transport": "http",
-            "url": "http://localhost:3000/mcp",
-        },
-    )
-
-    assert project_result["path"] == str(project_dir / ".deepseek" / "mcp.json")
-    rendered = json.loads((project_dir / ".deepseek" / "mcp.json").read_text())
-    assert rendered == {
-        "servers": {
-            "repo-tools": {
-                "url": "http://localhost:3000/mcp",
-            }
-        }
-    }
+    assert result["path"] == str(project_dir / config_dir / "mcp.json")
+    rendered = json.loads((project_dir / config_dir / "mcp.json").read_text())
+    assert rendered == {root_key: {"repo-tools": expected_server}}
 
 
 def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:
@@ -1379,14 +1371,36 @@ def test_deepseek_tui_hook_writes_toml_and_removes_entry(tmp_path: Path) -> None
     }
 
 
-def test_deepseek_tui_mcp_requires_transport_for_present_state(
+@pytest.mark.parametrize(
+    ("module", "relative_path", "extra_args", "missing_field"),
+    [
+        (
+            deepseek_tui_mcp,
+            "mcp.json",
+            {"name": "repo-tools"},
+            "transport",
+        ),
+        (
+            deepseek_tui_skill,
+            "skills/repo-reviewer",
+            {"name": "Repo reviewer"},
+            "description",
+        ),
+    ],
+)
+def test_present_state_enforces_required_fields(
     tmp_path: Path,
+    module,
+    relative_path: str,
+    extra_args: dict,
+    missing_field: str,
 ) -> None:
-    """Verify DeepSeek-TUI MCP validation reports contextual required fields."""
+    """Verify modules enforce required_if fields for state=present."""
+    args = {"path": str(tmp_path / relative_path), **extra_args}
     _assert_fails(
-        deepseek_tui_mcp,
-        {"path": str(tmp_path / "mcp.json"), "name": "repo-tools"},
-        "state is present but all of the following are missing: transport",
+        module,
+        args,
+        f"state is present but all of the following are missing: {missing_field}",
     )
 
 
@@ -1421,20 +1435,6 @@ def test_deepseek_tui_hook_rejects_malformed_hook_entries(tmp_path: Path) -> Non
             "command": "repo-env export",
         },
         "Expected 'hooks.hooks' to be a list",
-    )
-
-
-def test_deepseek_tui_skill_requires_description_for_present_state(
-    tmp_path: Path,
-) -> None:
-    """Verify DeepSeek-TUI skill validation reports contextual required fields."""
-    _assert_fails(
-        deepseek_tui_skill,
-        {
-            "path": str(tmp_path / "skills" / "repo-reviewer"),
-            "name": "Repo reviewer",
-        },
-        "state is present but all of the following are missing: description",
     )
 
 
