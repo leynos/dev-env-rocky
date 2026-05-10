@@ -173,33 +173,31 @@ def state_transition(changed: bool, existed_before: bool, state: str) -> str:
     return "updated" if existed_before else "created"
 
 
-def main() -> None:
-    """Run the Ansible module."""
-    module = AnsibleModule(
-        argument_spec={
-            "name": {"type": "str", "required": True},
-            "slug": {"type": "str"},
-            "state": {
-                "type": "str",
-                "choices": ["present", "absent"],
-                "default": "present",
-            },
-            "scope": {"type": "str", "choices": ["user", "project"], "default": "user"},
-            "project_dir": {"type": "path"},
-            "path": {"type": "path"},
-            "description": {"type": "str"},
-            "body": {"type": "str", "default": ""},
-            "metadata": {"type": "dict", "default": {}},
-            "extra_files": {"type": "dict", "default": {}},
+def _build_argument_spec() -> dict[str, Any]:
+    """Return the argument spec for the deepseek_tui_skill module."""
+    return {
+        "name": {"type": "str", "required": True},
+        "slug": {"type": "str"},
+        "state": {
+            "type": "str",
+            "choices": ["present", "absent"],
+            "default": "present",
         },
-        required_if=[["state", "present", ["description"]]],
-        supports_check_mode=True,
-    )
+        "scope": {"type": "str", "choices": ["user", "project"], "default": "user"},
+        "project_dir": {"type": "path"},
+        "path": {"type": "path"},
+        "description": {"type": "str"},
+        "body": {"type": "str", "default": ""},
+        "metadata": {"type": "dict", "default": {}},
+        "extra_files": {"type": "dict", "default": {}},
+    }
 
-    slug = module.params.get("slug") or slugify(module.params["name"])
+
+def _resolve_skill_directory(module: AnsibleModule, slug: str) -> str:
+    """Validate params and resolve the skill directory path, failing the module on error."""
     try:
         validate_present_skill_params(module.params)
-        directory = resolve_directory(
+        return resolve_directory(
             path=module.params.get("path"),
             scope=module.params["scope"],
             project_dir=module.params.get("project_dir"),
@@ -215,24 +213,16 @@ def main() -> None:
             )
         )
 
-    existed_before = os.path.isdir(expand_path(directory))
-    changes = manage_directory_markdown_resource(
-        module=module,
-        directory=directory,
-        primary_filename="SKILL.md",
-        frontmatter=build_frontmatter(
-            name=module.params["name"],
-            description=module.params.get("description"),
-            metadata=module.params.get("metadata") or {},
-        ),
-        body=module.params["body"],
-        state=module.params["state"],
-        extra_files=module.params.get("extra_files") or {},
-    )
-    transition = state_transition(
-        changes.changed, existed_before, module.params["state"]
-    )
 
+def _emit_skill_result(
+    module: AnsibleModule,
+    directory: str,
+    slug: str,
+    changes: object,
+    existed_before: bool,
+) -> None:
+    """Log the operation and exit the module with the computed result."""
+    transition = state_transition(changes.changed, existed_before, module.params["state"])
     log_operation(
         module,
         "deepseek_tui_skill",
@@ -254,6 +244,33 @@ def main() -> None:
         name=module.params["name"],
         state_transition=transition,
     )
+
+
+def main() -> None:
+    """Run the Ansible module."""
+    module = AnsibleModule(
+        argument_spec=_build_argument_spec(),
+        required_if=[["state", "present", ["description"]]],
+        supports_check_mode=True,
+    )
+
+    slug = module.params.get("slug") or slugify(module.params["name"])
+    directory = _resolve_skill_directory(module, slug)
+    existed_before = os.path.isdir(expand_path(directory))
+    changes = manage_directory_markdown_resource(
+        module=module,
+        directory=directory,
+        primary_filename="SKILL.md",
+        frontmatter=build_frontmatter(
+            name=module.params["name"],
+            description=module.params.get("description"),
+            metadata=module.params.get("metadata") or {},
+        ),
+        body=module.params["body"],
+        state=module.params["state"],
+        extra_files=module.params.get("extra_files") or {},
+    )
+    _emit_skill_result(module, directory, slug, changes, existed_before)
 
 
 if __name__ == "__main__":
