@@ -262,6 +262,11 @@ def main() -> None:
             "disabled_tools": {"type": "list", "elements": "str"},
             "extra": {"type": "dict", "default": {}},
         },
+        required_if=[
+            ["state", "present", ["transport"]],
+            ["transport", "stdio", ["command"]],
+            ["transport", "http", ["url"]],
+        ],
         supports_check_mode=True,
     )
 

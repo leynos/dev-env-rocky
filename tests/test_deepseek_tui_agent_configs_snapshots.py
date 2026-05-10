@@ -2,37 +2,13 @@
 
 import json
 from pathlib import Path
-from types import ModuleType
-from typing import Protocol, cast
 
-import pytest  # ty: ignore[unresolved-import]
 from ansible_collections.agentic.agent_configs.plugins.modules import (
     deepseek_tui_hook,
     deepseek_tui_mcp,
     deepseek_tui_skill,
 )
-from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
-    AnsibleExitJson,
-    set_module_args,
-)
-
-
-class AnsibleModuleEntrypoint(Protocol):
-    """Minimal protocol for modules exercised through their Ansible entrypoint."""
-
-    def main(self) -> None:
-        """Run the Ansible module entrypoint."""
-
-
-def _run_module(
-    module: ModuleType | AnsibleModuleEntrypoint,
-    args: dict[str, object],
-) -> dict[str, object]:
-    """Run an Ansible module in-process and return its exit payload."""
-    set_module_args(args)
-    with pytest.raises(AnsibleExitJson) as exc:
-        module.main()
-    return cast(dict[str, object], exc.value.args[0])
+from ansible_module_runner import run_module
 
 
 def test_deepseek_tui_generated_configuration_matches_snapshot(
@@ -43,7 +19,7 @@ def test_deepseek_tui_generated_configuration_matches_snapshot(
     deepseek_home = tmp_path / ".deepseek"
     deepseek_home.mkdir()
 
-    _run_module(
+    run_module(
         deepseek_tui_mcp,
         {
             "path": str(deepseek_home / "mcp.json"),
@@ -55,7 +31,7 @@ def test_deepseek_tui_generated_configuration_matches_snapshot(
             "required": True,
         },
     )
-    _run_module(
+    run_module(
         deepseek_tui_hook,
         {
             "path": str(deepseek_home / "config.toml"),
@@ -66,7 +42,7 @@ def test_deepseek_tui_generated_configuration_matches_snapshot(
             "enabled": True,
         },
     )
-    _run_module(
+    run_module(
         deepseek_tui_skill,
         {
             "path": str(deepseek_home / "skills" / "repo-reviewer"),

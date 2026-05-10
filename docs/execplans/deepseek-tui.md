@@ -23,9 +23,9 @@ user role or playbook wiring should then include that role, so the normal site
 configuration can deploy DeepSeek-TUI for the managed owner user.
 
 Observable success means a maintainer can run the documented pytest,
-pytest-bdd, syrupy, Molecule, Podman and `ansible-lint` gates, see them pass,
-and inspect generated DeepSeek-TUI configuration in the same style as existing
-Codex and Claude configuration.
+pytest-bdd (Behaviour-Driven Development, BDD), syrupy, Molecule, Podman and
+`ansible-lint` gates, see them pass, and inspect generated DeepSeek-TUI
+configuration in the same style as existing Codex and Claude configuration.
 
 ## Constraints
 
@@ -117,10 +117,10 @@ Codex and Claude configuration.
   provide --api-key.` Review evidence is missing until credentials are
   available.
 - [x] 2026-05-09 19:34 BST: Added root-level pytest-bdd behavioural coverage
-  and syrupy snapshot coverage for DeepSeek-TUI MCP, hook, and skill
-  generation. Updated `make test` to install the required root test
-  dependencies and updated `make typecheck` so the root tests typecheck with
-  the Ansible collection on `PYTHONPATH`.
+  and syrupy snapshot coverage for DeepSeek-TUI Model Context Protocol (MCP),
+  hook, and skill generation. Updated `make test` to install the required root
+  test dependencies and updated `make typecheck` so the root tests typecheck
+  with the Ansible collection on `PYTHONPATH`.
 - [x] 2026-05-09 19:36 BST: Committed the behavioural and snapshot milestone as
   `b738619` (`Cover DeepSeek-TUI modules with BDD snapshots`).
 - [ ] 2026-05-09 19:36 BST: Retried `coderabbit review --agent`; it still
@@ -165,8 +165,8 @@ Codex and Claude configuration.
   `/tmp/coderabbit-review-dev-env-rocky-deepseek-tui-owner.out`.
 - [x] 2026-05-09 20:49 BST: During completion audit, ran
   `ansible-lint ansible/site.yml` and found it did not yet pass because the
-  site playbook exposed existing role lint backlog plus canonical FQCN findings
-  for `git_config`.
+  site playbook exposed existing role lint backlog plus canonical Fully
+  Qualified Collection Name (FQCN) findings for `git_config`.
 - [x] 2026-05-09 20:52 BST: Added a project `.ansible-lint` compatibility
   profile for the existing site-playbook backlog, fixed `git_config` call sites
   to use `community.general.git_config`, and reran `ansible-lint
@@ -208,6 +208,24 @@ Codex and Claude configuration.
   'coderabbit auth login --agent' or provide --api-key.` Review evidence is
   still missing until credentials are available. Durable log:
   `/tmp/coderabbit-review-deepseek-tui-review-fixes-final.out`.
+- [x] 2026-05-10 01:58 BST: Verified the follow-up review comments. The
+  DeepSeek-TUI GitHub owner remains `Hmbown`, not `Hmbrown`; the hook module
+  already declares its required `event` and `command` arguments. Patched the
+  still-valid items by adding `required_if` validation for MCP and skill
+  modules, making `--break-system-packages` opt-in, sharing the root Ansible
+  module runner helper, broadening skill path/removal coverage, and expanding
+  acronyms in this plan.
+- [x] 2026-05-10 02:09 BST: Replayed the follow-up gates with focused pytest,
+  `make check-fmt`, `make lint`, `make typecheck`, `make test`,
+  `make markdownlint`, focused markdownlint, `make nixie`, focused Ruff,
+  site and role `ansible-lint`, site syntax-check, and
+  `molecule test -s rocky10`. Durable logs use the
+  `/tmp/*deepseek-tui-review-comments-2.out` prefix.
+- [ ] 2026-05-10 02:10 BST: Retried `coderabbit review --agent` after the
+  follow-up review fixes; it still failed with `Authentication required.
+  Please run 'coderabbit auth login --agent' or provide --api-key.` Review
+  evidence is still missing until credentials are available. Durable log:
+  `/tmp/coderabbit-review-deepseek-tui-review-comments-2.out`.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [x] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
@@ -243,10 +261,10 @@ Codex and Claude configuration.
   subagent registry equivalent to Claude Code commands or Codex subagents.
 - `coderabbit review --agent` is installed but not authenticated in this
   environment, so CodeRabbit milestone review cannot currently run.
-- The Rocky 10 base image does not provide a `python3-tomlkit` RPM in its
-  enabled repositories. The role therefore installs `python3-pip` and
-  `python3-packaging` through the system package manager, then installs
-  `tomlkit` through target-side `pip`.
+- The Rocky 10 base image does not provide a `python3-tomlkit` Red Hat Package
+  Manager (RPM) package in its enabled repositories. The role therefore installs
+  `python3-pip` and `python3-packaging` through the system package manager,
+  then installs `tomlkit` through target-side `pip`.
 - Full-site `ansible-lint` exercises older roles that pre-date this branch and
   carry a separate lint backlog. The branch adds a compatibility profile for
   that backlog so the site playbook can still be linted while the new reusable

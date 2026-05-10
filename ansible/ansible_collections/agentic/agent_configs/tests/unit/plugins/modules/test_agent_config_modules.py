@@ -1386,7 +1386,7 @@ def test_deepseek_tui_mcp_requires_transport_for_present_state(
     _assert_fails(
         deepseek_tui_mcp,
         {"path": str(tmp_path / "mcp.json"), "name": "repo-tools"},
-        "transport is required when state=present name='repo-tools'",
+        "state is present but all of the following are missing: transport",
     )
 
 
@@ -1434,16 +1434,18 @@ def test_deepseek_tui_skill_requires_description_for_present_state(
             "path": str(tmp_path / "skills" / "repo-reviewer"),
             "name": "Repo reviewer",
         },
-        "description is required when state=present name='Repo reviewer'",
+        "state is present but all of the following are missing: description",
     )
 
 
-def test_deepseek_tui_skill_resolves_workspace_preferred_path(tmp_path: Path) -> None:
-    """Verify project-scoped DeepSeek-TUI skills use the preferred .agents path."""
+def test_deepseek_tui_skill_resolves_workspace_preferred_path_and_scopes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify DeepSeek-TUI skill path resolution and removal semantics."""
     project_dir = tmp_path / "repo"
     project_dir.mkdir()
 
-    result = _run_module(
+    project_result = _run_module(
         deepseek_tui_skill,
         {
             "name": "Repository reviewer",
@@ -1455,7 +1457,7 @@ def test_deepseek_tui_skill_resolves_workspace_preferred_path(tmp_path: Path) ->
     )
 
     expected_dir = project_dir / ".agents" / "skills" / "repository-reviewer"
-    assert result["directory"] == str(expected_dir)
+    assert project_result["directory"] == str(expected_dir)
     assert (
         (expected_dir / "SKILL.md")
         .read_text()
@@ -1463,6 +1465,56 @@ def test_deepseek_tui_skill_resolves_workspace_preferred_path(tmp_path: Path) ->
             '---\nname: "Repository reviewer"\ndescription: "Review this repository."'
         )
     )
+
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+
+    user_result = _run_module(
+        deepseek_tui_skill,
+        {
+            "name": "User reviewer",
+            "scope": "user",
+            "description": "Review user-scoped changes.",
+        },
+    )
+
+    expected_user_dir = home / ".deepseek" / "skills" / "user-reviewer"
+    assert user_result["directory"] == str(expected_user_dir)
+    assert expected_user_dir.is_dir()
+    assert (expected_user_dir / "SKILL.md").is_file()
+
+    explicit_dir = tmp_path / "explicit-skill-dir"
+
+    explicit_result = _run_module(
+        deepseek_tui_skill,
+        {
+            "name": "Explicit reviewer",
+            "path": str(explicit_dir),
+            "scope": "project",
+            "project_dir": str(project_dir),
+            "description": "Review explicitly scoped changes.",
+            "extra_files": {"references/checklist.md": "Check support files.\n"},
+        },
+    )
+
+    assert explicit_result["directory"] == str(explicit_dir)
+    assert explicit_dir.is_dir()
+    assert (explicit_dir / "SKILL.md").is_file()
+    assert (explicit_dir / "references" / "checklist.md").is_file()
+
+    absent_result = _run_module(
+        deepseek_tui_skill,
+        {
+            "name": "Explicit reviewer",
+            "path": str(explicit_dir),
+            "state": "absent",
+        },
+    )
+
+    assert absent_result["changed"] is True
+    assert absent_result["state_transition"] == "removed"
+    assert not explicit_dir.exists()
 
 
 def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> None:

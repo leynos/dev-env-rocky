@@ -257,7 +257,10 @@ variables. The role manages target-side Python dependencies by installing
 `python3-pip` and `python3-packaging` through the package manager, then
 installing `tomlkit` through `pip`; disable that with
 `deepseek_tui_manage_python_dependencies: false` only when the managed host
-already provides `tomlkit` to Ansible's Python interpreter.
+already provides `tomlkit` to Ansible's Python interpreter. The role does not
+pass `pip` extra arguments by default; set
+`deepseek_tui_python_pip_extra_args` only on platforms that require an
+explicit compatibility flag such as `--break-system-packages`.
 
 Role validation lives in
 `ansible/ansible_collections/agentic/agent_configs/roles/deepseek_tui/molecule/rocky10`.

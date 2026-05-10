@@ -66,6 +66,7 @@ options:
   description:
     description:
       - Skill description used in front matter.
+      - Required when C(state=present).
     type: str
   body:
     description:
@@ -192,6 +193,7 @@ def main() -> None:
             "metadata": {"type": "dict", "default": {}},
             "extra_files": {"type": "dict", "default": {}},
         },
+        required_if=[["state", "present", ["description"]]],
         supports_check_mode=True,
     )
 

@@ -13,7 +13,7 @@ deepseek_tui_python_system_packages:
   - python3-pip
 deepseek_tui_python_pip_packages:
   - tomlkit
-deepseek_tui_python_pip_extra_args: --break-system-packages
+deepseek_tui_python_pip_extra_args: ""
 
 deepseek_tui_config_path: "{{ ansible_env.HOME }}/.deepseek/config.toml"
 deepseek_tui_mcp_path: "{{ ansible_env.HOME }}/.deepseek/mcp.json"

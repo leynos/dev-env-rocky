@@ -21,7 +21,7 @@
   ansible.builtin.pip:
     name: "{{ deepseek_tui_python_pip_packages }}"
     state: present
-    extra_args: "{{ deepseek_tui_python_pip_extra_args }}"
+    extra_args: "{{ deepseek_tui_python_pip_extra_args | default(omit, true) }}"
   when: deepseek_tui_manage_python_dependencies | bool
 
 - name: Install DeepSeek-TUI package globally via Bun

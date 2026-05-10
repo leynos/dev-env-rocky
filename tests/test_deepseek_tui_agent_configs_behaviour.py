@@ -5,41 +5,18 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from types import ModuleType
-from typing import Protocol, cast
 
-import pytest  # ty: ignore[unresolved-import]
 import tomllib
 from ansible_collections.agentic.agent_configs.plugins.modules import (
     deepseek_tui_hook,
     deepseek_tui_mcp,
     deepseek_tui_skill,
 )
-from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
-    AnsibleExitJson,
-    set_module_args,
-)
 from pytest_bdd import given, scenarios, then, when  # ty: ignore[unresolved-import]
 
+from ansible_module_runner import run_module
+
 scenarios("features/deepseek_tui_agent_configs.feature")
-
-
-class AnsibleModuleEntrypoint(Protocol):
-    """Minimal protocol for modules exercised through their Ansible entrypoint."""
-
-    def main(self) -> None:
-        """Run the Ansible module entrypoint."""
-
-
-def _run_module(
-    module: ModuleType | AnsibleModuleEntrypoint,
-    args: dict[str, object],
-) -> dict[str, object]:
-    """Run an Ansible module in-process and return its exit payload."""
-    set_module_args(args)
-    with pytest.raises(AnsibleExitJson) as exc:
-        module.main()
-    return cast(dict[str, object], exc.value.args[0])
 
 
 @given("an empty DeepSeek-TUI home directory", target_fixture="deepseek_home")
@@ -53,7 +30,7 @@ def empty_deepseek_home(tmp_path: Path) -> Path:
 @when("the DeepSeek-TUI modules provision a repository toolset")
 def provision_repository_toolset(deepseek_home: Path) -> None:
     """Provision MCP, hook, and skill resources with the new modules."""
-    _run_module(
+    run_module(
         deepseek_tui_mcp,
         {
             "path": str(deepseek_home / "mcp.json"),
@@ -65,7 +42,7 @@ def provision_repository_toolset(deepseek_home: Path) -> None:
             "required": True,
         },
     )
-    _run_module(
+    run_module(
         deepseek_tui_hook,
         {
             "path": str(deepseek_home / "config.toml"),
@@ -76,7 +53,7 @@ def provision_repository_toolset(deepseek_home: Path) -> None:
             "enabled": True,
         },
     )
-    _run_module(
+    run_module(
         deepseek_tui_skill,
         {
             "path": str(deepseek_home / "skills" / "repo-reviewer"),

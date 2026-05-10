@@ -5,6 +5,7 @@
 
   vars:
     fake_bun_log_dir: /tmp/fake-bun-log
+    deepseek_tui_python_pip_extra_args: --break-system-packages
     deepseek_tui_mcp_servers:
       - name: repo-tools
         transport: stdio
