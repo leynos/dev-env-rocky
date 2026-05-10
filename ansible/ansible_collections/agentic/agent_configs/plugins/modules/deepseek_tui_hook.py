@@ -219,6 +219,62 @@ def ensure_hook_entries(path: str, hooks_root: dict[str, Any]) -> list[object]:
     return hook_entries
 
 
+def _apply_present_hook(
+    hook_entries: list[object],
+    desired_hook: dict[str, Any],
+) -> bool:
+    """Upsert *desired_hook* into *hook_entries*; return True if a change was made."""
+    for index, hook in enumerate(hook_entries):
+        if isinstance(hook, dict) and hook_identity_matches(hook, desired_hook):
+            if hook != desired_hook:
+                hook_entries[index] = desired_hook
+                return True
+            return False
+    hook_entries.append(desired_hook)
+    return True
+
+
+def _apply_absent_hook(
+    hooks_root: dict[str, Any],
+    data: dict[str, Any],
+    hook_entries: list[object],
+    desired_hook: dict[str, Any],
+) -> bool:
+    """Remove any hook matching *desired_hook*; prune empty containers.
+
+    Returns True if the hook list was modified.
+    """
+    retained = [
+        hook
+        for hook in hook_entries
+        if hook_without_managed_identity(hook, desired_hook)
+    ]
+    if retained == hook_entries:
+        return False
+    hooks_root["hooks"] = retained
+    if not hooks_root.get("hooks"):
+        hooks_root.pop("hooks", None)
+    if not hooks_root:
+        data.pop("hooks", None)
+    return True
+
+
+def _persist_hook_changes(
+    module: AnsibleModule,
+    path: str,
+    data: dict[str, Any],
+    changed: bool,
+    removed_legacy_block: bool,
+    existed_before: bool,
+) -> tuple[bool, dict[str, Any], bool]:
+    """Write TOML to disk (unless check mode) when pending changes exist."""
+    if changed or removed_legacy_block:
+        if module.check_mode:
+            return True, data, existed_before
+        write_toml_if_changed(module, path, data)
+    return changed, data, existed_before
+
+
 def manage_hook_toml(
     module: AnsibleModule,
     path: str,
@@ -244,34 +300,13 @@ def manage_hook_toml(
     )
 
     if state == "present":
-        for index, hook in enumerate(hook_entries):
-            if isinstance(hook, dict) and hook_identity_matches(hook, desired_hook):
-                if hook != desired_hook:
-                    hook_entries[index] = desired_hook
-                    changed = True
-                break
-        else:
-            hook_entries.append(desired_hook)
-            changed = True
+        changed |= _apply_present_hook(hook_entries, desired_hook)
     else:
-        retained = [
-            hook
-            for hook in hook_entries
-            if hook_without_managed_identity(hook, desired_hook)
-        ]
-        if retained != hook_entries:
-            hooks_root["hooks"] = retained
-            changed = True
-        if not hooks_root.get("hooks"):
-            hooks_root.pop("hooks", None)
-        if not hooks_root:
-            data.pop("hooks", None)
+        changed |= _apply_absent_hook(hooks_root, data, hook_entries, desired_hook)
 
-    if changed or removed_legacy_block:
-        if module.check_mode:
-            return True, data, existed_before
-        write_toml_if_changed(module, path, data)
-    return changed, data, existed_before
+    return _persist_hook_changes(
+        module, path, data, changed, removed_legacy_block, existed_before
+    )
 
 
 def state_transition(changed: bool, existed_before: bool, state: str) -> str:
