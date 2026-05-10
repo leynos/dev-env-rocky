@@ -150,9 +150,11 @@ Extraction candidates, in rough priority order:
   modules. Thin wrappers with no proprietary logic belong in `lodybox` as usage
   examples.
 
-Extraction milestones will be tracked in `docs/roadmap.md`. The public
-repository will reflect the collection boundary as it is drawn, showing role
-tasks that delegate to collection modules rather than inlining task logic.
+Extraction milestones will be tracked in `docs/roadmap.md`. The accepted
+boundary for those milestones is recorded in
+`docs/adr-002-collection-boundary.md`. The public repository will reflect that
+boundary as it is drawn, showing role tasks that delegate to collection modules
+rather than inlining task logic.
 
 ## Consequences
 

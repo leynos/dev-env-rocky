@@ -1,3 +1,13 @@
+"""Provide Ansible module execution helpers for agent_configs unit tests.
+
+The helpers in this module serialize module arguments into Ansible's global
+test input slot and replace ``exit_json`` or ``fail_json`` with exceptions that
+tests can assert against. The package ``conftest.py`` fixture installs those
+helpers on ``AnsibleModule`` for in-process module tests, while direct helper
+tests can use ``FakeModule`` when constructing a full Ansible module would add
+unnecessary setup.
+"""
+
 from __future__ import annotations
 
 import json

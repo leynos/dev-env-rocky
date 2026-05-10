@@ -3,6 +3,24 @@
 This guide documents the local design rules for the agent configuration modules
 and the roles that use them.
 
+## Collection Boundary
+
+`docs/adr-002-collection-boundary.md` records the accepted boundary between
+reusable Ansible collections and site-local orchestration.
+
+Use `agentic.agent_configs` for reusable agent configuration primitives:
+structured JSON/TOML edits, agent MCP registration, skills, hooks, subagents,
+droids, and custom models. Use `packaging.tools` for reusable package-manager
+primitives and future configurable package roles. Keep site-local roles as the
+owner of the concrete managed-host profile: private repositories, vaulted
+secret variable names, package selections, symlinks, service enablement,
+inventory assumptions, and owner-user policy.
+
+Do not move a whole local role into a collection simply because it calls
+collection modules. Extract one responsibility only after its inputs, defaults,
+secrets, and validation are documented. Until that contract exists, the role is
+site-local orchestration.
+
 ## Structured File Modules
 
 The `agentic.agent_configs` collection includes generic modules for structured
@@ -166,9 +184,9 @@ callers do not need to invoke it directly.
 ## Tool Package Modules
 
 The `packaging.tools` collection provides thin wrappers around three package
-manager CLIs. Each module follows the same narrow contract: `state:
-present|absent`, an optional exact `version`, check mode, and modest return
-data (`name`, `state`, `previous_version`, `installed_version`, `cmd`).
+manager CLIs. Each module follows the same narrow contract:
+`state: present|absent`, an optional exact `version`, check mode, and modest
+return data (`name`, `state`, `previous_version`, `installed_version`, `cmd`).
 
 ### uv_tool
 
@@ -184,8 +202,8 @@ Key parameters:
 - `force`: Pass `--force` to reinstall even if already present.
 - `uv_path`: Path to the `uv` executable; defaults to `uv`.
 
-State detection reads `uv tool list`. That output is human-oriented and has
-no documented stable machine-readable contract, so the regex parser may need
+State detection reads `uv tool list`. That output is human-oriented and has no
+documented stable machine-readable contract, so the regex parser may need
 adjustment if `uv` changes its output layout. The `name` parameter must match
 what `uv tool list` reports, which is the package name — not the executable
 name.
@@ -208,16 +226,15 @@ Key parameters:
 State detection uses `cargo install --list`, which is documented and stable.
 Removal uses `cargo uninstall`. The assumption that `cargo-binstall` writes
 entries readable by `cargo install --list` is reasonable given binstall's
-stated goal of being a drop-in for `cargo install`, but is an inference
-rather than an explicit compatibility guarantee.
+stated goal of being a drop-in for `cargo install`, but is an inference rather
+than an explicit compatibility guarantee.
 
 ### bun_global
 
-`packaging.tools.bun_global` installs and removes global Node packages via
-Bun.
+`packaging.tools.bun_global` installs and removes global Node packages via Bun.
 
-The `node_packages` role keeps trusted lifecycle-script execution explicit.
-Any package with `trust_postinstall: true` must include a
+The `node_packages` role keeps trusted lifecycle-script execution explicit. Any
+package with `trust_postinstall: true` must include a
 `trust_postinstall_reason` entry and an exact `version` pin in the same loop
 item. Optional packages that trust postinstall scripts, such as `puppeteer` and
 `@zed-industries/codex-acp-linux-x64`, are disabled by role defaults and
@@ -313,5 +330,5 @@ make molecule
 
 The Molecule scenarios use Podman with the `quay.io/rockylinux/rockylinux:10`
 image. They cover the `node_packages` role's Bun global install flow with a
-fake Bun fixture, including trusted postinstall handling for `css-view`, and
-the `paths` role's managed PATH precedence for login shells.
+fake Bun fixture, including trusted postinstall handling for `css-view`, and the
+ `paths` role's managed PATH precedence for login shells.
