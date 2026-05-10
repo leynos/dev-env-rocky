@@ -32,30 +32,40 @@ def extract_task(content: str, name: str) -> str:
     return match.group("body")
 
 
+def extract_make_target(content: str, name: str) -> str:
+    """Return the recipe body for the Makefile target named *name*."""
+    match = re.search(
+        rf"(?ms)^{re.escape(name)}:[^\n]*\n(?P<body>.*?)(?=^[^\t\n][^:\n]*:|\Z)",
+        content,
+    )
+    assert match, f"expected Makefile target named {name!r} to exist"
+    return match.group("body")
+
+
 def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     """Role must copy the checked-in installer and guard with creates:."""
-    defaults = CODERABBIT_DEFAULTS.read_text()
+    defaults = yaml.safe_load(CODERABBIT_DEFAULTS.read_text())
     tasks = yaml.safe_load(CODERABBIT_TASKS.read_text())
     install_task = next(t for t in tasks if t.get("name") == "Install CodeRabbit CLI")
     copy_task = next(
         t for t in tasks if t.get("name") == "Copy CodeRabbit CLI installer"
     )
 
-    assert "../../../coderabbit-install.sh" in defaults, (
-        "CodeRabbit CLI role must source the already-downloaded installer"
+    assert (
+        defaults["coderabbit_cli_installer_src"]
+        == "{{ playbook_dir }}/../../../coderabbit-install.sh"
     )
-    assert "lookup('env', 'PWD')" not in defaults, (
+    assert "lookup('env', 'PWD')" not in defaults["coderabbit_cli_installer_src"], (
         "installer src must not use ambient PWD; use playbook_dir instead"
     )
-    assert "https://cli.coderabbit.ai/releases" in defaults, (
-        "CodeRabbit CLI role must pass a real default release URL, not omit"
+    assert (
+        defaults["coderabbit_cli_download_url"] == "https://cli.coderabbit.ai/releases"
     )
     assert (
         copy_task["ansible.builtin.copy"]["src"] == "{{ coderabbit_cli_installer_src }}"
     )
     assert (
-        install_task["args"]["creates"]
-        == "{{ coderabbit_cli_install_dir }}/coderabbit"
+        install_task["args"]["creates"] == "{{ coderabbit_cli_install_dir }}/coderabbit"
     )
     env = install_task["environment"]
     assert "CODERABBIT_INSTALL_DIR" in env
@@ -64,7 +74,7 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
 
 def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     """Auth task must use --api-key with the vaulted key and set no_log."""
-    defaults = CODERABBIT_DEFAULTS.read_text()
+    defaults = yaml.safe_load(CODERABBIT_DEFAULTS.read_text())
     tasks = yaml.safe_load(CODERABBIT_TASKS.read_text())
     auth_task = next(
         t
@@ -73,8 +83,10 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     )
     argv = auth_task["ansible.builtin.command"]["argv"]
 
-    assert "coderabbit_api_keys | default({}, true)" in defaults
-    assert ".get(inventory_hostname, '')" in defaults
+    assert (
+        "coderabbit_api_keys | default({}, true)" in defaults["coderabbit_cli_api_key"]
+    )
+    assert ".get(inventory_hostname, '')" in defaults["coderabbit_cli_api_key"]
     assert "auth" in argv
     assert "login" in argv
     assert "--api-key" in argv
@@ -88,16 +100,22 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
 
 def test_site_runs_coderabbit_cli_before_agent_tools() -> None:
     """coderabbit_cli must precede agent_tools in site.yml role list."""
-    content = SITE_PLAYBOOK.read_text()
-
-    assert content.index("    - coderabbit_cli") < content.index("    - agent_tools"), (
-        "CodeRabbit CLI must be installed before agent_tools runs"
+    plays = yaml.safe_load(SITE_PLAYBOOK.read_text())
+    user_play = next(
+        play
+        for play in plays
+        if play.get("name") == "Configure user environment for owner user"
     )
+    roles = user_play["roles"]
+
+    assert "coderabbit_cli" in roles
+    assert "agent_tools" in roles
+    assert roles.index("coderabbit_cli") < roles.index("agent_tools")
 
 
 def test_make_molecule_runs_coderabbit_cli_scenario() -> None:
     """Makefile molecule target must invoke the rocky10 scenario."""
-    content = MAKEFILE.read_text()
+    target_body = extract_make_target(MAKEFILE.read_text(), "molecule")
 
-    assert "cd ansible/roles/coderabbit_cli &&" in content
-    assert "$(MOLECULE) test -s rocky10" in content
+    assert "cd ansible/roles/coderabbit_cli &&" in target_body
+    assert "$(MOLECULE) test -s rocky10" in target_body
