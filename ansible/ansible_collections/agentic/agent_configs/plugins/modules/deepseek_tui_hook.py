@@ -8,6 +8,7 @@ when several hosts or tasks can target the same file.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import os
 from typing import Any
 
@@ -131,28 +132,32 @@ hook:
 """
 
 
-def build_hook_definition(
-    *,
-    event: str,
-    command: str,
-    name: str | None,
-    condition: dict[str, Any] | None,
-    timeout_secs: int | None,
-    background: bool | None,
-    continue_on_error: bool | None,
-    extra: dict[str, Any],
-) -> dict[str, Any]:
+@dataclass(frozen=True, slots=True)
+class HookParams:
+    """Value object encapsulating the fields of a single DeepSeek-TUI hook."""
+
+    event: str
+    command: str
+    name: str | None = None
+    condition: dict[str, Any] | None = None
+    timeout_secs: int | None = None
+    background: bool | None = None
+    continue_on_error: bool | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+def build_hook_definition(params: HookParams) -> dict[str, Any]:
     """Build a DeepSeek-TUI hook definition from domain parameters."""
     desired: dict[str, Any] = {
-        "event": event,
-        "command": command,
-        "name": name,
-        "condition": condition,
-        "timeout_secs": timeout_secs,
-        "background": background,
-        "continue_on_error": continue_on_error,
+        "event": params.event,
+        "command": params.command,
+        "name": params.name,
+        "condition": params.condition,
+        "timeout_secs": params.timeout_secs,
+        "background": params.background,
+        "continue_on_error": params.continue_on_error,
     }
-    desired.update(extra)
+    desired.update(params.extra)
     return clean_dict(desired)
 
 
@@ -427,7 +432,7 @@ def main() -> None:
     )
 
     path = _resolve_hook_path(module)
-    desired = build_hook_definition(
+    hook_params = HookParams(
         event=module.params["event"],
         command=module.params["command"],
         name=module.params.get("name"),
@@ -437,6 +442,7 @@ def main() -> None:
         continue_on_error=module.params.get("continue_on_error"),
         extra=module.params.get("extra") or {},
     )
+    desired = build_hook_definition(hook_params)
     changed, data, existed_before = _apply_hook_changes(module, path, desired)
     _emit_result(module, path, desired, changed, existed_before, data)
 
