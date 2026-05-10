@@ -54,6 +54,13 @@ def test_system_packages_include_ninja_build() -> None:
     """Ensure Meson/CMake projects can rely on Ninja being present."""
     assert_required_system_package("ninja-build")
 
+def test_system_packages_include_coderabbit_installer_prerequisites() -> None:
+    """Ensure the CodeRabbit installer has its required RPM tools."""
+    tasks_content = PACKAGES_TASKS.read_text()
+
+    assert "- git" in tasks_content, "CodeRabbit CLI installer requires git"
+    assert "- unzip" in tasks_content, "CodeRabbit CLI installer requires unzip"
+
 
 def test_system_packages_include_htop() -> None:
     """Ensure deployed systems include an interactive process viewer."""

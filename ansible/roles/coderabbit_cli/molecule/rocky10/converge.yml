@@ -1,0 +1,13 @@
+---
+- name: Converge coderabbit_cli
+  hosts: all
+  gather_facts: true
+
+  vars:
+    owner_user: root
+    coderabbit_cli_installer_src: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/../../../../../coderabbit-install.sh"
+    coderabbit_cli_download_url: file:///tmp/coderabbit-releases
+    coderabbit_api_key: molecule-coderabbit-token
+
+  roles:
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"

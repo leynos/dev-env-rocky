@@ -1,0 +1,58 @@
+---
+- name: Verify coderabbit_cli
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Check CodeRabbit CLI binary
+      ansible.builtin.command:
+        argv:
+          - /root/.local/bin/coderabbit
+          - -V
+      changed_when: false
+      register: coderabbit_version
+
+    - name: Assert CodeRabbit CLI version fixture runs
+      ansible.builtin.assert:
+        that:
+          - coderabbit_version.stdout == 'coderabbit 0.0.0-molecule'
+        fail_msg: "CodeRabbit CLI binary did not run from the managed install directory"
+
+    - name: Check CodeRabbit CLI alias
+      ansible.builtin.stat:
+        path: /root/.local/bin/cr
+      register: coderabbit_alias
+
+    - name: Assert CodeRabbit CLI alias points at binary
+      ansible.builtin.assert:
+        that:
+          - coderabbit_alias.stat.islnk
+          - coderabbit_alias.stat.lnk_source == '/root/.local/bin/coderabbit'
+        fail_msg: "CodeRabbit CLI alias was not linked to the managed binary"
+
+    - name: Check CodeRabbit auth file
+      ansible.builtin.stat:
+        path: /root/.coderabbit/auth.json
+      register: coderabbit_auth_file
+
+    - name: Assert CodeRabbit CLI was authenticated
+      ansible.builtin.assert:
+        that:
+          - coderabbit_auth_file.stat.exists
+          - coderabbit_auth_file.stat.mode == '0644'
+        fail_msg: "CodeRabbit CLI auth file was not created"
+
+    - name: Run CodeRabbit CLI agent review fixture
+      ansible.builtin.command:
+        argv:
+          - /root/.local/bin/coderabbit
+          - review
+          - --agent
+      changed_when: false
+      register: coderabbit_review
+
+    - name: Assert CodeRabbit CLI agent mode runs
+      ansible.builtin.assert:
+        that:
+          - coderabbit_review.stdout == '{"findings":[]}'
+        fail_msg: "CodeRabbit CLI agent review mode did not run successfully"

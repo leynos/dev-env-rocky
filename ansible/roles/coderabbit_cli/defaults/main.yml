@@ -1,0 +1,4 @@
+---
+coderabbit_cli_installer_src: "{{ lookup('env', 'PWD') }}/../../coderabbit-install.sh"
+coderabbit_cli_install_dir: "{{ ansible_facts.env.HOME }}/.local/bin"
+coderabbit_cli_api_key: "{{ coderabbit_api_key }}"

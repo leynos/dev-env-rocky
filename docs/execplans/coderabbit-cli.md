@@ -15,11 +15,11 @@ the already-downloaded installer script at `../../coderabbit-install.sh`, keeps
 host-specific CodeRabbit API keys in Ansible Vault, and proves the behaviour
 with a Molecule scenario that runs on Podman against a Rocky Linux container.
 
-Success is observable in three ways. The user role creates `~/.local/bin/coderabbit`
-and the `~/.local/bin/cr` alias. The managed owner user's shell environment has
-`CODERABBIT_API_KEY` available from the vaulted host variable. Running
-`coderabbit review --agent` from the repository after major milestones starts
-the installed CLI in agent mode.
+Success is observable in three ways. The user role creates
+`~/.local/bin/coderabbit` and the `~/.local/bin/cr` alias. The role
+authenticates the CLI by running `coderabbit auth login --api-key` with the
+host's vaulted key. Running `coderabbit review --agent` from the repository
+after major milestones starts the installed CLI in agent mode.
 
 ## Constraints
 
@@ -56,8 +56,8 @@ Stop and ask for direction if the checked-in installer cannot be adapted to a
 deterministic Molecule test without modifying the vendored installer script.
 
 Stop and ask for direction if CodeRabbit authentication requires a file format
-or command whose behaviour cannot be confirmed without exposing the secret token
-in logs.
+or command whose behaviour cannot be confirmed without exposing the secret
+token in logs.
 
 Stop if a gate requires more than 1200 seconds in one command. Split the gate
 or report the blocker.
@@ -70,9 +70,10 @@ The installer normally downloads a release archive from CodeRabbit. Molecule
 must avoid external network dependence by serving a local fake release archive
 and pointing `CODERABBIT_DOWNLOAD_URL` at that local fixture.
 
-The CodeRabbit CLI's exact authentication environment variable contract may
-change. The implementation will use `CODERABBIT_API_KEY` unless testing the live
-CLI shows a different documented variable is required.
+The CodeRabbit CLI's exact authentication contract may change. Live help output
+confirmed the current supported non-interactive path is
+`coderabbit auth login --api-key <api-key>` for persistent authentication, or
+`coderabbit review --agent --api-key <api-key>` for one review invocation.
 
 The repository's `make molecule` target currently covers only `node_packages`
 and `paths`. The target must be updated so the new `coderabbit_cli` scenario is
@@ -89,14 +90,21 @@ part of the normal role gate.
 - [x] 2026-05-10: Confirmed the installer script exists at
   `../../coderabbit-install.sh` and installs `coderabbit` plus `cr` under
   `~/.local/bin`.
-- [ ] Add a focused CodeRabbit CLI role and wire it into `ansible/site.yml`
-  before `agent_tools`.
-- [ ] Add vaulted host API keys for `rohga.df12.net` and `vendetta.df12.net`.
-- [ ] Add deterministic Molecule plus Python regression coverage for the role.
-- [ ] Update user and developer documentation.
-- [ ] Run `coderabbit review --agent` after major milestones and record the
-  result.
-- [ ] Run all relevant gates with durable logs.
+- [x] 2026-05-10: Added the `coderabbit_cli` role, wired it into
+  `ansible/site.yml`, and added focused Python regression coverage.
+- [x] 2026-05-10: Added deterministic Molecule coverage using a local fake
+  CodeRabbit release archive served through `file:///tmp/coderabbit-releases`.
+- [x] 2026-05-10: Added vaulted `coderabbit_api_key` values for
+  `rohga.df12.net` and `vendetta.df12.net` from the provided token files.
+- [x] 2026-05-10: Updated `docs/users-guide.md` and
+  `docs/developers-guide.md`.
+- [x] 2026-05-10: Ran CodeRabbit review checkpoints. The unauthenticated run
+  failed as expected, and the `--api-key` run reached the review service but
+  failed because the CodeRabbit account has no usage credits.
+- [x] 2026-05-10: Ran focused tests, full Python gates, Markdown/Mermaid gates,
+  full Makefile Molecule coverage, vault verification, `git diff --check`, and
+  `ansible-playbook --syntax-check` with durable logs under `/tmp`.
+- [ ] Commit the completed implementation change.
 - [ ] Commit each completed logical change.
 
 ## Surprises & Discoveries
@@ -105,14 +113,34 @@ GrepAI is configured for the `Projects` workspace, but Qdrant was not reachable
 at `127.0.0.1:6334` during initial discovery. Exact file inspection was used as
 the fallback.
 
-The current `make molecule` target runs `node_packages` and `paths` only, so the
-new role needs to be added there for the requested e2e coverage to be part of
-the repository gate.
+The current `make molecule` target runs `node_packages` and `paths` only, so
+the new role needs to be added there for the requested e2e coverage to be part
+of the repository gate.
 
 The existing Cursor CLI role is a close local pattern for a user-scoped CLI
 installer role, but it fetches from the network during deployment. The
 CodeRabbit role can avoid installer drift by copying and executing the
 pre-downloaded installer script.
+
+The bare Rocky 10 Molecule container lacks `git` and `unzip`, both of which the
+CodeRabbit installer requires. The system package role already installed `git`,
+but `unzip` had to be added there, and the Molecule prepare step installs both
+tools in the container fixture.
+
+`molecule` is not installed directly on `PATH` in this environment. Focused
+Molecule validation was run with
+`uv run --with molecule --with 'molecule-plugins[podman]' molecule test -s rocky10`.
+
+`make fmt` failed on pre-existing Markdown lint issues outside the repository's
+`MARKDOWN_PATHS` gate, under `agent-prompts` and `agent-skills`. The unrelated
+formatter edits were reverted, and the relevant Markdown gate
+`make markdownlint` passed.
+
+The live CodeRabbit CLI did not accept `CODERABBIT_API_KEY` as an environment
+variable for `coderabbit review --agent`. Its help output documents
+`coderabbit auth login --api-key <api-key>` for stored authentication and
+`coderabbit review --agent --api-key <key>` for direct review authentication,
+so the role authenticates with `auth login --api-key`.
 
 ## Decision Log
 
@@ -126,9 +154,14 @@ match existing role scenarios. The scenario will serve a local fake CodeRabbit
 release archive so the test proves the installer integration without relying on
 the public release service.
 
-2026-05-10: Store host-specific tokens as a `coderabbit_api_keys` mapping in
-Ansible Vault. This mirrors the existing host-keyed `lody_auth_tokens` shape
-and keeps inventory-specific secrets out of plaintext variables.
+2026-05-10: Store the CodeRabbit token as a per-host `coderabbit_api_key`
+variable in each host's vaulted variables. This is simpler than a host-keyed
+mapping because each host only needs its own token at role runtime.
+
+2026-05-10: Authenticate CodeRabbit CLI with `coderabbit auth login --api-key`
+rather than exporting `CODERABBIT_API_KEY` in shell startup files. This matches
+the live CLI help output and avoids placing the secret in every interactive
+shell environment.
 
 ## Implementation Plan
 
@@ -136,25 +169,26 @@ First, add the planning document and gate it with Markdown checks. Commit this
 plan before making role changes.
 
 Second, add `ansible/roles/coderabbit_cli`. The role creates
-`{{ ansible_env.HOME }}/.local/bin`, copies `../../coderabbit-install.sh` to a
-temporary managed location, runs it as the owner user with
-`CODERABBIT_INSTALL_DIR={{ ansible_env.HOME }}/.local/bin`, and declares
-`creates: {{ ansible_env.HOME }}/.local/bin/coderabbit` for idempotence. It
-writes a user environment fragment that exports `CODERABBIT_API_KEY` from
-`coderabbit_api_keys[inventory_hostname]` with `no_log: true`.
+`{{ ansible_facts.env.HOME }}/.local/bin`, copies
+`../../coderabbit-install.sh` to a temporary managed location, runs it as the
+owner user with `CODERABBIT_INSTALL_DIR` set to that bin directory, and declares
+`creates: ~/.local/bin/coderabbit` for idempotence. It then runs
+`coderabbit auth login --api-key` with the host's `coderabbit_api_key` and
+`no_log: true`, using `creates: ~/.coderabbit/auth.json` to avoid repeated
+authentication.
 
 Third, wire `coderabbit_cli` into the user-environment role list in
-`ansible/site.yml` before `agent_tools`. Add Python regression tests that assert
-the role uses the local installer path, remains idempotent, keeps secret-bearing
-tasks under `no_log`, and runs before `agent_tools`.
+`ansible/site.yml` before `agent_tools`. Add Python regression tests that
+assert the role uses the local installer path, remains idempotent, keeps
+secret-bearing tasks under `no_log`, and runs before `agent_tools`.
 
 Fourth, add a Molecule `rocky10` scenario under
 `ansible/roles/coderabbit_cli/molecule/rocky10`. The prepare playbook creates a
 fake CodeRabbit release directory containing `latest/VERSION` and a zip archive
-with an executable fake `coderabbit`. Converge points
-`CODERABBIT_DOWNLOAD_URL` at that local release fixture and passes a fake
-`coderabbit_api_keys` value. Verify asserts the `coderabbit` binary, `cr`
-symlink, exported API key fragment, and idempotent second converge result.
+with an executable fake `coderabbit`. Converge points `CODERABBIT_DOWNLOAD_URL`
+at that local release fixture and passes a fake `coderabbit_api_key` value.
+Verify asserts the `coderabbit` binary, `cr` symlink, auth file, agent review
+fixture, and idempotent second converge result.
 
 Fifth, update `Makefile` so `make molecule` runs the new scenario. Update
 `docs/users-guide.md` and `docs/developers-guide.md` to document the role,
@@ -197,7 +231,7 @@ make test 2>&1 | tee /tmp/test-dev-env-rocky-coderabbit-cli.out
 ```
 
 ```bash
-make molecule 2>&1 | tee /tmp/molecule-dev-env-rocky-coderabbit-cli.out
+make molecule MOLECULE="uv run --with molecule --with 'molecule-plugins[podman]' molecule" 2>&1 | tee /tmp/molecule-dev-env-rocky-coderabbit-cli.out
 ```
 
 ```bash
@@ -207,13 +241,20 @@ git diff --check 2>&1 | tee /tmp/diff-check-dev-env-rocky-coderabbit-cli.out
 After each major milestone, run:
 
 ```bash
-coderabbit review --agent 2>&1 | tee /tmp/coderabbit-review-dev-env-rocky-coderabbit-cli.out
+coderabbit review --agent --api-key "$(cat ~/__coderabbit_token_rohga)" 2>&1 | tee /tmp/coderabbit-review-dev-env-rocky-coderabbit-cli.out
 ```
 
-The final completion audit must map every requirement from the user objective to
-actual artefacts and command evidence.
+The final completion audit must map every requirement from the user objective
+to actual artefacts and command evidence.
 
 ## Outcomes & Retrospective
 
-Pending. This section will be completed after the role, vault updates, tests,
-documentation, gates, CodeRabbit review runs, and commits are complete.
+The implementation installs and authenticates CodeRabbit CLI through a
+dedicated role, adds deterministic Molecule coverage, stores both host API keys
+as inline Ansible Vault values, updates user and developer documentation, and
+wires the new role into the normal user-environment playbook and Molecule gate.
+
+The only incomplete external signal is CodeRabbit's hosted review result: the
+CLI reached the service with `--api-key`, but the service rejected the review
+because the account has no usage credits. That is an account-state blocker, not
+a local implementation failure.

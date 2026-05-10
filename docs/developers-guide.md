@@ -122,6 +122,30 @@ The role must appear before `agent_tools` in `site.yml`. This ordering ensures
 the `cursor-agent` binary exists before `agent_tools` configures Cursor MCP
 servers and skills.
 
+
+## CodeRabbit CLI Role
+
+The `coderabbit_cli` Ansible role installs the CodeRabbit `coderabbit` binary
+and the `cr` alias into the managed user's `~/.local/bin` directory. The role
+copies the already-downloaded installer from `../../coderabbit-install.sh` on
+the controller instead of curling the installer during the play. The copied
+installer is executed with `CODERABBIT_INSTALL_DIR` set to the managed
+user-local bin directory and with `creates: ~/.local/bin/coderabbit`, so the
+install task is idempotent after the binary exists.
+
+The role authenticates the CLI by running `coderabbit auth login --api-key`
+with the host's vaulted `coderabbit_api_key` variable. That command task must
+keep `no_log: true` because the argv contains a secret. The task uses
+`creates: ~/.coderabbit/auth.json` so an already-authenticated CLI is not
+re-authenticated on every playbook run.
+
+The role has a Molecule `rocky10` scenario. The scenario installs the
+installer's RPM prerequisites, builds a local fake CodeRabbit release archive
+under `/tmp/coderabbit-releases`, points `CODERABBIT_DOWNLOAD_URL` at that
+fixture, and verifies the installed binary, `cr` symlink, auth file, agent
+review mode, and idempotence. This keeps the e2e test deterministic and does
+not depend on CodeRabbit's public release service.
+
 ## cursor_cli_mcp Module
 
 `agentic.agent_configs.cursor_cli_mcp` manages `mcpServers` entries in

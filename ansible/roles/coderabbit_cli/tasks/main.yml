@@ -1,0 +1,53 @@
+---
+- name: Ensure CodeRabbit CLI bin directory exists
+  ansible.builtin.file:
+    path: "{{ coderabbit_cli_install_dir }}"
+    state: directory
+    owner: "{{ owner_user }}"
+    group: "{{ owner_user }}"
+    mode: '0755'
+
+- name: Ensure CodeRabbit CLI installer cache directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts.env.HOME }}/.cache"
+    state: directory
+    owner: "{{ owner_user }}"
+    group: "{{ owner_user }}"
+    mode: '0755'
+
+- name: Copy CodeRabbit CLI installer
+  ansible.builtin.copy:
+    src: "{{ coderabbit_cli_installer_src }}"
+    dest: "{{ ansible_facts.env.HOME }}/.cache/coderabbit-install.sh"
+    owner: "{{ owner_user }}"
+    group: "{{ owner_user }}"
+    mode: '0700'
+
+- name: Install CodeRabbit CLI
+  ansible.builtin.shell:
+    cmd: "{{ ansible_facts.env.HOME }}/.cache/coderabbit-install.sh"
+    executable: /bin/bash
+  args:
+    creates: "{{ coderabbit_cli_install_dir }}/coderabbit"
+  environment:
+    CODERABBIT_INSTALL_DIR: "{{ coderabbit_cli_install_dir }}"
+    CODERABBIT_DOWNLOAD_URL: "{{ coderabbit_cli_download_url | default(omit) }}"
+    NO_COLOR: "1"
+  register: coderabbit_cli_install_result
+
+- name: Debug CodeRabbit CLI install output
+  ansible.builtin.debug:
+    msg: "{{ coderabbit_cli_install_result.stdout_lines | default([]) }}"
+  when: coderabbit_cli_install_result is changed
+
+- name: Authenticate CodeRabbit CLI with vaulted API key
+  ansible.builtin.command:
+    argv:
+      - "{{ coderabbit_cli_install_dir }}/coderabbit"
+      - auth
+      - login
+      - --api-key
+      - "{{ coderabbit_cli_api_key }}"
+  args:
+    creates: "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"
+  no_log: true

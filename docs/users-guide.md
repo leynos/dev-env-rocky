@@ -42,6 +42,40 @@ runs before `agent_tools` so Cursor exists before MCPs and skills are
 configured. Cursor CLI does not currently support stop hooks, so this
 repository does not install Cursor stop-hook configuration.
 
+The `coderabbit_cli` role installs CodeRabbit CLI through the downloaded
+installer script kept outside this repository at `../../coderabbit-install.sh`.
+The upstream source for that script is:
+
+```text
+https://cli.coderabbit.ai/install.sh
+```
+
+The role runs the installer with `CODERABBIT_INSTALL_DIR=~/.local/bin`, which
+creates both `~/.local/bin/coderabbit` and the short `~/.local/bin/cr` alias.
+It then authenticates CodeRabbit CLI with:
+
+```bash
+coderabbit auth login --api-key <vaulted-key>
+```
+
+The API key comes from the host's vaulted `coderabbit_api_key` variable, and
+the role suppresses task output while the secret is in use.
+
+To rotate a host's CodeRabbit API key:
+
+1. Write the replacement token to the matching local token file:
+   `~/__coderabbit_token_rohga` for `rohga.df12.net` or
+   `~/__coderabbit_token_vendetta` for `vendetta.df12.net`.
+2. Re-encrypt the value with `ansible-vault encrypt_string --vault-password-file
+   ~/.ansible_vault_pass --stdin-name coderabbit_api_key`.
+3. Replace the `coderabbit_api_key` value in the matching
+   `ansible/host_vars/<host>/vault.yml` file.
+4. Remove `~/.coderabbit/auth.json` on the affected host if CodeRabbit CLI has
+   already been authenticated with the old key.
+5. Run `make site`, or run a narrower play for the affected host.
+6. Verify that `coderabbit review --agent` runs from a git repository as the
+   owner user.
+
 ## Login Shell PATH
 
 The `paths` role writes `~/.bashrc.d/00-paths` and appends managed source hooks
@@ -77,6 +111,7 @@ The following packages are currently provisioned:
   `-G Ninja`).
 - `htop` — provides an interactive process viewer for inspecting CPU, memory,
   and process state on managed hosts.
+- `unzip` — extracts CodeRabbit CLI release archives during installation.
 
 ## Factory Droid DeepSeek Models
 
