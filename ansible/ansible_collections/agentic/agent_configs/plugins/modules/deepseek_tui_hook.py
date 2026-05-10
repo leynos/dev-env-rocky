@@ -318,35 +318,35 @@ def state_transition(changed: bool, existed_before: bool, state: str) -> str:
     return "updated" if existed_before else "created"
 
 
-def main() -> None:
-    """Run the Ansible module."""
-    module = AnsibleModule(
-        argument_spec={
-            "event": {"type": "str", "required": True},
-            "command": {"type": "str", "required": True},
-            "name": {"type": "str"},
-            "state": {
-                "type": "str",
-                "choices": ["present", "absent"],
-                "default": "present",
-            },
-            "scope": {"type": "str", "choices": ["user", "project"], "default": "user"},
-            "project_dir": {"type": "path"},
-            "path": {"type": "path"},
-            "condition": {"type": "dict"},
-            "timeout_secs": {"type": "int"},
-            "background": {"type": "bool"},
-            "continue_on_error": {"type": "bool"},
-            "enabled": {"type": "bool"},
-            "default_timeout_secs": {"type": "int"},
-            "working_dir": {"type": "path"},
-            "extra": {"type": "dict", "default": {}},
+def _build_argument_spec() -> dict[str, Any]:
+    """Return the Ansible module argument specification."""
+    return {
+        "event": {"type": "str", "required": True},
+        "command": {"type": "str", "required": True},
+        "name": {"type": "str"},
+        "state": {
+            "type": "str",
+            "choices": ["present", "absent"],
+            "default": "present",
         },
-        supports_check_mode=True,
-    )
+        "scope": {"type": "str", "choices": ["user", "project"], "default": "user"},
+        "project_dir": {"type": "path"},
+        "path": {"type": "path"},
+        "condition": {"type": "dict"},
+        "timeout_secs": {"type": "int"},
+        "background": {"type": "bool"},
+        "continue_on_error": {"type": "bool"},
+        "enabled": {"type": "bool"},
+        "default_timeout_secs": {"type": "int"},
+        "working_dir": {"type": "path"},
+        "extra": {"type": "dict", "default": {}},
+    }
 
+
+def _resolve_hook_path(module: AnsibleModule) -> str:
+    """Resolve the DeepSeek-TUI hook config path."""
     try:
-        path = resolve_scoped_config_path(
+        return resolve_scoped_config_path(
             path=module.params.get("path"),
             scope=module.params["scope"],
             project_dir=module.params.get("project_dir"),
@@ -363,18 +363,13 @@ def main() -> None:
             )
         )
 
-    desired = build_hook_definition(
-        event=module.params["event"],
-        command=module.params["command"],
-        name=module.params.get("name"),
-        condition=module.params.get("condition"),
-        timeout_secs=module.params.get("timeout_secs"),
-        background=module.params.get("background"),
-        continue_on_error=module.params.get("continue_on_error"),
-        extra=module.params.get("extra") or {},
-    )
+
+def _apply_hook_changes(
+    module: AnsibleModule, path: str, desired: dict[str, Any]
+) -> tuple[bool, dict[str, Any], bool]:
+    """Apply the desired hook changes to the TOML file."""
     try:
-        changed, data, existed_before = manage_hook_toml(
+        return manage_hook_toml(
             module=module,
             path=path,
             desired_hook=desired,
@@ -390,6 +385,16 @@ def main() -> None:
             )
         )
 
+
+def _emit_result(
+    module: AnsibleModule,
+    path: str,
+    desired: dict[str, Any],
+    changed: bool,
+    existed_before: bool,
+    data: dict[str, Any],
+) -> None:
+    """Emit the module operation log and Ansible result."""
     transition = state_transition(changed, existed_before, module.params["state"])
     log_operation(
         module,
@@ -412,6 +417,28 @@ def main() -> None:
         hooks=data.get("hooks", {}),
         state_transition=transition,
     )
+
+
+def main() -> None:
+    """Run the Ansible module."""
+    module = AnsibleModule(
+        argument_spec=_build_argument_spec(),
+        supports_check_mode=True,
+    )
+
+    path = _resolve_hook_path(module)
+    desired = build_hook_definition(
+        event=module.params["event"],
+        command=module.params["command"],
+        name=module.params.get("name"),
+        condition=module.params.get("condition"),
+        timeout_secs=module.params.get("timeout_secs"),
+        background=module.params.get("background"),
+        continue_on_error=module.params.get("continue_on_error"),
+        extra=module.params.get("extra") or {},
+    )
+    changed, data, existed_before = _apply_hook_changes(module, path, desired)
+    _emit_result(module, path, desired, changed, existed_before, data)
 
 
 if __name__ == "__main__":
