@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 """Manage DeepSeek-TUI lifecycle hooks in config.toml.
 
 This module performs read-modify-write updates on ``config.toml``. Serialise
@@ -10,6 +9,7 @@ when several hosts or tasks can target the same file.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
@@ -136,14 +136,14 @@ def build_hook_definition(
     event: str,
     command: str,
     name: str | None,
-    condition: dict[str, object] | None,
+    condition: dict[str, Any] | None,
     timeout_secs: int | None,
     background: bool | None,
     continue_on_error: bool | None,
-    extra: dict[str, object],
-) -> dict[str, object]:
+    extra: dict[str, Any],
+) -> dict[str, Any]:
     """Build a DeepSeek-TUI hook definition from domain parameters."""
-    desired: dict[str, object] = {
+    desired: dict[str, Any] = {
         "event": event,
         "command": command,
         "name": name,
@@ -157,7 +157,7 @@ def build_hook_definition(
 
 
 def hook_identity_matches(
-    existing: dict[str, object], desired: dict[str, object]
+    existing: dict[str, Any], desired: dict[str, Any]
 ) -> bool:
     """Return whether two hook entries represent the same managed hook."""
     if existing.get("event") != desired.get("event"):
@@ -168,14 +168,14 @@ def hook_identity_matches(
 
 
 def hook_without_managed_identity(
-    hook: object, desired: dict[str, object]
+    hook: object, desired: dict[str, Any]
 ) -> bool:
     """Return whether an existing hook should be retained."""
     return not (isinstance(hook, dict) and hook_identity_matches(hook, desired))
 
 
 def apply_global_hook_options(
-    hooks_root: dict[str, object],
+    hooks_root: dict[str, Any],
     *,
     enabled: bool | None,
     default_timeout_secs: int | None,
@@ -196,14 +196,14 @@ def apply_global_hook_options(
     return changed
 
 
-def ensure_hook_toml_shape(path: str, data: object) -> dict[str, object]:
+def ensure_hook_toml_shape(path: str, data: object) -> dict[str, Any]:
     """Return a mutable TOML root object or raise a contextual validation error."""
     if not isinstance(data, dict):
         raise ValueError(f"Expected TOML root object path={path!r}")
     return data
 
 
-def ensure_hooks_root(path: str, data: dict[str, object]) -> dict[str, object]:
+def ensure_hooks_root(path: str, data: dict[str, Any]) -> dict[str, Any]:
     """Return the mutable DeepSeek-TUI hooks table."""
     hooks_root = data.setdefault("hooks", {})
     if not isinstance(hooks_root, dict):
@@ -211,7 +211,7 @@ def ensure_hooks_root(path: str, data: dict[str, object]) -> dict[str, object]:
     return hooks_root
 
 
-def ensure_hook_entries(path: str, hooks_root: dict[str, object]) -> list[object]:
+def ensure_hook_entries(path: str, hooks_root: dict[str, Any]) -> list[object]:
     """Return the mutable hook entry list."""
     hook_entries = hooks_root.setdefault("hooks", [])
     if not isinstance(hook_entries, list):
@@ -222,9 +222,9 @@ def ensure_hook_entries(path: str, hooks_root: dict[str, object]) -> list[object
 def manage_hook_toml(
     module: AnsibleModule,
     path: str,
-    desired_hook: dict[str, object],
+    desired_hook: dict[str, Any],
     state: str,
-) -> tuple[bool, dict[str, object], bool]:
+) -> tuple[bool, dict[str, Any], bool]:
     """Create, update, or remove one DeepSeek-TUI hook in a TOML config file."""
     path = expand_path(path)
     data, removed_legacy_block = load_toml_file(module, path, default={})

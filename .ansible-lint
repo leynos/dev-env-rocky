@@ -1,17 +1,2 @@
 ---
-# Scope the site-playbook compatibility profile to legacy role task files that
-# pre-date the DeepSeek-TUI branch. New collection roles are linted directly.
-exclude_paths:
-  - ansible/roles/agent_tools/tasks/main.yml
-  - ansible/roles/cursor_cli/tasks/main.yml
-  - ansible/roles/infra_tools/tasks/main.yml
-  - ansible/roles/node_packages/defaults/main.yml
-  - ansible/roles/node_packages/tasks/main.yml
-  - ansible/roles/packages/tasks/main.yml
-  - ansible/roles/rust_crates/tasks/main.yml
-  - ansible/roles/rustup/tasks/main.yml
-  - ansible/roles/sccache_user/defaults/main.yml
-  - ansible/roles/user/defaults/main.yml
-  - ansible/roles/user_linger/tasks/main.yml
-  - ansible/roles/uv_tools/tasks/main.yml
-
+{}

@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 """Manage DeepSeek-TUI skill directories.
 
 This module performs read-modify-write updates across a skill directory.
@@ -133,10 +132,10 @@ def build_frontmatter(
     *,
     name: str,
     description: str | None,
-    metadata: dict[str, object],
-) -> dict[str, object]:
+    metadata: dict[str, Any],
+) -> dict[str, Any]:
     """Build DeepSeek-TUI skill front matter from domain parameters."""
-    base: dict[str, object] = {
+    base: dict[str, Any] = {
         "name": name,
         "description": description,
     }

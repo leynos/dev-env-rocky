@@ -1,0 +1,17 @@
+---
+# Compatibility profile for full-site linting while legacy site-local roles are
+# being migrated. New collection roles and Molecule scenarios should use the
+# default strict profile instead.
+exclude_paths:
+  - ansible/roles/agent_tools/tasks/main.yml
+  - ansible/roles/cursor_cli/tasks/main.yml
+  - ansible/roles/infra_tools/tasks/main.yml
+  - ansible/roles/node_packages/defaults/main.yml
+  - ansible/roles/node_packages/tasks/main.yml
+  - ansible/roles/packages/tasks/main.yml
+  - ansible/roles/rust_crates/tasks/main.yml
+  - ansible/roles/rustup/tasks/main.yml
+  - ansible/roles/sccache_user/defaults/main.yml
+  - ansible/roles/user/defaults/main.yml
+  - ansible/roles/user_linger/tasks/main.yml
+  - ansible/roles/uv_tools/tasks/main.yml

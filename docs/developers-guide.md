@@ -215,7 +215,6 @@ Key parameters:
 - `body`: Markdown body for `SKILL.md`.
 - `scope`: `user` (default) or `project`.
 
-
 ## DeepSeek-TUI Modules
 
 DeepSeek-TUI support is based on upstream release `v0.8.24` of

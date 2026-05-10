@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 """Manage DeepSeek-TUI Model Context Protocol server definitions.
 
 This module performs read-modify-write updates on ``mcp.json``. Serialise
@@ -158,7 +157,7 @@ def build_server_definition(
     transport: str,
     command: str | None,
     args: list[str],
-    env: dict[str, object],
+    env: dict[str, Any],
     url: str | None,
     disabled: bool | None,
     enabled: bool | None,
@@ -168,11 +167,11 @@ def build_server_definition(
     read_timeout: int | None,
     enabled_tools: list[str] | None,
     disabled_tools: list[str] | None,
-    extra: dict[str, object],
-) -> dict[str, object]:
+    extra: dict[str, Any],
+) -> dict[str, Any]:
     """Build a DeepSeek-TUI MCP server definition from domain parameters."""
     if transport == "stdio":
-        desired: dict[str, object] = {
+        desired: dict[str, Any] = {
             "command": command,
             "args": args,
             "env": env,

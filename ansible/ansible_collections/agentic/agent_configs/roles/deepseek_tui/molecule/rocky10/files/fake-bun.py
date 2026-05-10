@@ -4,11 +4,13 @@
 import fcntl
 import json
 import os
+import re
 import stat
 import sys
 from pathlib import Path
 
 EXPECTED_PACKAGE_SPEC = "deepseek-tui@0.8.24"
+PACKAGE_SPEC_RE = re.compile(r"^deepseek-tui@(.+)$")
 
 
 def append_log(argv: list[str]) -> None:
@@ -40,8 +42,12 @@ def write_executable(path: Path) -> None:
 
 def install_package(argv: list[str]) -> int:
     """Install fake DeepSeek-TUI package metadata and command shims."""
-    if argv != ["install", "-g", EXPECTED_PACKAGE_SPEC]:
+    if len(argv) != 3 or argv[:2] != ["install", "-g"]:
         print(f"unsupported fake bun install invocation: {argv}", file=sys.stderr)
+        return 2
+    package_match = PACKAGE_SPEC_RE.fullmatch(argv[2])
+    if package_match is None or argv[2] != EXPECTED_PACKAGE_SPEC:
+        print(f"unsupported fake bun package spec: {argv[2]!r}", file=sys.stderr)
         return 2
     global_dir = Path(os.environ["BUN_INSTALL_GLOBAL_DIR"])
     global_bin_dir = Path(os.environ["BUN_INSTALL_BIN"])
@@ -51,7 +57,7 @@ def install_package(argv: list[str]) -> int:
         json.dumps(
             {
                 "name": "deepseek-tui",
-                "version": EXPECTED_PACKAGE_SPEC.rsplit("@", maxsplit=1)[-1],
+                "version": package_match.group(1),
                 "bin": {
                     "deepseek": "bin/deepseek.js",
                     "deepseek-tui": "bin/deepseek-tui.js",
