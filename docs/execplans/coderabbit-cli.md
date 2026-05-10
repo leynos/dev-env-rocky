@@ -5,7 +5,7 @@ This ExecPlan (execution plan) is a living document. The sections
 `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
 proceeds.
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -244,7 +244,7 @@ git diff --check 2>&1 | tee /tmp/diff-check-dev-env-rocky-coderabbit-cli.out
 After each major milestone, run:
 
 ```bash
-coderabbit review --agent --api-key "$(cat ~/__coderabbit_token_rohga)" 2>&1 | tee /tmp/coderabbit-review-dev-env-rocky-coderabbit-cli.out
+coderabbit review --agent 2>&1 | tee /tmp/coderabbit-review-dev-env-rocky-coderabbit-cli.out
 ```
 
 The final completion audit must map every requirement from the user objective
