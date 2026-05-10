@@ -243,6 +243,88 @@ def state_transition(changed: bool, existed_before: bool, state: str) -> str:
     return "updated" if existed_before else "created"
 
 
+def _resolve_mcp_path(module: AnsibleModule) -> str:
+    """Resolve the effective mcp.json path, failing the module on error."""
+    try:
+        return resolve_scoped_config_path(
+            path=module.params.get("path"),
+            scope=module.params["scope"],
+            project_dir=module.params.get("project_dir"),
+            user_path="~/.deepseek/mcp.json",
+            project_relative_path=os.path.join(".deepseek", "mcp.json"),
+        )
+    except ValueError as exc:
+        module.fail_json(
+            msg=(
+                "failed to resolve DeepSeek-TUI MCP path "
+                f"name={module.params.get('name')!r} "
+                f"scope={module.params.get('scope')!r}: {exc}"
+            )
+        )
+
+
+def _build_desired_server(module: AnsibleModule) -> dict[str, Any] | None:
+    """Validate params and build the desired server definition; return None for state=absent."""
+    if module.params["state"] != "present":
+        return None
+    try:
+        validate_present_server_params(module.params)
+    except ValueError as exc:
+        module.fail_json(msg=str(exc))
+    return build_server_definition(
+        transport=module.params["transport"],
+        command=module.params.get("command"),
+        args=module.params.get("args") or [],
+        env=module.params.get("env") or {},
+        url=module.params.get("url"),
+        disabled=module.params.get("disabled"),
+        enabled=module.params.get("enabled"),
+        required=module.params.get("required"),
+        connect_timeout=module.params.get("connect_timeout"),
+        execute_timeout=module.params.get("execute_timeout"),
+        read_timeout=module.params.get("read_timeout"),
+        enabled_tools=module.params.get("enabled_tools"),
+        disabled_tools=module.params.get("disabled_tools"),
+        extra=module.params.get("extra") or {},
+    )
+
+
+def _check_existed_before(path: str, name: str) -> bool:
+    """Return True if a server entry named *name* already exists in *path*."""
+    try:
+        existing_data = load_json_file(path, default={})
+    except Exception:
+        return False
+    if not isinstance(existing_data, dict):
+        return False
+    existing_servers = existing_data.get("servers", {})
+    return isinstance(existing_servers, dict) and name in existing_servers
+
+
+def _assemble_result(
+    module: AnsibleModule,
+    *,
+    changed: bool,
+    existed_before: bool,
+    path: str,
+    data: dict[str, Any],
+    desired: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Assemble the module result dictionary."""
+    result: dict[str, Any] = {
+        "changed": changed,
+        "path": path,
+        "scope": module.params["scope"],
+        "name": module.params["name"],
+        "state_transition": state_transition(
+            changed, existed_before, module.params["state"]
+        ),
+    }
+    if module.params["state"] == "present":
+        result["server"] = data.get("servers", {}).get(module.params["name"], desired)
+    return result
+
+
 def main() -> None:
     """Run the Ansible module."""
     module = AnsibleModule(
@@ -279,57 +361,10 @@ def main() -> None:
         supports_check_mode=True,
     )
 
-    try:
-        path = resolve_scoped_config_path(
-            path=module.params.get("path"),
-            scope=module.params["scope"],
-            project_dir=module.params.get("project_dir"),
-            user_path="~/.deepseek/mcp.json",
-            project_relative_path=os.path.join(".deepseek", "mcp.json"),
-        )
-    except ValueError as exc:
-        module.fail_json(
-            msg=(
-                "failed to resolve DeepSeek-TUI MCP path "
-                f"name={module.params.get('name')!r} "
-                f"scope={module.params.get('scope')!r}: {exc}"
-            )
-        )
+    path = _resolve_mcp_path(module)
+    desired = _build_desired_server(module)
+    existed_before = _check_existed_before(path, module.params["name"])
 
-    desired = None
-    if module.params["state"] == "present":
-        try:
-            validate_present_server_params(module.params)
-        except ValueError as exc:
-            module.fail_json(msg=str(exc))
-        desired = build_server_definition(
-            transport=module.params["transport"],
-            command=module.params.get("command"),
-            args=module.params.get("args") or [],
-            env=module.params.get("env") or {},
-            url=module.params.get("url"),
-            disabled=module.params.get("disabled"),
-            enabled=module.params.get("enabled"),
-            required=module.params.get("required"),
-            connect_timeout=module.params.get("connect_timeout"),
-            execute_timeout=module.params.get("execute_timeout"),
-            read_timeout=module.params.get("read_timeout"),
-            enabled_tools=module.params.get("enabled_tools"),
-            disabled_tools=module.params.get("disabled_tools"),
-            extra=module.params.get("extra") or {},
-        )
-
-    existing_data = {}
-    try:
-        existing_data = load_json_file(path, default={})
-    except Exception:
-        existing_data = {}
-    existing_servers = (
-        existing_data.get("servers", {}) if isinstance(existing_data, dict) else {}
-    )
-    existed_before = (
-        isinstance(existing_servers, dict) and module.params["name"] in existing_servers
-    )
     changed, data = manage_named_json_entry(
         module=module,
         path=path,
@@ -339,18 +374,14 @@ def main() -> None:
         state=module.params["state"],
     )
 
-    result = {
-        "changed": changed,
-        "path": path,
-        "scope": module.params["scope"],
-        "name": module.params["name"],
-        "state_transition": state_transition(
-            changed, existed_before, module.params["state"]
-        ),
-    }
-    if module.params["state"] == "present":
-        result["server"] = data.get("servers", {}).get(module.params["name"], desired)
-
+    result = _assemble_result(
+        module,
+        changed=changed,
+        existed_before=existed_before,
+        path=path,
+        data=data,
+        desired=desired,
+    )
     log_operation(
         module,
         "deepseek_tui_mcp",
