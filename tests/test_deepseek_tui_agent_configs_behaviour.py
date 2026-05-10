@@ -16,6 +16,8 @@ from pytest_bdd import given, scenarios, then, when  # ty: ignore[unresolved-imp
 
 from ansible_module_runner import run_module
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
 scenarios("features/deepseek_tui_agent_configs.feature")
 
 
@@ -114,9 +116,8 @@ def skill_bundle_is_written(deepseek_home: Path) -> None:
     )
 
 
-def test_deepseek_tui_modules_run_through_ansible_playbook(tmp_path: Path) -> None:
-    """Exercise DeepSeek-TUI modules through an actual Ansible playbook boundary."""
-    deepseek_home = tmp_path / ".deepseek"
+def _write_deepseek_tui_playbook(tmp_path: Path, deepseek_home: Path) -> Path:
+    """Write a minimal DeepSeek-TUI provisioning playbook and return its path."""
     playbook = tmp_path / "deepseek-tui.yml"
     playbook.write_text(
         f"""---
@@ -150,27 +151,39 @@ def test_deepseek_tui_modules_run_through_ansible_playbook(tmp_path: Path) -> No
 """,
         encoding="utf-8",
     )
+    return playbook
+
+
+def _build_ansible_env() -> dict[str, str]:
+    """Return an environment dict with Ansible collection search paths configured."""
     env = os.environ.copy()
-    repo_root = Path(__file__).resolve().parents[1]
-    env["ANSIBLE_COLLECTIONS_PATH"] = str(repo_root / "ansible/ansible_collections")
+    env["ANSIBLE_COLLECTIONS_PATH"] = str(
+        _REPO_ROOT / "ansible/ansible_collections"
+    )
     env["ANSIBLE_LIBRARY"] = ":".join(
         [
             str(
-                repo_root
+                _REPO_ROOT
                 / "ansible/ansible_collections/agentic/agent_configs/plugins/modules"
             ),
             str(
-                repo_root
+                _REPO_ROOT
                 / "ansible/ansible_collections/packaging/tools/plugins/modules"
             ),
         ]
     )
     env["ANSIBLE_MODULE_UTILS"] = str(
-        repo_root
+        _REPO_ROOT
         / "ansible/ansible_collections/agentic/agent_configs/plugins/module_utils"
     )
+    return env
 
-    result = subprocess.run(
+
+def _run_ansible_playbook(
+    playbook: Path, env: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    """Run *playbook* via the Ansible CLI and return the completed process."""
+    return subprocess.run(
         [
             sys.executable,
             "-m",
@@ -187,6 +200,12 @@ def test_deepseek_tui_modules_run_through_ansible_playbook(tmp_path: Path) -> No
         capture_output=True,
     )
 
+
+def _assert_deepseek_tui_artifacts(
+    deepseek_home: Path,
+    result: subprocess.CompletedProcess[str],
+) -> None:
+    """Assert the playbook succeeded and wrote the expected DeepSeek-TUI artefacts."""
     assert result.returncode == 0, result.stderr + result.stdout
     assert (
         json.loads((deepseek_home / "mcp.json").read_text())["servers"]["repo-tools"][
@@ -196,3 +215,11 @@ def test_deepseek_tui_modules_run_through_ansible_playbook(tmp_path: Path) -> No
     )
     assert "repo-env" in (deepseek_home / "config.toml").read_text()
     assert (deepseek_home / "skills" / "repo-reviewer" / "SKILL.md").exists()
+
+
+def test_deepseek_tui_modules_run_through_ansible_playbook(tmp_path: Path) -> None:
+    """Exercise DeepSeek-TUI modules through an actual Ansible playbook boundary."""
+    deepseek_home = tmp_path / ".deepseek"
+    playbook = _write_deepseek_tui_playbook(tmp_path, deepseek_home)
+    result = _run_ansible_playbook(playbook, _build_ansible_env())
+    _assert_deepseek_tui_artifacts(deepseek_home, result)
