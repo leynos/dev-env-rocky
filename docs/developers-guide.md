@@ -131,7 +131,7 @@ copies the already-downloaded installer from `../../coderabbit-install.sh` on
 the controller instead of curling the installer during the play. The copied
 installer is executed with `CODERABBIT_INSTALL_DIR` set to the managed
 user-local bin directory and with `creates: ~/.local/bin/coderabbit`, so the
-install task is idempotent after the binary exists.
+installation task is idempotent after the binary exists.
 
 The role authenticates the CLI by running `coderabbit auth login --api-key`
 with the host's entry in the vaulted `coderabbit_api_keys` mapping. That

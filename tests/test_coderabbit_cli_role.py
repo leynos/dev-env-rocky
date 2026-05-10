@@ -104,6 +104,8 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     assert credential_mode_task["ansible.builtin.file"]["path"] == (
         "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"
     )
+    assert credential_mode_task["ansible.builtin.file"]["owner"] == "{{ owner_user }}"
+    assert credential_mode_task["ansible.builtin.file"]["group"] == "{{ owner_user }}"
     assert credential_mode_task["ansible.builtin.file"]["mode"] == "0600"
     assert credential_mode_task["when"] == "coderabbit_cli_api_key | length > 0"
 
