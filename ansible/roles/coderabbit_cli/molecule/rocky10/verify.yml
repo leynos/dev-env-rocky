@@ -39,7 +39,7 @@
       ansible.builtin.assert:
         that:
           - coderabbit_auth_file.stat.exists
-          - coderabbit_auth_file.stat.mode == '0644'
+          - coderabbit_auth_file.stat.mode == '0600'
         fail_msg: "CodeRabbit CLI auth file was not created"
 
     - name: Run CodeRabbit CLI agent review fixture

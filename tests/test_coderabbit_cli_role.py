@@ -53,7 +53,7 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
 
     assert (
         defaults["coderabbit_cli_installer_src"]
-        == "{{ playbook_dir }}/../../../coderabbit-install.sh"
+        == "{{ role_path }}/files/coderabbit-install.sh"
     )
     assert "lookup('env', 'PWD')" not in defaults["coderabbit_cli_installer_src"], (
         "installer src must not use ambient PWD; use playbook_dir instead"
@@ -81,6 +81,11 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
         for t in tasks
         if t.get("name") == "Authenticate CodeRabbit CLI with vaulted API key"
     )
+    credential_mode_task = next(
+        t
+        for t in tasks
+        if t.get("name") == "Restrict CodeRabbit CLI credential file permissions"
+    )
     argv = auth_task["ansible.builtin.command"]["argv"]
 
     assert (
@@ -96,6 +101,11 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     )
     assert auth_task.get("no_log") is True
     assert auth_task["when"] == "coderabbit_cli_api_key | length > 0"
+    assert credential_mode_task["ansible.builtin.file"]["path"] == (
+        "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"
+    )
+    assert credential_mode_task["ansible.builtin.file"]["mode"] == "0600"
+    assert credential_mode_task["when"] == "coderabbit_cli_api_key | length > 0"
 
 
 def test_site_runs_coderabbit_cli_before_agent_tools() -> None:
