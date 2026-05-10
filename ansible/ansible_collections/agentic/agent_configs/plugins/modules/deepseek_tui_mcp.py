@@ -1,14 +1,22 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""Manage DeepSeek-TUI Model Context Protocol server definitions."""
+"""Manage DeepSeek-TUI Model Context Protocol server definitions.
+
+This module performs read-modify-write updates on ``mcp.json``. Serialise
+parallel writes externally, for example by running the play with ``serial: 1``
+when several hosts or tasks can target the same file.
+"""
 
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
     clean_dict,
+    load_json_file,
+    log_operation,
     manage_named_json_entry,
     resolve_scoped_config_path,
 )
@@ -145,46 +153,85 @@ server:
 """
 
 
-def build_server_definition(module: AnsibleModule) -> dict:
-    """Build the DeepSeek-TUI MCP server definition from module parameters."""
-    params = module.params
-    transport = params.get("transport")
-    extra = params.get("extra") or {}
-
-    if transport is None:
-        module.fail_json(msg="transport is required when state=present")
-
+def build_server_definition(
+    *,
+    transport: str,
+    command: str | None,
+    args: list[str],
+    env: dict[str, object],
+    url: str | None,
+    disabled: bool | None,
+    enabled: bool | None,
+    required: bool | None,
+    connect_timeout: int | None,
+    execute_timeout: int | None,
+    read_timeout: int | None,
+    enabled_tools: list[str] | None,
+    disabled_tools: list[str] | None,
+    extra: dict[str, object],
+) -> dict[str, object]:
+    """Build a DeepSeek-TUI MCP server definition from domain parameters."""
     if transport == "stdio":
-        command = params.get("command")
-        if not command:
-            module.fail_json(msg="command is required when transport=stdio")
-        desired = {
+        desired: dict[str, object] = {
             "command": command,
-            "args": params.get("args") or [],
-            "env": params.get("env") or {},
+            "args": args,
+            "env": env,
         }
     else:
-        url = params.get("url")
-        if not url:
-            module.fail_json(msg="url is required when transport=http")
         desired = {"url": url}
 
     desired.update(
         clean_dict(
             {
-                "disabled": params.get("disabled"),
-                "enabled": params.get("enabled"),
-                "required": params.get("required"),
-                "connect_timeout": params.get("connect_timeout"),
-                "execute_timeout": params.get("execute_timeout"),
-                "read_timeout": params.get("read_timeout"),
-                "enabled_tools": params.get("enabled_tools"),
-                "disabled_tools": params.get("disabled_tools"),
+                "disabled": disabled,
+                "enabled": enabled,
+                "required": required,
+                "connect_timeout": connect_timeout,
+                "execute_timeout": execute_timeout,
+                "read_timeout": read_timeout,
+                "enabled_tools": enabled_tools,
+                "disabled_tools": disabled_tools,
             }
         )
     )
     desired.update(extra)
     return clean_dict(desired)
+
+
+def validate_present_server_params(params: dict[str, Any]) -> None:
+    """Validate MCP parameters that are required only when the server exists."""
+    transport = params.get("transport")
+    if transport is None:
+        msg = (
+            "transport is required when state=present "
+            f"name={params.get('name')!r} scope={params.get('scope')!r}"
+        )
+        raise ValueError(msg)
+    if transport == "stdio":
+        command = params.get("command")
+        if not command:
+            msg = (
+                "command is required when transport=stdio "
+                f"name={params.get('name')!r} scope={params.get('scope')!r}"
+            )
+            raise ValueError(msg)
+    else:
+        url = params.get("url")
+        if not url:
+            msg = (
+                "url is required when transport=http "
+                f"name={params.get('name')!r} scope={params.get('scope')!r}"
+            )
+            raise ValueError(msg)
+
+
+def state_transition(changed: bool, existed_before: bool, state: str) -> str:
+    """Return a compact state transition label for module results."""
+    if not changed:
+        return "unchanged"
+    if state == "absent":
+        return "removed" if existed_before else "unchanged"
+    return "updated" if existed_before else "created"
 
 
 def main() -> None:
@@ -227,12 +274,48 @@ def main() -> None:
             project_relative_path=os.path.join(".deepseek", "mcp.json"),
         )
     except ValueError as exc:
-        module.fail_json(msg=str(exc))
+        module.fail_json(
+            msg=(
+                "failed to resolve DeepSeek-TUI MCP path "
+                f"name={module.params.get('name')!r} "
+                f"scope={module.params.get('scope')!r}: {exc}"
+            )
+        )
 
     desired = None
     if module.params["state"] == "present":
-        desired = build_server_definition(module)
+        try:
+            validate_present_server_params(module.params)
+        except ValueError as exc:
+            module.fail_json(msg=str(exc))
+        desired = build_server_definition(
+            transport=module.params["transport"],
+            command=module.params.get("command"),
+            args=module.params.get("args") or [],
+            env=module.params.get("env") or {},
+            url=module.params.get("url"),
+            disabled=module.params.get("disabled"),
+            enabled=module.params.get("enabled"),
+            required=module.params.get("required"),
+            connect_timeout=module.params.get("connect_timeout"),
+            execute_timeout=module.params.get("execute_timeout"),
+            read_timeout=module.params.get("read_timeout"),
+            enabled_tools=module.params.get("enabled_tools"),
+            disabled_tools=module.params.get("disabled_tools"),
+            extra=module.params.get("extra") or {},
+        )
 
+    existing_data = {}
+    try:
+        existing_data = load_json_file(path, default={})
+    except Exception:
+        existing_data = {}
+    existing_servers = (
+        existing_data.get("servers", {}) if isinstance(existing_data, dict) else {}
+    )
+    existed_before = (
+        isinstance(existing_servers, dict) and module.params["name"] in existing_servers
+    )
     changed, data = manage_named_json_entry(
         module=module,
         path=path,
@@ -247,10 +330,23 @@ def main() -> None:
         "path": path,
         "scope": module.params["scope"],
         "name": module.params["name"],
+        "state_transition": state_transition(
+            changed, existed_before, module.params["state"]
+        ),
     }
     if module.params["state"] == "present":
         result["server"] = data.get("servers", {}).get(module.params["name"], desired)
 
+    log_operation(
+        module,
+        "deepseek_tui_mcp",
+        action=result["state_transition"],
+        path=path,
+        name=module.params["name"],
+        scope=module.params["scope"],
+        state=module.params["state"],
+        changed=changed,
+    )
     module.exit_json(**result)
 
 

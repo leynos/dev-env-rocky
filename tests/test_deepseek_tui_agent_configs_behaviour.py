@@ -1,10 +1,12 @@
 """Behaviour tests for DeepSeek-TUI agent configuration modules."""
 
-from __future__ import annotations
-
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
-from typing import Any
+from types import ModuleType
+from typing import Protocol, cast
 
 import pytest  # ty: ignore[unresolved-import]
 import tomllib
@@ -22,12 +24,22 @@ from pytest_bdd import given, scenarios, then, when  # ty: ignore[unresolved-imp
 scenarios("features/deepseek_tui_agent_configs.feature")
 
 
-def _run_module(module: Any, args: dict[str, Any]) -> dict[str, Any]:
+class AnsibleModuleEntrypoint(Protocol):
+    """Minimal protocol for modules exercised through their Ansible entrypoint."""
+
+    def main(self) -> None:
+        """Run the Ansible module entrypoint."""
+
+
+def _run_module(
+    module: ModuleType | AnsibleModuleEntrypoint,
+    args: dict[str, object],
+) -> dict[str, object]:
     """Run an Ansible module in-process and return its exit payload."""
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
         module.main()
-    return exc.value.args[0]
+    return cast(dict[str, object], exc.value.args[0])
 
 
 @given("an empty DeepSeek-TUI home directory", target_fixture="deepseek_home")
@@ -123,3 +135,87 @@ def skill_bundle_is_written(deepseek_home: Path) -> None:
     assert (skill_dir / "references" / "checklist.md").read_text() == (
         "Check tests and docs.\n"
     )
+
+
+def test_deepseek_tui_modules_run_through_ansible_playbook(tmp_path: Path) -> None:
+    """Exercise DeepSeek-TUI modules through an actual Ansible playbook boundary."""
+    deepseek_home = tmp_path / ".deepseek"
+    playbook = tmp_path / "deepseek-tui.yml"
+    playbook.write_text(
+        f"""---
+- name: Configure DeepSeek-TUI through collection modules
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Configure DeepSeek-TUI MCP server
+      agentic.agent_configs.deepseek_tui_mcp:
+        path: "{deepseek_home / "mcp.json"}"
+        name: repo-tools
+        transport: stdio
+        command: repo-tools-mcp
+        args:
+          - --stdio
+
+    - name: Configure DeepSeek-TUI hook
+      agentic.agent_configs.deepseek_tui_hook:
+        path: "{deepseek_home / "config.toml"}"
+        event: shell_env
+        name: repo-env
+        command: repo-env export
+        enabled: true
+
+    - name: Configure DeepSeek-TUI skill
+      agentic.agent_configs.deepseek_tui_skill:
+        path: "{deepseek_home / "skills" / "repo-reviewer"}"
+        name: Repo reviewer
+        description: Review repository changes.
+        body: Read AGENTS.md before reviewing.
+""",
+        encoding="utf-8",
+    )
+    env = os.environ.copy()
+    repo_root = Path(__file__).resolve().parents[1]
+    env["ANSIBLE_COLLECTIONS_PATH"] = str(repo_root / "ansible/ansible_collections")
+    env["ANSIBLE_LIBRARY"] = ":".join(
+        [
+            str(
+                repo_root
+                / "ansible/ansible_collections/agentic/agent_configs/plugins/modules"
+            ),
+            str(
+                repo_root
+                / "ansible/ansible_collections/packaging/tools/plugins/modules"
+            ),
+        ]
+    )
+    env["ANSIBLE_MODULE_UTILS"] = str(
+        repo_root
+        / "ansible/ansible_collections/agentic/agent_configs/plugins/module_utils"
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ansible.cli.playbook",
+            "-i",
+            "localhost,",
+            "-c",
+            "local",
+            str(playbook),
+        ],
+        check=False,
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert (
+        json.loads((deepseek_home / "mcp.json").read_text())["servers"]["repo-tools"][
+            "command"
+        ]
+        == "repo-tools-mcp"
+    )
+    assert "repo-env" in (deepseek_home / "config.toml").read_text()
+    assert (deepseek_home / "skills" / "repo-reviewer" / "SKILL.md").exists()

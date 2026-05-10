@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Fake Bun executable for the DeepSeek-TUI Molecule scenario."""
 
-from __future__ import annotations
-
+import fcntl
 import json
 import os
 import stat
 import sys
 from pathlib import Path
+
+EXPECTED_PACKAGE_SPEC = "deepseek-tui@0.8.24"
 
 
 def append_log(argv: list[str]) -> None:
@@ -21,7 +22,13 @@ def append_log(argv: list[str]) -> None:
         "PATH": os.environ.get("PATH"),
     }
     with log_path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, sort_keys=True) + "\n")
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            handle.write(json.dumps(entry, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def write_executable(path: Path) -> None:
@@ -33,6 +40,9 @@ def write_executable(path: Path) -> None:
 
 def install_package(argv: list[str]) -> int:
     """Install fake DeepSeek-TUI package metadata and command shims."""
+    if argv != ["install", "-g", EXPECTED_PACKAGE_SPEC]:
+        print(f"unsupported fake bun install invocation: {argv}", file=sys.stderr)
+        return 2
     global_dir = Path(os.environ["BUN_INSTALL_GLOBAL_DIR"])
     global_bin_dir = Path(os.environ["BUN_INSTALL_BIN"])
     package_json = global_dir / "node_modules" / "deepseek-tui" / "package.json"
@@ -41,7 +51,7 @@ def install_package(argv: list[str]) -> int:
         json.dumps(
             {
                 "name": "deepseek-tui",
-                "version": argv[-1].rsplit("@", maxsplit=1)[-1],
+                "version": EXPECTED_PACKAGE_SPEC.rsplit("@", maxsplit=1)[-1],
                 "bin": {
                     "deepseek": "bin/deepseek.js",
                     "deepseek-tui": "bin/deepseek-tui.js",
@@ -73,7 +83,7 @@ def main() -> int:
     """Dispatch supported fake Bun commands."""
     argv = sys.argv[1:]
     append_log(argv)
-    if len(argv) >= 3 and argv[:2] == ["install", "-g"]:
+    if argv[:2] == ["install", "-g"]:
         return install_package(argv)
     if argv == ["pm", "trust", "deepseek-tui"]:
         return trust_package()

@@ -1,13 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""Manage DeepSeek-TUI skill directories."""
+"""Manage DeepSeek-TUI skill directories.
+
+This module performs read-modify-write updates across a skill directory.
+Serialise parallel writes externally, for example by running the play with
+``serial: 1`` when several hosts or tasks can target the same directory.
+"""
 
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    expand_path,
+    log_operation,
     manage_directory_markdown_resource,
     merge_dicts,
     normalize_mapping_order,
@@ -110,36 +118,59 @@ paths:
 """
 
 
-def build_frontmatter(module: AnsibleModule) -> dict:
-    """Build DeepSeek-TUI skill front matter from module parameters."""
-    params = module.params
+def validate_present_skill_params(params: dict[str, Any]) -> None:
+    """Validate skill parameters that are required only for present resources."""
     if params["state"] == "present" and not params.get("description"):
-        module.fail_json(msg="description is required when state=present")
-    base = {
-        "name": params["name"],
-        "description": params.get("description"),
+        msg = (
+            "description is required when state=present "
+            f"name={params.get('name')!r} scope={params.get('scope')!r}"
+        )
+        raise ValueError(msg)
+
+
+def build_frontmatter(
+    *,
+    name: str,
+    description: str | None,
+    metadata: dict[str, object],
+) -> dict[str, object]:
+    """Build DeepSeek-TUI skill front matter from domain parameters."""
+    base: dict[str, object] = {
+        "name": name,
+        "description": description,
     }
     return normalize_mapping_order(
-        merge_dicts(base, params.get("metadata") or {}),
+        merge_dicts(base, metadata),
         ["name", "description"],
     )
 
 
-def resolve_directory(module: AnsibleModule) -> str:
+def resolve_directory(
+    *,
+    path: str | None,
+    scope: str,
+    project_dir: str | None,
+    slug: str,
+) -> str:
     """Resolve the managed DeepSeek-TUI skill directory."""
-    if module.params.get("path"):
-        return module.params["path"]
-    slug = module.params.get("slug") or slugify(module.params["name"])
-    try:
-        return resolve_scoped_config_path(
-            path=None,
-            scope=module.params["scope"],
-            project_dir=module.params.get("project_dir"),
-            user_path=os.path.join("~/.deepseek/skills", slug),
-            project_relative_path=os.path.join(".agents/skills", slug),
-        )
-    except ValueError as exc:
-        module.fail_json(msg=str(exc))
+    if path:
+        return path
+    return resolve_scoped_config_path(
+        path=None,
+        scope=scope,
+        project_dir=project_dir,
+        user_path=os.path.join("~/.deepseek/skills", slug),
+        project_relative_path=os.path.join(".agents/skills", slug),
+    )
+
+
+def state_transition(changed: bool, existed_before: bool, state: str) -> str:
+    """Return a compact state transition label for module results."""
+    if not changed:
+        return "unchanged"
+    if state == "absent":
+        return "removed" if existed_before else "unchanged"
+    return "updated" if existed_before else "created"
 
 
 def main() -> None:
@@ -164,24 +195,63 @@ def main() -> None:
         supports_check_mode=True,
     )
 
-    directory = resolve_directory(module)
+    slug = module.params.get("slug") or slugify(module.params["name"])
+    try:
+        validate_present_skill_params(module.params)
+        directory = resolve_directory(
+            path=module.params.get("path"),
+            scope=module.params["scope"],
+            project_dir=module.params.get("project_dir"),
+            slug=slug,
+        )
+    except ValueError as exc:
+        module.fail_json(
+            msg=(
+                "failed to resolve DeepSeek-TUI skill directory "
+                f"name={module.params.get('name')!r} "
+                f"scope={module.params.get('scope')!r} "
+                f"state={module.params.get('state')!r}: {exc}"
+            )
+        )
+
+    existed_before = os.path.isdir(expand_path(directory))
     changes = manage_directory_markdown_resource(
         module=module,
         directory=directory,
         primary_filename="SKILL.md",
-        frontmatter=build_frontmatter(module),
+        frontmatter=build_frontmatter(
+            name=module.params["name"],
+            description=module.params.get("description"),
+            metadata=module.params.get("metadata") or {},
+        ),
         body=module.params["body"],
         state=module.params["state"],
         extra_files=module.params.get("extra_files") or {},
     )
+    transition = state_transition(
+        changes.changed, existed_before, module.params["state"]
+    )
 
+    log_operation(
+        module,
+        "deepseek_tui_skill",
+        action=transition,
+        path=directory,
+        name=module.params["name"],
+        slug=slug,
+        scope=module.params["scope"],
+        state=module.params["state"],
+        changed=changes.changed,
+        changed_paths=changes.paths,
+    )
     module.exit_json(
         changed=changes.changed,
         directory=directory,
         paths=changes.paths,
         scope=module.params["scope"],
-        slug=module.params.get("slug") or slugify(module.params["name"]),
+        slug=slug,
         name=module.params["name"],
+        state_transition=transition,
     )
 
 

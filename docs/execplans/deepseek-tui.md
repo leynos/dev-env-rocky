@@ -185,6 +185,29 @@ Codex and Claude configuration.
   run 'coderabbit auth login --agent' or provide --api-key.` Review evidence is
   still missing until credentials are available. Durable log:
   `/tmp/coderabbit-review-dev-env-rocky-deepseek-tui-audit-lint.out`.
+- [x] 2026-05-10 01:34 BST: Addressed the PR review findings by separating
+  DeepSeek-TUI domain builders and validation from Ansible `fail_json`
+  boundaries, adding contextual operation logs and state-transition results,
+  tightening fake Bun command parsing and log locking, scoping the
+  `.ansible-lint` compatibility profile to legacy files, and documenting the
+  new validation, dependency, lint-profile, `git_config` and concurrency
+  patterns.
+- [x] 2026-05-10 01:34 BST: Expanded validation coverage for the PR review
+  findings with malformed-parameter unit tests, an Ansible playbook
+  behavioural boundary test, and Molecule verification that fake
+  DeepSeek-TUI package metadata persists correctly.
+- [x] 2026-05-10 01:47 BST: Replayed the review-fix gates through focused
+  Ruff, `make check-fmt`, `make lint`, `make typecheck`, `make test`,
+  `make markdownlint`, focused markdownlint, `make nixie`, site and role
+  `ansible-lint`, site syntax-check, and `molecule test -s rocky10`. The
+  only retry was the site syntax-check environment, which needed the
+  repository custom module paths for `cargo_binstall`. Durable logs use the
+  `/tmp/*deepseek-tui-review-fixes-final.out` prefix.
+- [ ] 2026-05-10 01:48 BST: Retried `coderabbit review --agent` after the PR
+  review fixes; it still failed with `Authentication required. Please run
+  'coderabbit auth login --agent' or provide --api-key.` Review evidence is
+  still missing until credentials are available. Durable log:
+  `/tmp/coderabbit-review-deepseek-tui-review-fixes-final.out`.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [x] Add a reusable DeepSeek-TUI collection role with Molecule and Podman
@@ -228,6 +251,10 @@ Codex and Claude configuration.
   carry a separate lint backlog. The branch adds a compatibility profile for
   that backlog so the site playbook can still be linted while the new reusable
   DeepSeek-TUI role remains directly lint-clean.
+- PR review tightened the architecture bar for Ansible modules: reusable
+  DeepSeek-TUI builders now accept plain domain parameters, while `main()`
+  remains the command boundary that translates validation failures into
+  Ansible responses and logs the resulting operation.
 
 ## Decision Log
 

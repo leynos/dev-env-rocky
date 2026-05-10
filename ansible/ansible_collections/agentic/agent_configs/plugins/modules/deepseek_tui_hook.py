@@ -1,17 +1,22 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""Manage DeepSeek-TUI lifecycle hooks in config.toml."""
+"""Manage DeepSeek-TUI lifecycle hooks in config.toml.
+
+This module performs read-modify-write updates on ``config.toml``. Serialise
+parallel writes externally, for example by running the play with ``serial: 1``
+when several hosts or tasks can target the same file.
+"""
 
 from __future__ import annotations
 
 import os
-from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
     clean_dict,
     expand_path,
     load_toml_file,
+    log_operation,
     resolve_scoped_config_path,
     write_toml_if_changed,
 )
@@ -126,23 +131,34 @@ hook:
 """
 
 
-def build_hook_definition(module: AnsibleModule) -> dict:
-    """Build a DeepSeek-TUI hook definition from module parameters."""
-    params = module.params
-    desired = {
-        "event": params["event"],
-        "command": params["command"],
-        "name": params.get("name"),
-        "condition": params.get("condition"),
-        "timeout_secs": params.get("timeout_secs"),
-        "background": params.get("background"),
-        "continue_on_error": params.get("continue_on_error"),
+def build_hook_definition(
+    *,
+    event: str,
+    command: str,
+    name: str | None,
+    condition: dict[str, object] | None,
+    timeout_secs: int | None,
+    background: bool | None,
+    continue_on_error: bool | None,
+    extra: dict[str, object],
+) -> dict[str, object]:
+    """Build a DeepSeek-TUI hook definition from domain parameters."""
+    desired: dict[str, object] = {
+        "event": event,
+        "command": command,
+        "name": name,
+        "condition": condition,
+        "timeout_secs": timeout_secs,
+        "background": background,
+        "continue_on_error": continue_on_error,
     }
-    desired.update(params.get("extra") or {})
+    desired.update(extra)
     return clean_dict(desired)
 
 
-def hook_identity_matches(existing: dict, desired: dict) -> bool:
+def hook_identity_matches(
+    existing: dict[str, object], desired: dict[str, object]
+) -> bool:
     """Return whether two hook entries represent the same managed hook."""
     if existing.get("event") != desired.get("event"):
         return False
@@ -151,16 +167,27 @@ def hook_identity_matches(existing: dict, desired: dict) -> bool:
     return existing.get("command") == desired.get("command")
 
 
-def hook_without_managed_identity(hook: Any, desired: dict) -> bool:
+def hook_without_managed_identity(
+    hook: object, desired: dict[str, object]
+) -> bool:
     """Return whether an existing hook should be retained."""
     return not (isinstance(hook, dict) and hook_identity_matches(hook, desired))
 
 
-def apply_global_hook_options(module: AnsibleModule, hooks_root: dict) -> bool:
+def apply_global_hook_options(
+    hooks_root: dict[str, object],
+    *,
+    enabled: bool | None,
+    default_timeout_secs: int | None,
+    working_dir: str | None,
+) -> bool:
     """Apply optional global DeepSeek-TUI hook settings."""
     changed = False
-    for param_name in ("enabled", "default_timeout_secs", "working_dir"):
-        value = module.params.get(param_name)
+    for param_name, value in (
+        ("enabled", enabled),
+        ("default_timeout_secs", default_timeout_secs),
+        ("working_dir", working_dir),
+    ):
         if value is None:
             continue
         if hooks_root.get(param_name) != value:
@@ -169,25 +196,52 @@ def apply_global_hook_options(module: AnsibleModule, hooks_root: dict) -> bool:
     return changed
 
 
+def ensure_hook_toml_shape(path: str, data: object) -> dict[str, object]:
+    """Return a mutable TOML root object or raise a contextual validation error."""
+    if not isinstance(data, dict):
+        raise ValueError(f"Expected TOML root object path={path!r}")
+    return data
+
+
+def ensure_hooks_root(path: str, data: dict[str, object]) -> dict[str, object]:
+    """Return the mutable DeepSeek-TUI hooks table."""
+    hooks_root = data.setdefault("hooks", {})
+    if not isinstance(hooks_root, dict):
+        raise ValueError(f"Expected 'hooks' to be a table path={path!r}")
+    return hooks_root
+
+
+def ensure_hook_entries(path: str, hooks_root: dict[str, object]) -> list[object]:
+    """Return the mutable hook entry list."""
+    hook_entries = hooks_root.setdefault("hooks", [])
+    if not isinstance(hook_entries, list):
+        raise ValueError(f"Expected 'hooks.hooks' to be a list path={path!r}")
+    return hook_entries
+
+
 def manage_hook_toml(
     module: AnsibleModule,
     path: str,
-    desired_hook: dict,
+    desired_hook: dict[str, object],
     state: str,
-) -> tuple[bool, dict]:
+) -> tuple[bool, dict[str, object], bool]:
     """Create, update, or remove one DeepSeek-TUI hook in a TOML config file."""
     path = expand_path(path)
     data, removed_legacy_block = load_toml_file(module, path, default={})
-    if not isinstance(data, dict):
-        module.fail_json(msg="Expected TOML root object in %s" % path)
-    hooks_root = data.setdefault("hooks", {})
-    if not isinstance(hooks_root, dict):
-        module.fail_json(msg="Expected 'hooks' to be a table in %s" % path)
-    hook_entries = hooks_root.setdefault("hooks", [])
-    if not isinstance(hook_entries, list):
-        module.fail_json(msg="Expected 'hooks.hooks' to be a list in %s" % path)
+    data = ensure_hook_toml_shape(path, data)
+    hooks_root = ensure_hooks_root(path, data)
+    hook_entries = ensure_hook_entries(path, hooks_root)
 
-    changed = apply_global_hook_options(module, hooks_root)
+    existed_before = any(
+        isinstance(hook, dict) and hook_identity_matches(hook, desired_hook)
+        for hook in hook_entries
+    )
+    changed = apply_global_hook_options(
+        hooks_root,
+        enabled=module.params.get("enabled"),
+        default_timeout_secs=module.params.get("default_timeout_secs"),
+        working_dir=module.params.get("working_dir"),
+    )
 
     if state == "present":
         for index, hook in enumerate(hook_entries):
@@ -215,9 +269,18 @@ def manage_hook_toml(
 
     if changed or removed_legacy_block:
         if module.check_mode:
-            return True, data
+            return True, data, existed_before
         write_toml_if_changed(module, path, data)
-    return changed, data
+    return changed, data, existed_before
+
+
+def state_transition(changed: bool, existed_before: bool, state: str) -> str:
+    """Return a compact state transition label for module results."""
+    if not changed:
+        return "unchanged"
+    if state == "absent":
+        return "removed" if existed_before else "unchanged"
+    return "updated" if existed_before else "created"
 
 
 def main() -> None:
@@ -256,16 +319,54 @@ def main() -> None:
             project_relative_path=os.path.join(".deepseek", "config.toml"),
         )
     except ValueError as exc:
-        module.fail_json(msg=str(exc))
+        module.fail_json(
+            msg=(
+                "failed to resolve DeepSeek-TUI hook path "
+                f"event={module.params.get('event')!r} "
+                f"name={module.params.get('name')!r} "
+                f"scope={module.params.get('scope')!r}: {exc}"
+            )
+        )
 
-    desired = build_hook_definition(module)
-    changed, data = manage_hook_toml(
-        module=module,
-        path=path,
-        desired_hook=desired,
-        state=module.params["state"],
+    desired = build_hook_definition(
+        event=module.params["event"],
+        command=module.params["command"],
+        name=module.params.get("name"),
+        condition=module.params.get("condition"),
+        timeout_secs=module.params.get("timeout_secs"),
+        background=module.params.get("background"),
+        continue_on_error=module.params.get("continue_on_error"),
+        extra=module.params.get("extra") or {},
     )
+    try:
+        changed, data, existed_before = manage_hook_toml(
+            module=module,
+            path=path,
+            desired_hook=desired,
+            state=module.params["state"],
+        )
+    except ValueError as exc:
+        module.fail_json(
+            msg=(
+                "failed to manage DeepSeek-TUI hook "
+                f"path={path!r} event={module.params.get('event')!r} "
+                f"name={module.params.get('name')!r} "
+                f"state={module.params.get('state')!r}: {exc}"
+            )
+        )
 
+    transition = state_transition(changed, existed_before, module.params["state"])
+    log_operation(
+        module,
+        "deepseek_tui_hook",
+        action=transition,
+        path=path,
+        event=module.params["event"],
+        name=module.params.get("name"),
+        scope=module.params["scope"],
+        state=module.params["state"],
+        changed=changed,
+    )
     module.exit_json(
         changed=changed,
         path=path,
@@ -274,6 +375,7 @@ def main() -> None:
         command=module.params["command"],
         hook=desired if module.params["state"] == "present" else None,
         hooks=data.get("hooks", {}),
+        state_transition=transition,
     )
 
 

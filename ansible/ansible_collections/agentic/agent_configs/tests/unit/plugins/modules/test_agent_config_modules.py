@@ -1379,6 +1379,65 @@ def test_deepseek_tui_hook_writes_toml_and_removes_entry(tmp_path: Path) -> None
     }
 
 
+def test_deepseek_tui_mcp_requires_transport_for_present_state(
+    tmp_path: Path,
+) -> None:
+    """Verify DeepSeek-TUI MCP validation reports contextual required fields."""
+    _assert_fails(
+        deepseek_tui_mcp,
+        {"path": str(tmp_path / "mcp.json"), "name": "repo-tools"},
+        "transport is required when state=present name='repo-tools'",
+    )
+
+
+def test_deepseek_tui_mcp_rejects_malformed_servers_root(tmp_path: Path) -> None:
+    """Verify DeepSeek-TUI MCP rejects non-object servers data."""
+    path = tmp_path / "mcp.json"
+    path.write_text('{"servers": []}\n')
+
+    _assert_fails(
+        deepseek_tui_mcp,
+        {
+            "path": str(path),
+            "name": "repo-tools",
+            "transport": "stdio",
+            "command": "repo-tools-mcp",
+        },
+        "Expected 'servers' to be a JSON object",
+    )
+
+
+def test_deepseek_tui_hook_rejects_malformed_hook_entries(tmp_path: Path) -> None:
+    """Verify DeepSeek-TUI hook rejects malformed hooks.hooks TOML values."""
+    path = tmp_path / "config.toml"
+    path.write_text("[hooks]\nhooks = \"bad\"\n")
+
+    _assert_fails(
+        deepseek_tui_hook,
+        {
+            "path": str(path),
+            "event": "shell_env",
+            "name": "repo-env",
+            "command": "repo-env export",
+        },
+        "Expected 'hooks.hooks' to be a list",
+    )
+
+
+def test_deepseek_tui_skill_requires_description_for_present_state(
+    tmp_path: Path,
+) -> None:
+    """Verify DeepSeek-TUI skill validation reports contextual required fields."""
+    _assert_fails(
+        deepseek_tui_skill,
+        {
+            "path": str(tmp_path / "skills" / "repo-reviewer"),
+            "name": "Repo reviewer",
+        },
+        "description is required when state=present name='Repo reviewer'",
+    )
+
+
 def test_deepseek_tui_skill_resolves_workspace_preferred_path(tmp_path: Path) -> None:
     """Verify project-scoped DeepSeek-TUI skills use the preferred .agents path."""
     project_dir = tmp_path / "repo"

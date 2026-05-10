@@ -1,10 +1,9 @@
 """Snapshot tests for generated DeepSeek-TUI configuration artefacts."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
-from typing import Any
+from types import ModuleType
+from typing import Protocol, cast
 
 import pytest  # ty: ignore[unresolved-import]
 from ansible_collections.agentic.agent_configs.plugins.modules import (
@@ -18,12 +17,22 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 )
 
 
-def _run_module(module: Any, args: dict[str, Any]) -> dict[str, Any]:
+class AnsibleModuleEntrypoint(Protocol):
+    """Minimal protocol for modules exercised through their Ansible entrypoint."""
+
+    def main(self) -> None:
+        """Run the Ansible module entrypoint."""
+
+
+def _run_module(
+    module: ModuleType | AnsibleModuleEntrypoint,
+    args: dict[str, object],
+) -> dict[str, object]:
     """Run an Ansible module in-process and return its exit payload."""
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
         module.main()
-    return exc.value.args[0]
+    return cast(dict[str, object], exc.value.args[0])
 
 
 def test_deepseek_tui_generated_configuration_matches_snapshot(

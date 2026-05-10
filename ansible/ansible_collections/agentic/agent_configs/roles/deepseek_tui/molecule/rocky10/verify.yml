@@ -98,6 +98,31 @@
           - deepseek_tui_mcp_data.servers['repo-tools'].required
         fail_msg: DeepSeek-TUI mcp.json did not contain expected server
 
+    - name: Read persisted DeepSeek-TUI package metadata
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - >-
+            import json, pathlib;
+            path = pathlib.Path('/root/.bun/install/global/node_modules/deepseek-tui/package.json');
+            print(json.dumps(json.loads(path.read_text()), sort_keys=True))
+      changed_when: false
+      register: deepseek_tui_package_metadata
+
+    - name: Decode persisted DeepSeek-TUI package metadata
+      ansible.builtin.set_fact:
+        deepseek_tui_package_data: "{{ deepseek_tui_package_metadata.stdout | from_json }}"
+
+    - name: Assert DeepSeek-TUI package metadata persisted
+      ansible.builtin.assert:
+        that:
+          - deepseek_tui_package_data.name == 'deepseek-tui'
+          - deepseek_tui_package_data.version == '0.8.24'
+          - deepseek_tui_package_data.bin.deepseek == 'bin/deepseek.js'
+          - deepseek_tui_package_data.bin['deepseek-tui'] == 'bin/deepseek-tui.js'
+        fail_msg: DeepSeek-TUI package metadata did not persist after install
+
     - name: Check DeepSeek-TUI command links
       ansible.builtin.stat:
         path: "/root/.local/bin/{{ item }}"

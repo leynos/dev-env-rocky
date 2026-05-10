@@ -1,7 +1,5 @@
 """Shared fixtures for repository-level tests."""
 
-from __future__ import annotations
-
 import pytest  # ty: ignore[unresolved-import]
 from ansible.module_utils import basic  # ty: ignore[unresolved-import]
 from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
