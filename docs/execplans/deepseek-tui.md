@@ -226,6 +226,24 @@ configuration in the same style as existing Codex and Claude configuration.
   Please run 'coderabbit auth login --agent' or provide --api-key.` Review
   evidence is still missing until credentials are available. Durable log:
   `/tmp/coderabbit-review-deepseek-tui-review-comments-2.out`.
+- [x] 2026-05-10 02:23 BST: Fixed the owner-user play integration bug where
+  the DeepSeek-TUI role's system package task inherited
+  `become_user: "{{ owner_user }}"`. The package task now escalates to root
+  only when the current Ansible user is not already root, avoiding `sudo`
+  inside the root-only Rocky 10 Molecule container while still escaping the
+  owner-user play context in `ansible/site.yml`.
+- [x] 2026-05-10 02:23 BST: Added a regression test that asserts the
+  DeepSeek-TUI system package task has a root escape for non-root play
+  contexts. First Molecule replay failed because unconditional `become: true`
+  invoked missing `sudo` in the root container; after making escalation
+  conditional, `molecule test -s rocky10` passed converge, idempotence, verify
+  and destroy. Durable log:
+  `/tmp/molecule-deepseek-tui-root-package-fix.out`.
+- [ ] 2026-05-10 02:24 BST: Retried `coderabbit review --agent` after the
+  root package task fix; it still failed with `Authentication required. Please
+  run 'coderabbit auth login --agent' or provide --api-key.` Review evidence
+  is still missing until credentials are available. Durable log:
+  `/tmp/coderabbit-review-deepseek-tui-root-package-fix.out`.
 - [x] Finish `agentic.agent_configs` module support by adding behavioural and
   snapshot coverage for the already implemented DeepSeek-TUI capabilities.
 - [x] Add a reusable DeepSeek-TUI collection role with Molecule and Podman

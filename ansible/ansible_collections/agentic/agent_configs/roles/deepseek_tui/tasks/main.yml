@@ -12,6 +12,8 @@
     mode: '0755'
 
 - name: Ensure DeepSeek-TUI module Python package installer is available
+  become: "{{ ansible_user_id is defined and ansible_user_id != 'root' }}"
+  become_user: root
   ansible.builtin.package:
     name: "{{ deepseek_tui_python_system_packages }}"
     state: present
