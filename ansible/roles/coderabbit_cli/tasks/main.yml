@@ -31,7 +31,7 @@
     creates: "{{ coderabbit_cli_install_dir }}/coderabbit"
   environment:
     CODERABBIT_INSTALL_DIR: "{{ coderabbit_cli_install_dir }}"
-    CODERABBIT_DOWNLOAD_URL: "{{ coderabbit_cli_download_url | default(omit) }}"
+    CODERABBIT_DOWNLOAD_URL: "{{ coderabbit_cli_download_url }}"
     NO_COLOR: "1"
   register: coderabbit_cli_install_result
 

@@ -26,6 +26,9 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     assert "../../coderabbit-install.sh" in defaults, (
         "CodeRabbit CLI role must source the already-downloaded installer"
     )
+    assert "https://cli.coderabbit.ai/releases" in defaults, (
+        "CodeRabbit CLI role must pass a real default release URL, not omit"
+    )
     assert 'src: "{{ coderabbit_cli_installer_src }}"' in tasks, (
         "CodeRabbit CLI role must copy the configured installer source"
     )
@@ -34,6 +37,9 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     )
     assert "CODERABBIT_INSTALL_DIR" in install_task, (
         "CodeRabbit CLI installer must target the managed user-local bin directory"
+    )
+    assert "default(omit)" not in install_task, (
+        "omit must not be used inside task environment because it becomes a string"
     )
 
 
