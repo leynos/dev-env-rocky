@@ -1,5 +1,5 @@
 ---
-coderabbit_cli_installer_src: "{{ playbook_dir }}/../../coderabbit-install.sh"
+coderabbit_cli_installer_src: "{{ playbook_dir }}/../../../coderabbit-install.sh"
 coderabbit_cli_install_dir: "{{ ansible_facts.env.HOME }}/.local/bin"
-coderabbit_cli_api_key: "{{ coderabbit_api_keys[inventory_hostname] }}"
+coderabbit_cli_api_key: "{{ (coderabbit_api_keys | default({}, true)).get(inventory_hostname, '') }}"
 coderabbit_cli_download_url: https://cli.coderabbit.ai/releases

@@ -41,7 +41,7 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
         t for t in tasks if t.get("name") == "Copy CodeRabbit CLI installer"
     )
 
-    assert "../../coderabbit-install.sh" in defaults, (
+    assert "../../../coderabbit-install.sh" in defaults, (
         "CodeRabbit CLI role must source the already-downloaded installer"
     )
     assert "lookup('env', 'PWD')" not in defaults, (
@@ -73,10 +73,8 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     )
     argv = auth_task["ansible.builtin.command"]["argv"]
 
-    assert (
-        'coderabbit_cli_api_key: "{{ coderabbit_api_keys[inventory_hostname] }}"'
-        in defaults
-    )
+    assert "coderabbit_api_keys | default({}, true)" in defaults
+    assert ".get(inventory_hostname, '')" in defaults
     assert "auth" in argv
     assert "login" in argv
     assert "--api-key" in argv
@@ -85,6 +83,7 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
         "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"
     )
     assert auth_task.get("no_log") is True
+    assert auth_task["when"] == "coderabbit_cli_api_key | length > 0"
 
 
 def test_site_runs_coderabbit_cli_before_agent_tools() -> None:

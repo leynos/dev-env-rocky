@@ -51,3 +51,4 @@
   args:
     creates: "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"
   no_log: true
+  when: coderabbit_cli_api_key | length > 0
