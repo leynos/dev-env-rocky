@@ -820,7 +820,6 @@ maintain.
 [^4]: Cyclomatic complexity: Definition and limits in understanding code
       quality — the Developer Experience platform,
       <https://getdx.com/blog/cyclomatic-complexity/>
-      <https://getdx.com/blog/cyclomatic-complexity/>
 [^5]: Cyclomatic complexity — Wikipedia (risk classification),
       <https://en.wikipedia.org/wiki/Cyclomatic_complexity>
 [^6]: Cognitive Complexity — Code Climate,
