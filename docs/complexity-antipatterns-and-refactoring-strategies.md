@@ -579,7 +579,7 @@ and method structure.
 Structural pattern matching—available in languages like Python (since 3.10 with
 match-case) and C#—offers a declarative and expressive way to handle complex
 conditional logic, often replacing verbose if-elif-else chains or switch
-statements.[^21]
+statements.[^22]
 
 It works by allowing code to match against the *structure* of data—such as its
 type, shape, or specific values within sequences like lists or tuples, or
@@ -653,7 +653,7 @@ behaviour—common culprits for bugs and increased cognitive load in imperative
 code.[^26]
 
 Examples include using Structured Query Language for database queries—
-specifying the desired dataset rather than the retrieval algorithm[^34]—or
+specifying the desired dataset rather than the retrieval algorithm[^25]—or
 employing functional programming constructs like `map`, `filter`, and `reduce`
 on collections instead of writing explicit loops. Refactoring imperative code
 to a declarative style can start small, perhaps by converting a loop that
@@ -839,49 +839,45 @@ maintain.
        <https://media.pragprog.com/titles/atcrime2/logic.pdf>
 [^12]: The software antipatterns that are killing development speed | Okoone,
        <https://www.okoone.com/spark/strategy-transformation/the-software-anti-patterns-that-are-killing-development-speed/>
-[^13]: How to *resist* refactoring a large spaghetti codebase? :
-       r/SoftwareEngineering — Reddit,
-       <https://www.reddit.com/r/SoftwareEngineering/comments/11smgtp/how_to_resist_refactoring_a_large_spaghetti/>
-[^14]: Refactoring nested conditional statements — Software Engineering
-       Stack Exchange,
-       <https://softwareengineering.stackexchange.com/questions/47789/>
-[^15]: CodeScene Automatic Code Evolution (ACE): Auto-Refactor Code,
-       <https://codescene.io/docs/auto-refactor/index.html>
-[^16]: Code Smells — Samman Technical Coaching,
-       <https://sammancoaching.org/reference/code_smells/>
-[^17]: src/sas/sascalc/poresize/maxEnt_method.py — CodeScene,
-       <https://codescene.io/projects/64300/delta?repo-id=263464&review-id=3247&biomarker=Overall+Code+Complexity&filename=src%2Fsas%2Fsascalc%2Fporesize%2FmaxEnt_method.py&method=>
-[^18]: Separation of concerns — Wikipedia,
+[^13]: Separation of concerns — Wikipedia,
        <https://en.wikipedia.org/wiki/Separation_of_concerns>
-[^19]: Command Query Responsibility Segregation pattern — Azure Architecture
+[^14]: Command Query Responsibility Segregation pattern — Azure Architecture
        Center | Microsoft Learn,
        <https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs>
-[^20]: Mastering Command Query Responsibility Segregation: 7 Powerful Benefits,
+[^15]: Mastering Command Query Responsibility Segregation: 7 Powerful Benefits,
        <https://hyscaler.com/insights/mastering-cqrs-benefits-of-command-query/>
-[^21]: Implementing Command Query Responsibility Segregation in the dotnet
-       ecosystem — Dev Community,
-       <https://dev.to/moh_moh701/enhancing-net-applications-with-cqrs-and-solid-principles-30i8>
-[^22]: Refactoring a God class — Stack Overflow,
+[^16]: Refactoring a God class — Stack Overflow,
        <https://stackoverflow.com/questions/14870377/>
-[^23]: Command Query Responsibility Segregation: Understanding From First
-       Principles — NDepend Blog,
-       <https://blog.ndepend.com/cqrs-understanding-first-principles/>
-[^24]: When to use the Command Query Responsibility Segregation design
-       pattern? — architecture — Stack Overflow,
-       <https://stackoverflow.com/questions/8820748/when-to-use-the-cqrs-design-pattern>
-[^25]: Another pasta-themed programming problem is "ravioli code". That …,
-       <https://news.ycombinator.com/item?id=4537664>
-[^26]: Ravioli Code — C2 wiki, <https://wiki.c2.com/?RavioliCode>
-[^27]: Ravioli code — why an antipattern? — Stack Overflow,
-       <https://stackoverflow.com/questions/2052017/ravioli-code-why-an-anti-pattern>
-[^28]: A Guide to Data Abstraction and Its Significant Benefits — CelerData,
+[^17]: Ravioli Code — C2 wiki, <https://wiki.c2.com/?RavioliCode>
+[^18]: A Guide to Data Abstraction and Its Significant Benefits — CelerData,
        <https://celerdata.com/glossary/a-guide-to-data-abstraction>
-[^29]: The Role of Abstraction in Software Development | Bebras Armenia,
+[^19]: The Role of Abstraction in Software Development | Bebras Armenia,
        <https://bebras.am/en/blog/The-Role-of-Abstraction-in-Software-Development>
-[^30]: Abstraction, Refactoring, Complexity, and Tradeoffs — Part 1 | Synth
-       …, <https://omux.dev/blog/abstraction-refactoring-complexity/>
-[^31]: Don't create over abstractions — Castineiras thoughts -,
-       <https://www.castineiras.com/?p=102>
-[^32]: Refactor `if-else` Statements to `match-case` for Improved Readability
+[^20]: Abstraction, Refactoring, Complexity, and Tradeoffs — Part 1 | Synth,
+       <https://omux.dev/blog/abstraction-refactoring-complexity/>
+[^21]: Adam Tornhill, *Code as a Crime Scene*, Second Edition,
+       <https://media.pragprog.com/titles/atcrime2/logic.pdf>
+[^22]: Refactor `if-else` Statements to `match-case` for Improved Readability
        and Maintainability in Python 3.10+ · Issue #453 — GitHub,
        <https://github.com/sourcery-ai/sourcery/issues/453>
+[^23]: Structural Pattern Matching — Python documentation,
+       <https://docs.python.org/3/tutorial/controlflow.html#match-statements>
+[^24]: Data model — Python documentation,
+       <https://docs.python.org/3/reference/datamodel.html>
+[^25]: Declarative programming — Wikipedia,
+       <https://en.wikipedia.org/wiki/Declarative_programming>
+[^26]: Functional programming — Wikipedia,
+       <https://en.wikipedia.org/wiki/Functional_programming>
+[^27]: Don't create over abstractions — Castineiras thoughts,
+       <https://www.castineiras.com/?p=102>
+[^28]: Command pattern — Refactoring.Guru,
+       <https://refactoring.guru/design-patterns/command>
+[^29]: Command — Wikipedia,
+       <https://en.wikipedia.org/wiki/Command_pattern>
+[^30]: Refactoring nested conditional statements — Software Engineering
+       Stack Exchange,
+       <https://softwareengineering.stackexchange.com/questions/47789/>
+[^31]: Abstraction, Refactoring, Complexity, and Tradeoffs — Part 1 | Synth,
+       <https://omux.dev/blog/abstraction-refactoring-complexity/>
+[^32]: State pattern — Refactoring.Guru,
+       <https://refactoring.guru/design-patterns/state>

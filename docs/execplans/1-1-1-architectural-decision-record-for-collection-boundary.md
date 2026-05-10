@@ -214,7 +214,7 @@ In the ADR decision, classify every requested candidate:
   stable variable contract before role extraction.
 
 Update `docs/developers-guide.md` with a short collection-boundary section. It
-should point to the new ADR and summarise how contributors decide whether a
+should point to the new ADR and summarize how contributors decide whether a
 future change belongs in `agentic.agent_configs`, `packaging.tools`, or a
 site-local role. Keep this as internal-facing guidance; do not duplicate the
 whole ADR.
@@ -245,13 +245,21 @@ Run formatting and validation through `tee` logs under `/tmp`, using the branch
 name in each log path. At minimum run:
 
 ```bash
-make check-fmt 2>&1 | tee /tmp/check-fmt-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary.out
-make typecheck 2>&1 | tee /tmp/typecheck-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary.out
-make lint 2>&1 | tee /tmp/lint-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary.out
-make test 2>&1 | tee /tmp/test-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary.out
-make markdownlint 2>&1 | tee /tmp/markdownlint-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary.out
-make nixie 2>&1 | tee /tmp/nixie-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary.out
-git diff --check 2>&1 | tee /tmp/diff-check-dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary.out
+LOG_PREFIX=/tmp/dev-env-rocky-1-1-1-architectural-decision-record-for-collection-boundary
+make check-fmt 2>&1 \
+  | tee "${LOG_PREFIX}-check-fmt.out"
+make typecheck 2>&1 \
+  | tee "${LOG_PREFIX}-typecheck.out"
+make lint 2>&1 \
+  | tee "${LOG_PREFIX}-lint.out"
+make test 2>&1 \
+  | tee "${LOG_PREFIX}-test.out"
+make markdownlint 2>&1 \
+  | tee "${LOG_PREFIX}-markdownlint.out"
+make nixie 2>&1 \
+  | tee "${LOG_PREFIX}-nixie.out"
+git diff --check 2>&1 \
+  | tee "${LOG_PREFIX}-diff-check.out"
 ```
 
 If any gate fails because of the new documentation, fix the documentation and
