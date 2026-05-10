@@ -1,4 +1,10 @@
-"""Regression tests for CodeRabbit CLI role wiring."""
+"""Regression tests for the coderabbit_cli Ansible role.
+
+Verifies role wiring: installer source path, idempotence guards,
+vaulted-key authentication, no_log discipline, site.yml ordering,
+and Makefile Molecule invocation. Tests load raw YAML/text from the
+repository and assert structural correctness without executing Ansible.
+"""
 
 import re
 from pathlib import Path
@@ -11,6 +17,12 @@ SITE_PLAYBOOK = REPO_ROOT / "ansible/site.yml"
 
 
 def extract_task(content: str, name: str) -> str:
+    """Return the YAML body of the task identified by *name*.
+
+    Scans *content* (a raw tasks YAML string) for a ``- name: <name>``
+    header and returns everything up to the next task header or end of
+    string. Raises ``AssertionError`` if no matching task is found.
+    """
     match = re.search(
         rf"(?ms)^- name: {re.escape(name)}\n(?P<body>.*?)(?=^- name: |\Z)", content
     )
@@ -19,6 +31,7 @@ def extract_task(content: str, name: str) -> str:
 
 
 def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
+    """Role must copy the checked-in installer and guard with creates:."""
     defaults = CODERABBIT_DEFAULTS.read_text()
     tasks = CODERABBIT_TASKS.read_text()
     install_task = extract_task(tasks, "Install CodeRabbit CLI")
@@ -47,6 +60,7 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
 
 
 def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
+    """Auth task must use --api-key with the vaulted key and set no_log."""
     defaults = CODERABBIT_DEFAULTS.read_text()
     tasks = CODERABBIT_TASKS.read_text()
     task = extract_task(tasks, "Authenticate CodeRabbit CLI with vaulted API key")
@@ -66,6 +80,7 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
 
 
 def test_site_runs_coderabbit_cli_before_agent_tools() -> None:
+    """coderabbit_cli must precede agent_tools in site.yml role list."""
     content = SITE_PLAYBOOK.read_text()
 
     assert content.index("    - coderabbit_cli") < content.index("    - agent_tools"), (
@@ -74,6 +89,7 @@ def test_site_runs_coderabbit_cli_before_agent_tools() -> None:
 
 
 def test_make_molecule_runs_coderabbit_cli_scenario() -> None:
+    """Makefile molecule target must invoke the rocky10 scenario."""
     content = MAKEFILE.read_text()
 
     assert "cd ansible/roles/coderabbit_cli &&" in content
