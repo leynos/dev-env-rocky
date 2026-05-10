@@ -26,6 +26,9 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     assert "../../coderabbit-install.sh" in defaults, (
         "CodeRabbit CLI role must source the already-downloaded installer"
     )
+    assert "lookup('env', 'PWD')" not in defaults, (
+        "installer src must not use ambient PWD; use playbook_dir instead"
+    )
     assert "https://cli.coderabbit.ai/releases" in defaults, (
         "CodeRabbit CLI role must pass a real default release URL, not omit"
     )
