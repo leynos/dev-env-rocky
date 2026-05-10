@@ -19,6 +19,9 @@
     uv_path: "{{ ansible_env.HOME }}/.local/bin/uv"
   loop:
     - { name: ruff }
+    - { name: ansible }
+    - { name: molecule }
+    - { name: ansible-lint }
     - { name: pyrefly }
     - { name: ty }
     - { name: yamllint }
