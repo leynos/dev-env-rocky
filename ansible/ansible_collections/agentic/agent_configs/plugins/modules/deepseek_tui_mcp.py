@@ -197,6 +197,28 @@ def build_server_definition(
     return clean_dict(desired)
 
 
+def _validate_stdio_params(params: dict[str, Any]) -> None:
+    """Raise ValueError if the stdio transport is missing its required command."""
+    command = params.get("command")
+    if not command:
+        msg = (
+            "command is required when transport=stdio "
+            f"name={params.get('name')!r} scope={params.get('scope')!r}"
+        )
+        raise ValueError(msg)
+
+
+def _validate_http_params(params: dict[str, Any]) -> None:
+    """Raise ValueError if the http transport is missing its required url."""
+    url = params.get("url")
+    if not url:
+        msg = (
+            "url is required when transport=http "
+            f"name={params.get('name')!r} scope={params.get('scope')!r}"
+        )
+        raise ValueError(msg)
+
+
 def validate_present_server_params(params: dict[str, Any]) -> None:
     """Validate MCP parameters that are required only when the server exists."""
     transport = params.get("transport")
@@ -207,21 +229,9 @@ def validate_present_server_params(params: dict[str, Any]) -> None:
         )
         raise ValueError(msg)
     if transport == "stdio":
-        command = params.get("command")
-        if not command:
-            msg = (
-                "command is required when transport=stdio "
-                f"name={params.get('name')!r} scope={params.get('scope')!r}"
-            )
-            raise ValueError(msg)
+        _validate_stdio_params(params)
     else:
-        url = params.get("url")
-        if not url:
-            msg = (
-                "url is required when transport=http "
-                f"name={params.get('name')!r} scope={params.get('scope')!r}"
-            )
-            raise ValueError(msg)
+        _validate_http_params(params)
 
 
 def state_transition(changed: bool, existed_before: bool, state: str) -> str:
