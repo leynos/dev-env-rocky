@@ -1,3 +1,12 @@
+"""Provide Ansible module execution helpers for packaging.tools unit tests.
+
+The helpers in this module serialize module arguments into Ansible's global
+test input slot and replace ``exit_json`` or ``fail_json`` with exceptions that
+tests can assert against. The package ``conftest.py`` fixture installs those
+helpers on ``AnsibleModule`` so tests can execute packaging modules in-process
+without allowing Ansible to terminate the interpreter.
+"""
+
 from __future__ import annotations
 
 import json
