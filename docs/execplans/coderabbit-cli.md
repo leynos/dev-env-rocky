@@ -106,8 +106,8 @@ part of the normal role gate.
 - [x] 2026-05-10: Ran focused tests, full Python gates, Markdown/Mermaid gates,
   full Makefile Molecule coverage, vault verification, `git diff --check`, and
   `ansible-playbook --syntax-check` with durable logs under `/tmp`.
-- [ ] Commit the completed implementation change.
-- [ ] Commit each completed logical change.
+- [x] Commit the completed implementation change.
+- [x] Commit each completed logical change.
 
 ## Surprises & Discoveries
 
