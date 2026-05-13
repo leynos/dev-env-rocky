@@ -14,6 +14,7 @@ from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    _state_transition,
     clean_dict,
     expand_path,
     load_toml_file,
@@ -314,15 +315,6 @@ def manage_hook_toml(
     )
 
 
-def state_transition(changed: bool, existed_before: bool, state: str) -> str:
-    """Return a compact state transition label for module results."""
-    if not changed:
-        return "unchanged"
-    if state == "absent":
-        return "removed" if existed_before else "unchanged"
-    return "updated" if existed_before else "created"
-
-
 def _build_argument_spec() -> dict[str, Any]:
     """Return the Ansible module argument specification."""
     return {
@@ -400,7 +392,11 @@ def _emit_result(
     data: dict[str, Any],
 ) -> None:
     """Emit the module operation log and Ansible result."""
-    transition = state_transition(changed, existed_before, module.params["state"])
+    transition = _state_transition(
+        changed=changed,
+        existed_before=existed_before,
+        state=module.params["state"],
+    )
     log_operation(
         module,
         "deepseek_tui_hook",

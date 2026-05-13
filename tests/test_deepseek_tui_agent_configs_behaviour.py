@@ -12,7 +12,7 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
     deepseek_tui_mcp,
     deepseek_tui_skill,
 )
-from pytest_bdd import given, scenarios, then, when  # ty: ignore[unresolved-import]
+from pytest_bdd import given, scenarios, then, when  # type: ignore[unresolved-import]  # ty: ignore[unresolved-import]
 
 from ansible_module_runner import run_module
 
@@ -71,7 +71,7 @@ def provision_repository_toolset(deepseek_home: Path) -> None:
 def mcp_server_is_written(deepseek_home: Path) -> None:
     """Assert the native DeepSeek-TUI MCP JSON shape is rendered."""
     rendered = json.loads((deepseek_home / "mcp.json").read_text())
-    assert rendered == {
+    expected = {
         "servers": {
             "repo-tools": {
                 "args": ["--stdio"],
@@ -81,13 +81,16 @@ def mcp_server_is_written(deepseek_home: Path) -> None:
             }
         }
     }
+    assert rendered == expected, (
+        f"Expected mcp.json to contain repo-tools MCP server entry, got: {rendered}"
+    )
 
 
 @then("the shell environment hook is written to config TOML")
 def shell_environment_hook_is_written(deepseek_home: Path) -> None:
     """Assert the DeepSeek-TUI hook appears under [[hooks.hooks]]."""
     rendered = tomllib.loads((deepseek_home / "config.toml").read_text())
-    assert rendered == {
+    expected = {
         "hooks": {
             "enabled": True,
             "hooks": [
@@ -100,19 +103,27 @@ def shell_environment_hook_is_written(deepseek_home: Path) -> None:
             ],
         }
     }
+    assert rendered == expected, (
+        f"Expected config.toml to contain repo-env hook, got: {rendered}"
+    )
 
 
 @then("the skill bundle is written to the DeepSeek skills directory")
 def skill_bundle_is_written(deepseek_home: Path) -> None:
     """Assert the DeepSeek-TUI skill directory contains primary and support files."""
     skill_dir = deepseek_home / "skills" / "repo-reviewer"
-    assert (skill_dir / "SKILL.md").read_text() == (
+    expected_skill = (
         '---\nname: "Repo reviewer"\n'
         'description: "Review repository changes."\n---\n\n'
         "Read AGENTS.md before reviewing.\n"
     )
-    assert (skill_dir / "references" / "checklist.md").read_text() == (
-        "Check tests and docs.\n"
+    assert (skill_dir / "SKILL.md").read_text() == expected_skill, (
+        "Expected SKILL.md to contain expected front matter and body"
+    )
+    assert (
+        skill_dir / "references" / "checklist.md"
+    ).read_text() == "Check tests and docs.\n", (
+        "Expected references/checklist.md to contain expected checklist content"
     )
 
 
@@ -158,7 +169,7 @@ def _build_ansible_env() -> dict[str, str]:
     """Return an environment dict with Ansible collection search paths configured."""
     env = os.environ.copy()
     env["ANSIBLE_COLLECTIONS_PATH"] = str(_REPO_ROOT / "ansible/ansible_collections")
-    env["ANSIBLE_LIBRARY"] = ":".join(
+    env["ANSIBLE_LIBRARY"] = os.pathsep.join(
         [
             str(
                 _REPO_ROOT
@@ -181,22 +192,28 @@ def _run_ansible_playbook(
     playbook: Path, env: dict[str, str]
 ) -> subprocess.CompletedProcess[str]:
     """Run *playbook* via the Ansible CLI and return the completed process."""
-    return subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "ansible.cli.playbook",
-            "-i",
-            "localhost,",
-            "-c",
-            "local",
-            str(playbook),
-        ],
-        check=False,
-        env=env,
-        text=True,
-        capture_output=True,
-    )
+    try:
+        return subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "ansible.cli.playbook",
+                "-i",
+                "localhost,",
+                "-c",
+                "local",
+                str(playbook),
+            ],
+            check=False,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise AssertionError(
+            "Ansible playbook did not complete within 120 seconds"
+        ) from exc
 
 
 def _assert_deepseek_tui_artifacts(
@@ -205,14 +222,17 @@ def _assert_deepseek_tui_artifacts(
 ) -> None:
     """Assert the playbook succeeded and wrote the expected DeepSeek-TUI artefacts."""
     assert result.returncode == 0, result.stderr + result.stdout
-    assert (
-        json.loads((deepseek_home / "mcp.json").read_text())["servers"]["repo-tools"][
-            "command"
-        ]
-        == "repo-tools-mcp"
+    servers = json.loads((deepseek_home / "mcp.json").read_text())["servers"]
+    actual_command = servers["repo-tools"]["command"]
+    assert actual_command == "repo-tools-mcp", (
+        f"Expected repo-tools command to be repo-tools-mcp, got: {actual_command}"
     )
-    assert "repo-env" in (deepseek_home / "config.toml").read_text()
-    assert (deepseek_home / "skills" / "repo-reviewer" / "SKILL.md").exists()
+    config_toml = (deepseek_home / "config.toml").read_text()
+    assert "repo-env" in config_toml, (
+        f"Expected config.toml to contain repo-env hook, got: {config_toml}"
+    )
+    skill_path = deepseek_home / "skills" / "repo-reviewer" / "SKILL.md"
+    assert skill_path.exists(), "Expected SKILL.md to exist under skills/repo-reviewer"
 
 
 def test_deepseek_tui_modules_run_through_ansible_playbook(tmp_path: Path) -> None:

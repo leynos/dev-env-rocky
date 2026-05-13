@@ -494,6 +494,7 @@ def test_codex_cli_mcp_writes_toml_and_removes_entry(tmp_path: Path) -> None:
 )
 def test_mcp_module_resolves_project_scoped_path(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     module,
     config_dir: str,
     root_key: str,
@@ -518,6 +519,25 @@ def test_mcp_module_resolves_project_scoped_path(
     assert result["path"] == str(project_dir / config_dir / "mcp.json")
     rendered = json.loads((project_dir / config_dir / "mcp.json").read_text())
     assert rendered == {root_key: {"repo-tools": expected_server}}
+
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+
+    user_result = _run_module(
+        module,
+        {
+            "name": "repo-tools",
+            "scope": "user",
+            "transport": "http",
+            "url": url,
+        },
+    )
+
+    expected_user_path = home / config_dir / "mcp.json"
+    assert user_result["path"] == str(expected_user_path)
+    rendered_user = json.loads(expected_user_path.read_text())
+    assert rendered_user == {root_key: {"repo-tools": expected_server}}
 
 
 def test_factory_droid_model_manages_custom_model_list(tmp_path: Path) -> None:

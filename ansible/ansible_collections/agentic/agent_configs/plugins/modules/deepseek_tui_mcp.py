@@ -6,14 +6,13 @@ parallel writes externally, for example by running the play with ``serial: 1``
 when several hosts or tasks can target the same file.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-import os
+from pathlib import Path
 from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    _state_transition,
     clean_dict,
     load_json_file,
     log_operation,
@@ -261,15 +260,6 @@ def validate_present_server_params(params: dict[str, Any]) -> None:
         _validate_http_params(params)
 
 
-def state_transition(changed: bool, existed_before: bool, state: str) -> str:
-    """Return a compact state transition label for module results."""
-    if not changed:
-        return "unchanged"
-    if state == "absent":
-        return "removed" if existed_before else "unchanged"
-    return "updated" if existed_before else "created"
-
-
 def _resolve_mcp_path(module: AnsibleModule) -> str:
     """Resolve the effective mcp.json path, failing the module on error."""
     try:
@@ -278,7 +268,7 @@ def _resolve_mcp_path(module: AnsibleModule) -> str:
             scope=module.params["scope"],
             project_dir=module.params.get("project_dir"),
             user_path="~/.deepseek/mcp.json",
-            project_relative_path=os.path.join(".deepseek", "mcp.json"),
+            project_relative_path=str(Path(".deepseek") / "mcp.json"),
         )
     except ValueError as exc:
         module.fail_json(
@@ -321,7 +311,9 @@ def _check_existed_before(path: str, name: str) -> bool:
     """Return True if a server entry named *name* already exists in *path*."""
     try:
         existing_data = load_json_file(path, default={})
-    except Exception:
+    except FileNotFoundError:
+        return False
+    except (OSError, ValueError):
         return False
     if not isinstance(existing_data, dict):
         return False
@@ -344,8 +336,10 @@ def _assemble_result(
         "path": path,
         "scope": module.params["scope"],
         "name": module.params["name"],
-        "state_transition": state_transition(
-            changed, existed_before, module.params["state"]
+        "state_transition": _state_transition(
+            changed=changed,
+            existed_before=existed_before,
+            state=module.params["state"],
         ),
     }
     if module.params["state"] == "present":

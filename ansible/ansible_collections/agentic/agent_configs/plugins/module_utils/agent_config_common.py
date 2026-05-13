@@ -147,6 +147,15 @@ def log_operation(
     logger(json.dumps(payload, sort_keys=True, ensure_ascii=False))
 
 
+def _state_transition(*, changed: bool, existed_before: bool, state: str) -> str:
+    """Return a compact state transition label for module results."""
+    if not changed:
+        return "unchanged"
+    if state == "absent":
+        return "removed" if existed_before else "unchanged"
+    return "updated" if existed_before else "created"
+
+
 def fail_with_io_error(module, operation: str, path: str, exc: OSError) -> None:
     """Fail an Ansible module with a consistent I/O error message."""
     log_operation(module, operation + "_failed", path=expand_path(path), error=str(exc))

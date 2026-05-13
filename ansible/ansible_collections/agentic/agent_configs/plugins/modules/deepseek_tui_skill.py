@@ -6,13 +6,12 @@ Serialise parallel writes externally, for example by running the play with
 ``serial: 1`` when several hosts or tasks can target the same directory.
 """
 
-from __future__ import annotations
-
-import os
+from pathlib import Path
 from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config_common import (
+    _state_transition,
     expand_path,
     log_operation,
     manage_directory_markdown_resource,
@@ -164,18 +163,9 @@ def resolve_directory(
         path=None,
         scope=scope,
         project_dir=project_dir,
-        user_path=os.path.join("~/.deepseek/skills", slug),
-        project_relative_path=os.path.join(".agents/skills", slug),
+        user_path=str(Path("~/.deepseek/skills") / slug),
+        project_relative_path=str(Path(".agents/skills") / slug),
     )
-
-
-def state_transition(changed: bool, existed_before: bool, state: str) -> str:
-    """Return a compact state transition label for module results."""
-    if not changed:
-        return "unchanged"
-    if state == "absent":
-        return "removed" if existed_before else "unchanged"
-    return "updated" if existed_before else "created"
 
 
 def _build_argument_spec() -> dict[str, Any]:
@@ -227,7 +217,11 @@ def _emit_skill_result(
     existed_before: bool,
 ) -> None:
     """Log the operation and exit the module with the computed result."""
-    transition = state_transition(changes.changed, existed_before, module.params["state"])
+    transition = _state_transition(
+        changed=changes.changed,
+        existed_before=existed_before,
+        state=module.params["state"],
+    )
     log_operation(
         module,
         "deepseek_tui_skill",
@@ -261,7 +255,7 @@ def main() -> None:
 
     slug = module.params.get("slug") or slugify(module.params["name"])
     directory = _resolve_skill_directory(module, slug)
-    existed_before = os.path.isdir(expand_path(directory))
+    existed_before = Path(expand_path(directory)).is_dir()
     changes = manage_directory_markdown_resource(
         module=module,
         directory=directory,
