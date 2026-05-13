@@ -153,7 +153,7 @@ configuration.
 
 2026-05-10: Use Molecule's Podman driver with a Rocky Linux 10 container to
 match existing role scenarios. The scenario will serve a local fake CodeRabbit
-release archive so the test proves the installer integration without relying on
+release archive, so the test proves the installer integration without relying on
 the public release service.
 
 2026-05-10: Store CodeRabbit tokens in a host-keyed `coderabbit_api_keys`
