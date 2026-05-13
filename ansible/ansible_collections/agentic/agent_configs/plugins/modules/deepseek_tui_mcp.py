@@ -8,6 +8,7 @@ when several hosts or tasks can target the same file.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import os
 from typing import Any
 
@@ -152,48 +153,52 @@ server:
 """
 
 
-def build_server_definition(
-    *,
-    transport: str,
-    command: str | None,
-    args: list[str],
-    env: dict[str, Any],
-    url: str | None,
-    disabled: bool | None,
-    enabled: bool | None,
-    required: bool | None,
-    connect_timeout: int | None,
-    execute_timeout: int | None,
-    read_timeout: int | None,
-    enabled_tools: list[str] | None,
-    disabled_tools: list[str] | None,
-    extra: dict[str, Any],
-) -> dict[str, Any]:
+@dataclass(frozen=True, slots=True)
+class ServerParams:
+    """Value object encapsulating the parameters of one DeepSeek-TUI MCP server."""
+
+    transport: str
+    command: str | None = None
+    args: list[str] = field(default_factory=list)
+    env: dict[str, Any] = field(default_factory=dict)
+    url: str | None = None
+    disabled: bool | None = None
+    enabled: bool | None = None
+    required: bool | None = None
+    connect_timeout: int | None = None
+    execute_timeout: int | None = None
+    read_timeout: int | None = None
+    enabled_tools: list[str] | None = None
+    disabled_tools: list[str] | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+def build_server_definition(params: ServerParams) -> dict[str, Any]:
     """Build a DeepSeek-TUI MCP server definition from domain parameters."""
-    if transport == "stdio":
+    if params.transport == "stdio":
         desired: dict[str, Any] = {
-            "command": command,
-            "args": args,
-            "env": env,
+            "command": params.command,
+            "args": params.args,
+            "env": params.env,
         }
     else:
-        desired = {"url": url}
+        desired = {"url": params.url}
 
     desired.update(
         clean_dict(
             {
-                "disabled": disabled,
-                "enabled": enabled,
-                "required": required,
-                "connect_timeout": connect_timeout,
-                "execute_timeout": execute_timeout,
-                "read_timeout": read_timeout,
-                "enabled_tools": enabled_tools,
-                "disabled_tools": disabled_tools,
+                "disabled": params.disabled,
+                "enabled": params.enabled,
+                "required": params.required,
+                "connect_timeout": params.connect_timeout,
+                "execute_timeout": params.execute_timeout,
+                "read_timeout": params.read_timeout,
+                "enabled_tools": params.enabled_tools,
+                "disabled_tools": params.disabled_tools,
             }
         )
     )
-    desired.update(extra)
+    desired.update(params.extra)
     return clean_dict(desired)
 
 
@@ -271,7 +276,7 @@ def _build_desired_server(module: AnsibleModule) -> dict[str, Any] | None:
         validate_present_server_params(module.params)
     except ValueError as exc:
         module.fail_json(msg=str(exc))
-    return build_server_definition(
+    server_params = ServerParams(
         transport=module.params["transport"],
         command=module.params.get("command"),
         args=module.params.get("args") or [],
@@ -287,6 +292,7 @@ def _build_desired_server(module: AnsibleModule) -> dict[str, Any] | None:
         disabled_tools=module.params.get("disabled_tools"),
         extra=module.params.get("extra") or {},
     )
+    return build_server_definition(server_params)
 
 
 def _check_existed_before(path: str, name: str) -> bool:
