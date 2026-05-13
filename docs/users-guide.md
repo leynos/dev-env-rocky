@@ -43,7 +43,8 @@ configured. Cursor CLI does not currently support stop hooks, so this
 repository does not install Cursor stop-hook configuration.
 
 The `coderabbit_cli` role installs CodeRabbit CLI through the downloaded
-installer script kept outside this repository at `../../coderabbit-install.sh`.
+installer script kept at the repository root as `../coderabbit-install.sh`
+relative to the `ansible/` directory.
 The upstream source for that script is:
 
 ```text
