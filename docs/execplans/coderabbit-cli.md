@@ -234,7 +234,9 @@ make test 2>&1 | tee /tmp/test-dev-env-rocky-coderabbit-cli.out
 ```
 
 ```bash
-make molecule MOLECULE="uv run --with molecule --with 'molecule-plugins[podman]' molecule" 2>&1 | tee /tmp/molecule-dev-env-rocky-coderabbit-cli.out
+make molecule \
+  MOLECULE="uv run --with molecule --with 'molecule-plugins[podman]' molecule" \
+  2>&1 | tee /tmp/molecule-dev-env-rocky-coderabbit-cli.out
 ```
 
 ```bash
