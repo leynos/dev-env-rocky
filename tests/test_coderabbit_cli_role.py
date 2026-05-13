@@ -44,22 +44,37 @@ def extract_make_target(content: str, name: str) -> str:
 
 def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     """Role must copy the checked-in installer and guard with creates:."""
-    defaults = yaml.safe_load(CODERABBIT_DEFAULTS.read_text())
+    defaults_data = yaml.safe_load(CODERABBIT_DEFAULTS.read_text())
+    installer_src: str = defaults_data["coderabbit_cli_installer_src"]
     tasks = yaml.safe_load(CODERABBIT_TASKS.read_text())
     install_task = next(t for t in tasks if t.get("name") == "Install CodeRabbit CLI")
     copy_task = next(
         t for t in tasks if t.get("name") == "Copy CodeRabbit CLI installer"
     )
 
-    assert (
-        defaults["coderabbit_cli_installer_src"]
-        == "{{ role_path }}/files/coderabbit-install.sh"
+    assert "../../../" not in installer_src, (
+        "installer src must not escape the repository via ../../.."
     )
-    assert "lookup('env', 'PWD')" not in defaults["coderabbit_cli_installer_src"], (
-        "installer src must not use ambient PWD; use role_path instead"
+    assert "coderabbit-install.sh" in installer_src, (
+        "installer src must reference coderabbit-install.sh"
+    )
+    assert installer_src.startswith("{{ playbook_dir }}/"), (
+        "installer src must use playbook_dir, not an ambient variable"
+    )
+    # Verify the path stays within one level above ansible/ (the repo root).
+    # playbook_dir resolves to ansible/; one `../` reaches the repo root.
+    # Two or more `../` sequences escape the repository.
+    traversal_depth = installer_src.count("../")
+    assert traversal_depth == 1, (
+        f"installer src must ascend exactly one directory level from playbook_dir "
+        f"(repo root); found {traversal_depth} '../' sequences in {installer_src!r}"
+    )
+    assert "lookup" not in yaml.dump(defaults_data), (
+        "defaults must not use any lookup() calls"
     )
     assert (
-        defaults["coderabbit_cli_download_url"] == "https://cli.coderabbit.ai/releases"
+        defaults_data["coderabbit_cli_download_url"]
+        == "https://cli.coderabbit.ai/releases"
     )
     assert (
         copy_task["ansible.builtin.copy"]["src"] == "{{ coderabbit_cli_installer_src }}"
