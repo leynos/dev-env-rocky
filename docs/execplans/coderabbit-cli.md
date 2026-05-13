@@ -11,7 +11,8 @@ Status: COMPLETE
 
 After this change, running the repository's Ansible site playbook installs the
 CodeRabbit CLI for the managed owner user on development hosts. The role uses
-the already-downloaded installer script at `../coderabbit-install.sh`, keeps
+the already-downloaded installer script at
+`ansible/roles/coderabbit_cli/files/coderabbit-install.sh`, keeps
 host-specific CodeRabbit API keys in Ansible Vault, and proves the behaviour
 with a Molecule scenario that runs on Podman against a Rocky Linux container.
 
@@ -34,7 +35,8 @@ checking, tests, or Molecule in parallel.
 Do not place build artefacts in `/tmp`; `/tmp` is only for logs and scratch
 files. Do not create an isolated Cargo cache.
 
-The CodeRabbit installer is already available at `../coderabbit-install.sh`.
+The CodeRabbit installer is already available at
+`ansible/roles/coderabbit_cli/files/coderabbit-install.sh`.
 Do not fetch a different installer for the role unless the checked-in script is
 found to be unusable. The original installer source is
 `https://cli.coderabbit.ai/install.sh`.
@@ -88,7 +90,8 @@ part of the normal role gate.
 - [x] 2026-05-10: Read `AGENTS.md`, `Makefile`, the Cursor CLI role, existing
   Molecule role scenarios, the inventory, and current vault layout.
 - [x] 2026-05-10: Confirmed the installer script exists at
-  `../coderabbit-install.sh` and installs `coderabbit` plus `cr` under
+  `ansible/roles/coderabbit_cli/files/coderabbit-install.sh` and installs
+  `coderabbit` plus `cr` under
   `~/.local/bin`.
 - [x] 2026-05-10: Added the `coderabbit_cli` role, wired it into
   `ansible/site.yml`, and added focused Python regression coverage.
@@ -173,8 +176,9 @@ plan before making role changes.
 
 Second, add `ansible/roles/coderabbit_cli`. The role creates
 `{{ ansible_facts.env.HOME }}/.local/bin`, copies
-`../coderabbit-install.sh` to a temporary managed location, runs it as the
-owner user with `CODERABBIT_INSTALL_DIR` set to that bin directory, and declares
+`ansible/roles/coderabbit_cli/files/coderabbit-install.sh` to a temporary
+managed location, runs it as the owner user with `CODERABBIT_INSTALL_DIR` set
+to that bin directory, and declares
 `creates: ~/.local/bin/coderabbit` for idempotence. It then runs
 `coderabbit auth login --api-key` with `coderabbit_api_keys[inventory_hostname]`
 and `no_log: true`, using `creates: ~/.coderabbit/auth.json` to avoid repeated

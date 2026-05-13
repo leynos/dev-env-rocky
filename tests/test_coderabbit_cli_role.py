@@ -6,10 +6,11 @@ and Makefile Molecule invocation. Tests load raw YAML/text from the
 repository and assert structural correctness without executing Ansible.
 """
 
+import importlib
 import re
 from pathlib import Path
 
-import yaml
+yaml = importlib.import_module("yaml")
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CODERABBIT_DEFAULTS = REPO_ROOT / "ansible/roles/coderabbit_cli/defaults/main.yml"
@@ -58,16 +59,13 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     assert "coderabbit-install.sh" in installer_src, (
         "installer src must reference coderabbit-install.sh"
     )
-    assert installer_src.startswith("{{ playbook_dir }}/"), (
-        "installer src must use playbook_dir, not an ambient variable"
+    assert installer_src == "{{ role_path }}/files/coderabbit-install.sh", (
+        "installer src must use the checked-in role files path"
     )
-    # Verify the path stays within one level above ansible/ (the repo root).
-    # playbook_dir resolves to ansible/; one `../` reaches the repo root.
-    # Two or more `../` sequences escape the repository.
     traversal_depth = installer_src.count("../")
-    assert traversal_depth == 1, (
-        f"installer src must ascend exactly one directory level from playbook_dir "
-        f"(repo root); found {traversal_depth} '../' sequences in {installer_src!r}"
+    assert traversal_depth == 0, (
+        f"installer src must stay inside the role files directory; found "
+        f"{traversal_depth} '../' sequences in {installer_src!r}"
     )
     assert "lookup" not in yaml.dump(defaults_data), (
         "defaults must not use any lookup() calls"

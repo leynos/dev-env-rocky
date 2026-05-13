@@ -128,9 +128,8 @@ servers and skills.
 The `coderabbit_cli` Ansible role installs the CodeRabbit `coderabbit` binary
 and the `cr` alias into the managed user's `~/.local/bin` directory. The role
 copies the checked-in installer from
-`../coderabbit-install.sh` relative to the `ansible/` playbook directory
-instead of curling the installer during the play. The copied installer is
-executed with
+`ansible/roles/coderabbit_cli/files/coderabbit-install.sh` instead of curling
+the installer during the play. The copied installer is executed with
 `CODERABBIT_INSTALL_DIR` set to the managed
 user-local bin directory and with `creates: ~/.local/bin/coderabbit`, so the
 installation task is idempotent after the binary exists.
