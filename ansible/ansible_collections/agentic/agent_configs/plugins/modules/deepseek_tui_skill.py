@@ -139,8 +139,13 @@ def build_frontmatter(
         "name": name,
         "description": description,
     }
+    filtered_metadata = {
+        key: value
+        for key, value in metadata.items()
+        if key not in {"name", "description"}
+    }
     return normalize_mapping_order(
-        merge_dicts(base, metadata),
+        merge_dicts(base, filtered_metadata),
         ["name", "description"],
     )
 

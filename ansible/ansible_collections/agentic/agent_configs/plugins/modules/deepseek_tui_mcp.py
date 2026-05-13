@@ -175,6 +175,28 @@ class ServerParams:
 
 def build_server_definition(params: ServerParams) -> dict[str, Any]:
     """Build a DeepSeek-TUI MCP server definition from domain parameters."""
+    managed_keys = {
+        "command",
+        "args",
+        "env",
+        "url",
+        "disabled",
+        "enabled",
+        "required",
+        "connect_timeout",
+        "execute_timeout",
+        "read_timeout",
+        "enabled_tools",
+        "disabled_tools",
+    }
+    conflicting_keys = set(params.extra) & managed_keys
+    if conflicting_keys:
+        msg = (
+            "extra cannot override managed MCP fields: "
+            f"{', '.join(sorted(conflicting_keys))}"
+        )
+        raise ValueError(msg)
+
     if params.transport == "stdio":
         desired: dict[str, Any] = {
             "command": params.command,
@@ -274,25 +296,25 @@ def _build_desired_server(module: AnsibleModule) -> dict[str, Any] | None:
         return None
     try:
         validate_present_server_params(module.params)
+        server_params = ServerParams(
+            transport=module.params["transport"],
+            command=module.params.get("command"),
+            args=module.params.get("args") or [],
+            env=module.params.get("env") or {},
+            url=module.params.get("url"),
+            disabled=module.params.get("disabled"),
+            enabled=module.params.get("enabled"),
+            required=module.params.get("required"),
+            connect_timeout=module.params.get("connect_timeout"),
+            execute_timeout=module.params.get("execute_timeout"),
+            read_timeout=module.params.get("read_timeout"),
+            enabled_tools=module.params.get("enabled_tools"),
+            disabled_tools=module.params.get("disabled_tools"),
+            extra=module.params.get("extra") or {},
+        )
+        return build_server_definition(server_params)
     except ValueError as exc:
         module.fail_json(msg=str(exc))
-    server_params = ServerParams(
-        transport=module.params["transport"],
-        command=module.params.get("command"),
-        args=module.params.get("args") or [],
-        env=module.params.get("env") or {},
-        url=module.params.get("url"),
-        disabled=module.params.get("disabled"),
-        enabled=module.params.get("enabled"),
-        required=module.params.get("required"),
-        connect_timeout=module.params.get("connect_timeout"),
-        execute_timeout=module.params.get("execute_timeout"),
-        read_timeout=module.params.get("read_timeout"),
-        enabled_tools=module.params.get("enabled_tools"),
-        disabled_tools=module.params.get("disabled_tools"),
-        extra=module.params.get("extra") or {},
-    )
-    return build_server_definition(server_params)
 
 
 def _check_existed_before(path: str, name: str) -> bool:

@@ -1421,6 +1421,23 @@ def test_deepseek_tui_mcp_rejects_malformed_servers_root(tmp_path: Path) -> None
     )
 
 
+def test_deepseek_tui_mcp_rejects_extra_managed_field_overrides(
+    tmp_path: Path,
+) -> None:
+    """Verify DeepSeek-TUI MCP extra data cannot override managed fields."""
+    _assert_fails(
+        deepseek_tui_mcp,
+        {
+            "path": str(tmp_path / "mcp.json"),
+            "name": "repo-tools",
+            "transport": "stdio",
+            "command": "repo-tools-mcp",
+            "extra": {"command": "malicious-mcp"},
+        },
+        "extra cannot override managed MCP fields: command",
+    )
+
+
 def test_deepseek_tui_hook_rejects_malformed_hook_entries(tmp_path: Path) -> None:
     """Verify DeepSeek-TUI hook rejects malformed hooks.hooks TOML values."""
     path = tmp_path / "config.toml"
@@ -1515,6 +1532,35 @@ def test_deepseek_tui_skill_resolves_workspace_preferred_path_and_scopes(
     assert absent_result["changed"] is True
     assert absent_result["state_transition"] == "removed"
     assert not explicit_dir.exists()
+
+
+def test_deepseek_tui_skill_metadata_cannot_override_managed_frontmatter(
+    tmp_path: Path,
+) -> None:
+    """Verify DeepSeek-TUI skill metadata cannot override managed front matter."""
+    path = tmp_path / "skills" / "repo-reviewer"
+
+    result = _run_module(
+        deepseek_tui_skill,
+        {
+            "path": str(path),
+            "name": "Repo reviewer",
+            "description": "Review repository changes.",
+            "metadata": {
+                "name": "Injected name",
+                "description": "Injected description.",
+                "owner": "release",
+            },
+        },
+    )
+
+    assert result["changed"] is True
+    rendered = (path / "SKILL.md").read_text()
+    assert 'name: "Repo reviewer"' in rendered
+    assert 'description: "Review repository changes."' in rendered
+    assert 'owner: "release"' in rendered
+    assert "Injected name" not in rendered
+    assert "Injected description." not in rendered
 
 
 def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> None:

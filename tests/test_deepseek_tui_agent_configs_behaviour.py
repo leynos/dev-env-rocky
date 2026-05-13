@@ -157,9 +157,7 @@ def _write_deepseek_tui_playbook(tmp_path: Path, deepseek_home: Path) -> Path:
 def _build_ansible_env() -> dict[str, str]:
     """Return an environment dict with Ansible collection search paths configured."""
     env = os.environ.copy()
-    env["ANSIBLE_COLLECTIONS_PATH"] = str(
-        _REPO_ROOT / "ansible/ansible_collections"
-    )
+    env["ANSIBLE_COLLECTIONS_PATH"] = str(_REPO_ROOT / "ansible/ansible_collections")
     env["ANSIBLE_LIBRARY"] = ":".join(
         [
             str(
