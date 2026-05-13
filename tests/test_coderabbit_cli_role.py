@@ -56,7 +56,7 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
         == "{{ role_path }}/files/coderabbit-install.sh"
     )
     assert "lookup('env', 'PWD')" not in defaults["coderabbit_cli_installer_src"], (
-        "installer src must not use ambient PWD; use playbook_dir instead"
+        "installer src must not use ambient PWD; use role_path instead"
     )
     assert (
         defaults["coderabbit_cli_download_url"] == "https://cli.coderabbit.ai/releases"
