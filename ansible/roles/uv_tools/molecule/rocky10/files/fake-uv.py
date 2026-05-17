@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Fake uv executable for deterministic uv_tools Molecule tests."""
 
+import fcntl
 import json
 import os
 import pathlib
 import stat
 import sys
+from collections.abc import Callable
 
 TOOL_DIR = pathlib.Path("/root/.local/bin")
 STATE_PATH = pathlib.Path("/tmp/fake-uv-log/installed-tools.json")
@@ -32,7 +34,26 @@ def _read_installed_tools() -> dict[str, str]:
 def _write_installed_tools(installed_tools: dict[str, str]) -> None:
     """Persist fake uv tool state to disk."""
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.write_text(json.dumps(installed_tools, sort_keys=True), encoding="utf-8")
+    tmp_path = STATE_PATH.with_suffix(".tmp")
+    with tmp_path.open("w", encoding="utf-8") as state_file:
+        state_file.write(json.dumps(installed_tools, sort_keys=True))
+        state_file.flush()
+        os.fsync(state_file.fileno())
+    os.replace(tmp_path, STATE_PATH)
+
+
+def _locked_state_update(updater_fn: Callable[[dict[str, str]], None]) -> None:
+    """Update fake uv state under a lock; Molecule is sequential, but this guards accidents."""
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = STATE_PATH.with_suffix(".lock")
+    with lock_path.open("w", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            installed_tools = _read_installed_tools()
+            updater_fn(installed_tools)
+            _write_installed_tools(installed_tools)
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def _tool_name_from_target(target: str) -> str:
@@ -67,9 +88,11 @@ def _install_tool(argv: list[str]) -> None:
     """Record a fake uv tool install and create executable shims."""
     target = argv[-1]
     tool_name = _tool_name_from_target(target)
-    installed_tools = _read_installed_tools()
-    installed_tools[tool_name] = "1.0.0"
-    _write_installed_tools(installed_tools)
+
+    def record_install(installed_tools: dict[str, str]) -> None:
+        installed_tools[tool_name] = "1.0.0"
+
+    _locked_state_update(record_install)
 
     _write_shim(tool_name)
     if "ansible-core" in _requested_executables_from(argv):
@@ -91,9 +114,11 @@ def main() -> int:
         return 0
 
     if len(argv) == 3 and argv[:2] == ["tool", "uninstall"]:
-        installed_tools = _read_installed_tools()
-        installed_tools.pop(argv[2], None)
-        _write_installed_tools(installed_tools)
+
+        def record_uninstall(installed_tools: dict[str, str]) -> None:
+            installed_tools.pop(argv[2], None)
+
+        _locked_state_update(record_uninstall)
         return 0
 
     print(f"unsupported fake uv invocation: {argv}", file=sys.stderr)
