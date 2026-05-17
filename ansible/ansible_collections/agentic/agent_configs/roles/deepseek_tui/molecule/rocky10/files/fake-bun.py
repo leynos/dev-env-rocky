@@ -88,6 +88,30 @@ def _trust_package() -> int:
 def main() -> int:
     """Dispatch supported fake Bun commands."""
     argv = sys.argv[1:]
+    if "BUN_FAKE_LOG" not in os.environ:
+        print("missing required environment variable: BUN_FAKE_LOG", file=sys.stderr)
+        return 2
+    if argv[:2] == ["install", "-g"]:
+        missing = [
+            name
+            for name in ("BUN_INSTALL_GLOBAL_DIR", "BUN_INSTALL_BIN")
+            if name not in os.environ
+        ]
+        if missing:
+            print(
+                f"missing required environment variables: {', '.join(missing)}",
+                file=sys.stderr,
+            )
+            return 2
+    if (
+        argv == ["pm", "trust", "deepseek-tui"]
+        and "BUN_INSTALL_GLOBAL_DIR" not in os.environ
+    ):
+        print(
+            "missing required environment variable: BUN_INSTALL_GLOBAL_DIR",
+            file=sys.stderr,
+        )
+        return 2
     _append_log(argv)
     if argv[:2] == ["install", "-g"]:
         return _install_package(argv)
