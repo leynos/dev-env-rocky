@@ -132,7 +132,9 @@ the required tools with the explicit `uv_path` set to
 
 The role installs Ansible workflow tools:
 
-- `ansible`, for ad hoc Ansible commands and Python package availability;
+- `ansible`, with executables linked from `ansible-core` and `ansible-lint`,
+  for ad hoc Ansible commands, `ansible-playbook`, and Python package
+  availability;
 - `molecule`, with `molecule-plugins[podman]`, for local role scenario tests
   that use the Podman driver;
 - `ansible-lint`, for playbook and role linting.

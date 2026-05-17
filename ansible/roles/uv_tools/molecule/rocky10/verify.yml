@@ -7,6 +7,7 @@
     fake_uv_log_dir: /tmp/fake-uv-log
     ansible_python_tools:
       - ansible
+      - ansible-playbook
       - molecule
       - ansible-lint
     ansible_python_tool_installs:
@@ -14,6 +15,8 @@
         argv:
           - tool
           - install
+          - --with-executables-from
+          - ansible-core,ansible-lint
           - ansible
       - name: molecule
         argv:
@@ -33,6 +36,12 @@
       - --with
       - molecule-plugins[podman]
       - molecule
+    ansible_core_executables_install_argv:
+      - tool
+      - install
+      - --with-executables-from
+      - ansible-core,ansible-lint
+      - ansible
 
   tasks:
     - name: Check fake uv command log exists
@@ -94,6 +103,21 @@
         that:
           - molecule_podman_installs | length == 1
         fail_msg: "uv_tools did not install molecule with molecule-plugins[podman]"
+
+    - name: Locate Ansible core executable install command
+      ansible.builtin.set_fact:
+        ansible_core_executable_installs: >-
+          {{
+            uv_command_entries
+            | selectattr('argv', 'equalto', ansible_core_executables_install_argv)
+            | list
+          }}
+
+    - name: Assert Ansible installs ansible-core executables
+      ansible.builtin.assert:
+        that:
+          - ansible_core_executable_installs | length == 1
+        fail_msg: "uv_tools did not link ansible-core executables for ansible"
 
     - name: Run installed Ansible Python tools through PATH
       ansible.builtin.command:

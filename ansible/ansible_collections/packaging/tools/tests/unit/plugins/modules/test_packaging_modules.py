@@ -569,6 +569,7 @@ def test_uv_tool_check_mode_installs_with_options(
             "version": "0.14.0",
             "python": "3.12",
             "with_packages": ["pytest"],
+            "with_executables_from": ["ansible-core,ansible-lint"],
             "force": True,
         },
     )
@@ -588,6 +589,8 @@ def test_uv_tool_check_mode_installs_with_options(
             "3.12",
             "--with",
             "pytest",
+            "--with-executables-from",
+            "ansible-core,ansible-lint",
             "ruff==0.14.0",
         ],
         "uv_tool should build install command with options",

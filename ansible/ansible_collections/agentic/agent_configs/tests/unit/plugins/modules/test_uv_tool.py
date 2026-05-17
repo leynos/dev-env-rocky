@@ -45,19 +45,31 @@ def test_uv_tool_parses_tool_list(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         uv_tool,
         "run",
-        lambda module, cmd: (0, "ruff v0.14.0\nbad line\nnixie v0.1.0 (from git)\n", ""),
+        lambda module, cmd: (
+            0,
+            "ruff v0.14.0\nbad line\nnixie v0.1.0 (from git)\n",
+            "",
+        ),
     )
 
-    assert_equal(uv_tool.read_installed_tools(FakeModule(), "/usr/bin/uv"), {
-        "ruff": "0.14.0",
-        "nixie": "0.1.0",
-    }, "uv_tool should parse installed tool list")
+    assert_equal(
+        uv_tool.read_installed_tools(FakeModule(), "/usr/bin/uv"),
+        {
+            "ruff": "0.14.0",
+            "nixie": "0.1.0",
+        },
+        "uv_tool should parse installed tool list",
+    )
 
 
-def test_uv_tool_check_mode_installs_with_options(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_uv_tool_check_mode_installs_with_options(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
-    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: pytest.fail("check mode must not run uv"))
+    monkeypatch.setattr(
+        uv_tool, "run", lambda module, cmd: pytest.fail("check mode must not run uv")
+    )
 
     result = run_module(
         uv_tool,
@@ -67,29 +79,44 @@ def test_uv_tool_check_mode_installs_with_options(monkeypatch: pytest.MonkeyPatc
             "version": "0.14.0",
             "python": "3.12",
             "with_packages": ["pytest"],
+            "with_executables_from": ["ansible-core,ansible-lint"],
             "force": True,
         },
     )
 
     assert_is(result["changed"], True, "uv_tool should report install change")
-    assert_equal(result["target"], "ruff==0.14.0", "uv_tool should build versioned target")
-    assert_equal(result["cmd"], [
-        "/usr/bin/uv",
-        "tool",
-        "install",
-        "--force",
-        "--python",
-        "3.12",
-        "--with",
-        "pytest",
-        "ruff==0.14.0",
-    ], "uv_tool should build install command with options")
+    assert_equal(
+        result["target"], "ruff==0.14.0", "uv_tool should build versioned target"
+    )
+    assert_equal(
+        result["cmd"],
+        [
+            "/usr/bin/uv",
+            "tool",
+            "install",
+            "--force",
+            "--python",
+            "3.12",
+            "--with",
+            "pytest",
+            "--with-executables-from",
+            "ansible-core,ansible-lint",
+            "ruff==0.14.0",
+        ],
+        "uv_tool should build install command with options",
+    )
 
 
-def test_uv_tool_check_mode_uninstalls_existing_tool(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_uv_tool_check_mode_uninstalls_existing_tool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
-    monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {"ruff": "0.14.0"})
-    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: pytest.fail("check mode must not run uv"))
+    monkeypatch.setattr(
+        uv_tool, "read_installed_tools", lambda module, uv_bin: {"ruff": "0.14.0"}
+    )
+    monkeypatch.setattr(
+        uv_tool, "run", lambda module, cmd: pytest.fail("check mode must not run uv")
+    )
 
     result = run_module(
         uv_tool,
@@ -108,10 +135,16 @@ def test_uv_tool_check_mode_uninstalls_existing_tool(monkeypatch: pytest.MonkeyP
     )
 
 
-def test_uv_tool_absent_is_idempotent_when_tool_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_uv_tool_absent_is_idempotent_when_tool_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
-    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: pytest.fail("missing tool must be idempotent"))
+    monkeypatch.setattr(
+        uv_tool,
+        "run",
+        lambda module, cmd: pytest.fail("missing tool must be idempotent"),
+    )
 
     result = run_module(
         uv_tool,
@@ -121,11 +154,15 @@ def test_uv_tool_absent_is_idempotent_when_tool_missing(monkeypatch: pytest.Monk
         },
     )
 
-    assert_equal(result, {
-        "changed": False,
-        "name": "ruff",
-        "state": "absent",
-    }, "uv_tool should be idempotent when tool is already absent")
+    assert_equal(
+        result,
+        {
+            "changed": False,
+            "name": "ruff",
+            "state": "absent",
+        },
+        "uv_tool should be idempotent when tool is already absent",
+    )
 
 
 def test_uv_tool_uses_spec_over_version(monkeypatch: pytest.MonkeyPatch) -> None:

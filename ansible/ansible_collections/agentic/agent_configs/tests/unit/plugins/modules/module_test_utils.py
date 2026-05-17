@@ -30,6 +30,7 @@ def set_module_args(args: dict[str, Any]) -> None:
     """Serialize Ansible module arguments into the global test input slot."""
     payload = json.dumps({"ANSIBLE_MODULE_ARGS": args})
     basic._ANSIBLE_ARGS = to_bytes(payload)
+    basic._ANSIBLE_PROFILE = "legacy"
 
 
 def exit_json(*args: Any, **kwargs: Any) -> None:

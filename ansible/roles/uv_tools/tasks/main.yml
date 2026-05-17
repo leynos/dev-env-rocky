@@ -17,10 +17,11 @@
     name: "{{ item.name }}"
     spec: "{{ item.spec | default(omit) }}"
     with_packages: "{{ item.with_packages | default(omit) }}"
+    with_executables_from: "{{ item.with_executables_from | default(omit) }}"
     uv_path: "{{ ansible_env.HOME }}/.local/bin/uv"
   loop:
     - { name: ruff }
-    - { name: ansible }
+    - { name: ansible, with_executables_from: ["ansible-core,ansible-lint"] }
     - { name: molecule, with_packages: ["molecule-plugins[podman]"] }
     - { name: ansible-lint }
     - { name: pyrefly }

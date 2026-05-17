@@ -27,6 +27,7 @@ class AnsibleFailJson(Exception):
 def set_module_args(args: dict[str, Any]) -> None:
     payload = json.dumps({"ANSIBLE_MODULE_ARGS": args})
     basic._ANSIBLE_ARGS = to_bytes(payload)
+    basic._ANSIBLE_PROFILE = "legacy"
 
 
 def exit_json(*args: Any, **kwargs: Any) -> None:

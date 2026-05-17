@@ -138,8 +138,8 @@ their commands through the user's normal shell `PATH`.
 
 The following Ansible tools are available after the playbook runs:
 
-- `ansible` — runs ad hoc Ansible commands and provides the Python package used
-  by related Ansible CLIs.
+- `ansible` — runs ad hoc Ansible commands and links the `ansible-core`
+  executables, including `ansible-playbook`, for local playbook workflows.
 - `molecule` — runs role scenario tests for local role validation, including
   the Podman Molecule driver plugin.
 - `ansible-lint` — checks playbooks and roles for Ansible best practices.

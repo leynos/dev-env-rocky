@@ -6,8 +6,9 @@
 The uv_tool.py Ansible module creates, updates, or removes tools managed by
 ``uv tool`` while reporting the command it ran or would run in check mode. Use
 it to keep user-level Python tooling repeatable with parameters such as
-``name``, ``version``, ``spec``, ``python``, ``with_packages``, ``force``, and
-``state``. The module resolves the ``uv`` executable, reads installed tool
+``name``, ``version``, ``spec``, ``python``, ``with_packages``,
+``with_executables_from``, ``force``, and ``state``. The module resolves the
+``uv`` executable, reads installed tool
 versions from ``uv tool list``, and applies installs or removals from ``main``.
 
 Example playbook task::
@@ -69,6 +70,14 @@ options:
     type: list
     elements: str
     default: []
+  with_executables_from:
+    description:
+      - Packages passed with repeated C(--with-executables-from) options.
+      - Use this when dependency package executables must be linked into the
+        installed tool environment.
+    type: list
+    elements: str
+    default: []
   force:
     description:
       - Pass C(--force) to C(uv tool install).
@@ -91,6 +100,12 @@ EXAMPLES = r"""
     spec: git+https://example.invalid/tools/my-tool
     with_packages:
       - requests
+
+- name: Install ansible with ansible-core executables linked
+  packaging.tools.uv_tool:
+    name: ansible
+    with_executables_from:
+      - ansible-core,ansible-lint
 
 - name: Remove a uv tool
   packaging.tools.uv_tool:
@@ -175,10 +190,19 @@ def main() -> None:
             "name": {"type": "str", "required": True},
             "version": {"type": "str", "required": False, "default": None},
             "spec": {"type": "str", "required": False, "default": None},
-            "state": {"type": "str", "choices": ["present", "absent"], "default": "present"},
+            "state": {
+                "type": "str",
+                "choices": ["present", "absent"],
+                "default": "present",
+            },
             "uv_path": {"type": "str", "default": "uv"},
             "python": {"type": "str", "required": False, "default": None},
             "with_packages": {"type": "list", "elements": "str", "default": []},
+            "with_executables_from": {
+                "type": "list",
+                "elements": "str",
+                "default": [],
+            },
             "force": {"type": "bool", "default": False},
         },
         supports_check_mode=True,
@@ -220,7 +244,9 @@ def main() -> None:
 
     # state == present
     desired_version = params["version"]
-    if installed_version is not None and (desired_version is None or installed_version == desired_version):
+    if installed_version is not None and (
+        desired_version is None or installed_version == desired_version
+    ):
         module.exit_json(
             changed=False,
             name=params["name"],
@@ -230,7 +256,11 @@ def main() -> None:
 
     install_target = params["spec"]
     if not install_target:
-        install_target = f"{params['name']}=={params['version']}" if params["version"] else params["name"]
+        install_target = (
+            f"{params['name']}=={params['version']}"
+            if params["version"]
+            else params["name"]
+        )
 
     cmd = [uv_bin, "tool", "install"]
     if params["force"]:
@@ -239,6 +269,8 @@ def main() -> None:
         cmd.extend(["--python", params["python"]])
     for pkg in params["with_packages"]:
         cmd.extend(["--with", pkg])
+    for pkg in params["with_executables_from"]:
+        cmd.extend(["--with-executables-from", pkg])
     cmd.append(install_target)
 
     if module.check_mode:

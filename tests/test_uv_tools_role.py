@@ -7,7 +7,8 @@ isolates the active YAML body of the "Install Python tools via uv" task so
 tests check the role's install loop, not unrelated comments or prose. The
 parameterized test then ensures each required tool is present as an uncommented
 loop item, including the Podman driver package that makes Molecule's configured
-Podman scenarios load on managed hosts.
+Podman scenarios load on managed hosts and the `ansible-core` executable links
+that make `ansible-playbook` available on fresh hosts.
 """
 
 import re
@@ -32,7 +33,7 @@ def extract_uv_tool_loop(content: str) -> str:
 @pytest.mark.parametrize(
     ("tool_name", "expected_options"),
     [
-        ("ansible", ""),
+        ("ansible", ', with_executables_from: ["ansible-core,ansible-lint"]'),
         ("molecule", ', with_packages: ["molecule-plugins[podman]"]'),
         ("ansible-lint", ""),
     ],

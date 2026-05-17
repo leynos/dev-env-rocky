@@ -1,10 +1,14 @@
+#!/usr/bin/python
+# Copyright: (c) 2026, Leynos
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 """Manage Python command-line tools installed with uv.
 
 The uv_tool.py Ansible module creates, updates, or removes tools managed by
 ``uv tool`` while reporting the command it ran or would run in check mode. Use
 it to keep user-level Python tooling repeatable with parameters such as
-``name``, ``version``, ``spec``, ``python``, ``with_packages``, ``force``, and
-``state``. The module resolves the ``uv`` executable, reads installed tool
+``name``, ``version``, ``spec``, ``python``, ``with_packages``,
+``with_executables_from``, ``force``, and ``state``. The module resolves the
+``uv`` executable, reads installed tool
 versions from ``uv tool list``, and applies installs or removals from ``main``.
 
 Example playbook task::
@@ -16,10 +20,11 @@ Example playbook task::
         python: "3.12"
 """
 
-#!/usr/bin/python
-# Copyright: (c) 2026, Leynos
-# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from __future__ import annotations
+
+import re
+
+from ansible.module_utils.basic import AnsibleModule
 
 DOCUMENTATION = r"""
 ---
@@ -66,6 +71,14 @@ options:
     type: list
     elements: str
     default: []
+  with_executables_from:
+    description:
+      - Packages passed with repeated C(--with-executables-from) options.
+      - Use this when dependency package executables must be linked into the
+        installed tool environment.
+    type: list
+    elements: str
+    default: []
   force:
     description:
       - Pass C(--force) to C(uv tool install).
@@ -88,6 +101,12 @@ EXAMPLES = r"""
     spec: git+https://example.invalid/tools/my-tool
     with_packages:
       - requests
+
+- name: Install ansible with ansible-core executables linked
+  agentic.agent_configs.uv_tool:
+    name: ansible
+    with_executables_from:
+      - ansible-core,ansible-lint
 
 - name: Remove a uv tool
   agentic.agent_configs.uv_tool:
@@ -130,10 +149,6 @@ stderr:
   returned: when a command is executed
   type: str
 """
-
-import re
-
-from ansible.module_utils.basic import AnsibleModule
 
 UV_LIST_RE = re.compile(r"^(?P<name>\S+)\s+v(?P<version>\S+)(?:\s|$)")
 
@@ -180,10 +195,19 @@ def main():
             "name": {"type": "str", "required": True},
             "version": {"type": "str", "required": False, "default": None},
             "spec": {"type": "str", "required": False, "default": None},
-            "state": {"type": "str", "choices": ["present", "absent"], "default": "present"},
+            "state": {
+                "type": "str",
+                "choices": ["present", "absent"],
+                "default": "present",
+            },
             "uv_path": {"type": "str", "default": "uv"},
             "python": {"type": "str", "required": False, "default": None},
             "with_packages": {"type": "list", "elements": "str", "default": []},
+            "with_executables_from": {
+                "type": "list",
+                "elements": "str",
+                "default": [],
+            },
             "force": {"type": "bool", "default": False},
         },
         supports_check_mode=True,
@@ -225,7 +249,9 @@ def main():
 
     # state == present
     desired_version = params["version"]
-    if installed_version is not None and (desired_version is None or installed_version == desired_version):
+    if installed_version is not None and (
+        desired_version is None or installed_version == desired_version
+    ):
         module.exit_json(
             changed=False,
             name=params["name"],
@@ -235,7 +261,11 @@ def main():
 
     install_target = params["spec"]
     if not install_target:
-        install_target = f"{params['name']}=={params['version']}" if params["version"] else params["name"]
+        install_target = (
+            f"{params['name']}=={params['version']}"
+            if params["version"]
+            else params["name"]
+        )
 
     cmd = [uv_bin, "tool", "install"]
     if params["force"]:
@@ -244,6 +274,8 @@ def main():
         cmd.extend(["--python", params["python"]])
     for pkg in params["with_packages"]:
         cmd.extend(["--with", pkg])
+    for pkg in params["with_executables_from"]:
+        cmd.extend(["--with-executables-from", pkg])
     cmd.append(install_target)
 
     if module.check_mode:
