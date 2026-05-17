@@ -304,6 +304,11 @@ def _had_hook_entries_before(data: dict[str, Any]) -> bool:
     return isinstance(hooks, dict) and "hooks" in hooks
 
 
+def _hooks_list_is_missing_or_empty(hooks_root: object) -> bool:
+    """Return True when hooks.hooks is absent or an empty list."""
+    return isinstance(hooks_root, dict) and hooks_root.get("hooks") in (None, [])
+
+
 def _cleanup_absent_noop(
     state: str,
     changed: bool,
@@ -315,11 +320,7 @@ def _cleanup_absent_noop(
     if state != "absent":
         return
     hooks_root = data.get("hooks")
-    if (
-        not pre_state.had_hook_entries
-        and isinstance(hooks_root, dict)
-        and hooks_root.get("hooks") in (None, [])
-    ):
+    if not pre_state.had_hook_entries and _hooks_list_is_missing_or_empty(hooks_root):
         hooks_root.pop("hooks", None)
     if not pre_state.had_hooks_table:
         data.pop("hooks", None)
