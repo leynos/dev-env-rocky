@@ -14,7 +14,7 @@ that make `ansible-playbook` available on fresh hosts.
 import re
 from pathlib import Path
 
-import pytest  # ty: ignore[unresolved-import]
+import pytest  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UV_TOOLS_TASKS = REPO_ROOT / "ansible/roles/uv_tools/tasks/main.yml"
@@ -31,24 +31,30 @@ def extract_uv_tool_loop(content: str) -> str:
 
 
 @pytest.mark.parametrize(
-    ("tool_name", "expected_fragment"),
-    (
+    ("tool_name", "expected_fragments"),
+    [
         (
             "ansible",
-            '{name: ansible, with_executables_from: ["ansible-core,ansible-lint"]}',
+            (
+                "{name: ansible",
+                'with_executables_from: ["ansible-core,ansible-lint"]',
+            ),
         ),
         (
             "molecule",
-            '{name: molecule, with_packages: ["molecule-plugins[podman]"]}',
+            ("{name: molecule", 'with_packages: ["molecule-plugins[podman]"]'),
         ),
-        ("ansible-lint", "{name: ansible-lint}"),
-    ),
+        ("ansible-lint", ("{name: ansible-lint}",)),
+    ],
 )
-def test_uv_tools_installed(tool_name: str, expected_fragment: str) -> None:
+def test_uv_tools_installed(
+    tool_name: str, expected_fragments: tuple[str, ...]
+) -> None:
     """Ensure each Ansible workflow CLI is installed by uv_tools."""
     tasks_content = UV_TOOLS_TASKS.read_text(encoding="utf-8")
     uv_tool_loop = extract_uv_tool_loop(tasks_content)
 
-    assert expected_fragment in uv_tool_loop, (
-        f"uv_tools must install {tool_name!r} for Ansible development"
-    )
+    for expected_fragment in expected_fragments:
+        assert expected_fragment in uv_tool_loop, (
+            f"uv_tools must install {tool_name!r} for Ansible development"
+        )
