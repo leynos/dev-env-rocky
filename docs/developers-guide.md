@@ -288,7 +288,9 @@ work are:
 - `python3-tomlkit`, installed by the package role for TOML round-trip writes;
 - `firecrawl-mcp`, installed globally through Bun for Codex MCP access;
 - `ninja-build`, installed by the `packages` role to provide the `ninja`
-  binary for projects that use Ninja as their build backend.
+  binary for projects that use Ninja as their build backend;
+- `htop`, installed by the `packages` role to provide an interactive process
+  viewer for inspecting CPU, memory and process state.
 
 ## Validation
 

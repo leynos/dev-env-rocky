@@ -58,7 +58,7 @@ lint: ruff ## Run Python linters
 typecheck: uv ## Run Python typechecking
 	$(UV_ENV) uv run --directory $(PYTHON_PACKAGE_DIR) --project . --group dev --with ty ty --version
 	$(UV_ENV) uv run --directory $(PYTHON_PACKAGE_DIR) --project . --group dev --with ty ty check src tests
-	$(UV_ENV) uv run --with pytest --with ty ty check tests
+	$(UV_ENV) uv run --with pytest --with pyyaml --with ty ty check tests
 
 markdownlint: $(MDLINT) ## Lint Markdown files
 	$(MDLINT) $(MARKDOWN_PATHS)
@@ -77,7 +77,7 @@ nixie: ## Validate Mermaid diagrams
 
 test: uv ## Run Python tests
 	$(UV_ENV) uv run --project $(PYTHON_PACKAGE_DIR) --group dev pytest -v $(PYTHON_PACKAGE_DIR)/tests
-	$(UV_ENV) uv run --with pytest pytest -v tests
+	$(UV_ENV) uv run --with pytest --with pyyaml pytest -v tests
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
