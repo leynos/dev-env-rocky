@@ -85,33 +85,60 @@ def _trust_package() -> int:
     return 0
 
 
+def _validate_install_env() -> int | None:
+    """Validate environment variables required for the install -g command.
+
+    Returns 2 on the first validation failure, or None when all variables are present.
+    """
+    missing = [
+        name
+        for name in ("BUN_INSTALL_GLOBAL_DIR", "BUN_INSTALL_BIN")
+        if name not in os.environ
+    ]
+    if missing:
+        print(
+            f"missing required environment variables: {', '.join(missing)}",
+            file=sys.stderr,
+        )
+        return 2
+    return None
+
+
+def _validate_trust_env() -> int | None:
+    """Validate environment variables required for the pm trust command.
+
+    Returns 2 if BUN_INSTALL_GLOBAL_DIR is absent, or None when it is present.
+    """
+    if "BUN_INSTALL_GLOBAL_DIR" not in os.environ:
+        print(
+            "missing required environment variable: BUN_INSTALL_GLOBAL_DIR",
+            file=sys.stderr,
+        )
+        return 2
+    return None
+
+
+def _validate_command_env(argv: list[str]) -> int | None:
+    """Validate command-specific environment variables.
+
+    Returns an exit code on failure, or None when all required variables are present.
+    """
+    if argv[:2] == ["install", "-g"]:
+        return _validate_install_env()
+    if argv == ["pm", "trust", "deepseek-tui"]:
+        return _validate_trust_env()
+    return None
+
+
 def main() -> int:
     """Dispatch supported fake Bun commands."""
     argv = sys.argv[1:]
     if "BUN_FAKE_LOG" not in os.environ:
         print("missing required environment variable: BUN_FAKE_LOG", file=sys.stderr)
         return 2
-    if argv[:2] == ["install", "-g"]:
-        missing = [
-            name
-            for name in ("BUN_INSTALL_GLOBAL_DIR", "BUN_INSTALL_BIN")
-            if name not in os.environ
-        ]
-        if missing:
-            print(
-                f"missing required environment variables: {', '.join(missing)}",
-                file=sys.stderr,
-            )
-            return 2
-    if (
-        argv == ["pm", "trust", "deepseek-tui"]
-        and "BUN_INSTALL_GLOBAL_DIR" not in os.environ
-    ):
-        print(
-            "missing required environment variable: BUN_INSTALL_GLOBAL_DIR",
-            file=sys.stderr,
-        )
-        return 2
+    env_error = _validate_command_env(argv)
+    if env_error is not None:
+        return env_error
     _append_log(argv)
     if argv[:2] == ["install", "-g"]:
         return _install_package(argv)
