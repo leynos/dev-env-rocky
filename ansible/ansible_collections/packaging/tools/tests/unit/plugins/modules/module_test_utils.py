@@ -12,6 +12,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pytest
+
 from ansible.module_utils import basic
 from ansible.module_utils.common.text.converters import to_bytes
 
@@ -39,3 +41,21 @@ def exit_json(*args: Any, **kwargs: Any) -> None:
 def fail_json(*args: Any, **kwargs: Any) -> None:
     kwargs["failed"] = True
     raise AnsibleFailJson(kwargs)
+
+
+def run_module(module: Any, args: dict[str, Any]) -> dict[str, Any]:
+    """Call module.main() with args and return the exit payload."""
+    set_module_args(args)
+    with pytest.raises(AnsibleExitJson) as exc:
+        module.main()
+    return exc.value.args[0]
+
+
+def assert_equal(actual: Any, expected: Any, context: str) -> None:
+    """Assert equality with a diagnostic message."""
+    assert actual == expected, f"{context}: expected {expected!r}, got {actual!r}"
+
+
+def assert_is(actual: Any, expected: Any, context: str) -> None:
+    """Assert identity with a diagnostic message."""
+    assert actual is expected, f"{context}: expected {expected!r}, got {actual!r}"
