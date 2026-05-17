@@ -129,6 +129,24 @@ The following packages are currently provisioned:
   and process state on managed hosts.
 - `unzip` — extracts CodeRabbit CLI release archives during installation.
 
+
+## Python Tools
+
+The `uv_tools` role installs user-scoped Python command-line tools with `uv`.
+The tools are installed under the managed user's uv tool directory and expose
+their commands through the user's normal shell `PATH`.
+
+The following Ansible tools are available after the playbook runs:
+
+- `ansible` — runs ad hoc Ansible commands and provides the Python package used
+  by related Ansible CLIs.
+- `molecule` — runs role scenario tests for local role validation.
+- `ansible-lint` — checks playbooks and roles for Ansible best practices.
+
+The same role also installs the repository's other Python developer tools, such
+as `ruff`, `pyrefly`, `ty`, `yamllint`, `copier`, `mbake`, `basedpyright`,
+`repomix`, `python-slugify`, `git-donkey`, `nixie`, and `lading`.
+
 ## Factory Droid DeepSeek Models
 
 When Droid is enabled, the playbook configures two Factory Droid custom models:

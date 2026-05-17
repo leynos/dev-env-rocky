@@ -123,6 +123,31 @@ the `cursor-agent` binary exists before `agent_tools` configures Cursor MCP
 servers and skills.
 
 
+## uv_tools Role
+
+The `uv_tools` role installs user-scoped Python CLIs through
+`packaging.tools.uv_tool`. It first ensures `uv` is available, then loops over
+the required tools with the explicit `uv_path` set to
+`{{ ansible_env.HOME }}/.local/bin/uv`.
+
+The role installs Ansible workflow tools:
+
+- `ansible`, for ad hoc Ansible commands and Python package availability;
+- `molecule`, for local role scenario tests;
+- `ansible-lint`, for playbook and role linting.
+
+It also installs the broader Python tooling used by this repository and the
+managed host workflow:
+
+- `ruff`, for Python formatting and linting;
+- `pyrefly`, `ty`, and `basedpyright`, for Python type checking;
+- `yamllint`, for YAML linting;
+- `copier`, for project templating;
+- `mbake`, for Makefile validation;
+- `repomix`, for repository packaging;
+- `python-slugify`, for slug generation;
+- `git-donkey`, `nixie`, and `lading`, from their Leynos Git repositories.
+
 ## CodeRabbit CLI Role
 
 The `coderabbit_cli` Ansible role installs the CodeRabbit `coderabbit` binary
@@ -318,6 +343,8 @@ Managed hosts are expected to run Rocky Linux 10 or newer with system Python
 work are:
 
 - `python3-tomlkit`, installed by the package role for TOML round-trip writes;
+- `ansible`, `molecule`, and `ansible-lint`, installed by the `uv_tools` role
+  for Ansible command execution, role scenario testing, and linting;
 - `firecrawl-mcp`, installed globally through Bun for Codex MCP access;
 - `ninja-build`, installed by the `packages` role to provide the `ninja`
   binary for projects that use Ninja as their build backend;
