@@ -9,15 +9,17 @@
   ansible.builtin.file:
     path: "{{ deepseek_tui_skills_dir }}"
     state: directory
-    mode: '0755'
+    mode: '0700'
 
 - name: Ensure DeepSeek-TUI module Python package installer is available
-  become: "{{ ansible_user_id is defined and ansible_user_id != 'root' }}"
+  become: true
   become_user: root
   ansible.builtin.package:
     name: "{{ deepseek_tui_python_system_packages }}"
     state: present
-  when: deepseek_tui_manage_python_dependencies | bool
+  when:
+    - deepseek_tui_manage_python_dependencies | bool
+    - ansible_user_id is not defined or ansible_user_id != 'root'
 
 - name: Ensure DeepSeek-TUI module Python dependencies are installed
   ansible.builtin.pip:
