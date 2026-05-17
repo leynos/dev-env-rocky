@@ -16,6 +16,8 @@ Run only the CLI tests:
         python/rust_cleanup/tests/test_rust_cleanup.py::TestMain
 """
 
+# pylint: disable=too-many-lines
+
 from __future__ import annotations
 
 import os
