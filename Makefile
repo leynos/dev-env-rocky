@@ -58,7 +58,7 @@ fmt: ruff $(MDFORMAT_ALL) ## Format Python and Markdown sources
 check-fmt: ruff ## Verify Python formatting
 	ruff format --check $(PYTHON_PATHS)
 
-lint: ruff ## Run Python linters
+lint: ruff uv ## Run Python linters
 	ruff check $(PYTHON_PATHS)
 	$(PYLINT) --rcfile=pylintrc.toml $(PYLINT_TARGETS)
 
