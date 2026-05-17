@@ -41,7 +41,7 @@ def _tool_name_from_target(target: str) -> str:
     return normalized_target.rsplit("/", maxsplit=1)[-1].split("==", maxsplit=1)[0]
 
 
-def requested_executables_from(argv: list[str]) -> list[str]:
+def _requested_executables_from(argv: list[str]) -> list[str]:
     """Return package names requested with uv's executable-linking flag."""
     packages: list[str] = []
     for index, arg in enumerate(argv):
@@ -50,7 +50,7 @@ def requested_executables_from(argv: list[str]) -> list[str]:
     return packages
 
 
-def write_shim(tool_name: str) -> None:
+def _write_shim(tool_name: str) -> None:
     """Create a fake executable shim for a uv-managed command."""
     TOOL_DIR.mkdir(parents=True, exist_ok=True)
     shim_path = TOOL_DIR / tool_name
@@ -71,9 +71,9 @@ def _install_tool(argv: list[str]) -> None:
     installed_tools[tool_name] = "1.0.0"
     _write_installed_tools(installed_tools)
 
-    write_shim(tool_name)
-    if "ansible-core" in requested_executables_from(argv):
-        write_shim("ansible-playbook")
+    _write_shim(tool_name)
+    if "ansible-core" in _requested_executables_from(argv):
+        _write_shim("ansible-playbook")
 
 
 def main() -> int:
