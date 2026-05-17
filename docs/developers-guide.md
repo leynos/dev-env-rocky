@@ -133,7 +133,8 @@ the required tools with the explicit `uv_path` set to
 The role installs Ansible workflow tools:
 
 - `ansible`, for ad hoc Ansible commands and Python package availability;
-- `molecule`, for local role scenario tests;
+- `molecule`, with `molecule-plugins[podman]`, for local role scenario tests
+  that use the Podman driver;
 - `ansible-lint`, for playbook and role linting.
 
 It also installs the broader Python tooling used by this repository and the
@@ -391,7 +392,8 @@ make molecule
 
 The Molecule scenarios use Podman with the `quay.io/rockylinux/rockylinux:10`
 image. They cover the `uv_tools` role's uv install loop with a fake uv fixture,
-including executable PATH checks for Ansible workflow tools; the
+including executable PATH checks for Ansible workflow tools and the
+`molecule-plugins[podman]` dependency for Molecule's Podman driver; the
 `node_packages` role's Bun global install flow with a fake Bun fixture,
 including trusted postinstall handling for `css-view`; and the `paths` role's
 managed PATH precedence for login shells.

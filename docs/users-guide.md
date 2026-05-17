@@ -140,7 +140,8 @@ The following Ansible tools are available after the playbook runs:
 
 - `ansible` — runs ad hoc Ansible commands and provides the Python package used
   by related Ansible CLIs.
-- `molecule` — runs role scenario tests for local role validation.
+- `molecule` — runs role scenario tests for local role validation, including
+  the Podman Molecule driver plugin.
 - `ansible-lint` — checks playbooks and roles for Ansible best practices.
 
 The same role also installs the repository's other Python developer tools, such

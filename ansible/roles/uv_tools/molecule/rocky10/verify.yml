@@ -9,6 +9,30 @@
       - ansible
       - molecule
       - ansible-lint
+    ansible_python_tool_installs:
+      - name: ansible
+        argv:
+          - tool
+          - install
+          - ansible
+      - name: molecule
+        argv:
+          - tool
+          - install
+          - --with
+          - molecule-plugins[podman]
+          - molecule
+      - name: ansible-lint
+        argv:
+          - tool
+          - install
+          - ansible-lint
+    molecule_podman_install_argv:
+      - tool
+      - install
+      - --with
+      - molecule-plugins[podman]
+      - molecule
 
   tasks:
     - name: Check fake uv command log exists
@@ -43,18 +67,33 @@
         ansible_tool_installs: >-
           {{
             uv_command_entries
-            | selectattr('argv', 'equalto', ['tool', 'install', item])
+            | selectattr('argv', 'equalto', item.argv)
             | list
           }}
-      loop: "{{ ansible_python_tools }}"
+      loop: "{{ ansible_python_tool_installs }}"
       register: ansible_tool_install_results
 
     - name: Assert Ansible uv tool install commands ran
       ansible.builtin.assert:
         that:
           - item.ansible_facts.ansible_tool_installs | length == 1
-        fail_msg: "uv_tools did not install {{ item.item }} through uv"
+        fail_msg: "uv_tools did not install {{ item.item.name }} through uv"
       loop: "{{ ansible_tool_install_results.results }}"
+
+    - name: Locate Molecule Podman plugin install command
+      ansible.builtin.set_fact:
+        molecule_podman_installs: >-
+          {{
+            uv_command_entries
+            | selectattr('argv', 'equalto', molecule_podman_install_argv)
+            | list
+          }}
+
+    - name: Assert Molecule installs the Podman driver plugin
+      ansible.builtin.assert:
+        that:
+          - molecule_podman_installs | length == 1
+        fail_msg: "uv_tools did not install molecule with molecule-plugins[podman]"
 
     - name: Run installed Ansible Python tools through PATH
       ansible.builtin.command:

@@ -16,11 +16,12 @@
   uv_tool:
     name: "{{ item.name }}"
     spec: "{{ item.spec | default(omit) }}"
+    with_packages: "{{ item.with_packages | default(omit) }}"
     uv_path: "{{ ansible_env.HOME }}/.local/bin/uv"
   loop:
     - { name: ruff }
     - { name: ansible }
-    - { name: molecule }
+    - { name: molecule, with_packages: ["molecule-plugins[podman]"] }
     - { name: ansible-lint }
     - { name: pyrefly }
     - { name: ty }

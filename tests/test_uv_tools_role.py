@@ -6,7 +6,8 @@ receive the Python command-line tools needed for Ansible development:
 isolates the active YAML body of the "Install Python tools via uv" task so
 tests check the role's install loop, not unrelated comments or prose. The
 parameterized test then ensures each required tool is present as an uncommented
-loop item.
+loop item, including the Podman driver package that makes Molecule's configured
+Podman scenarios load on managed hosts.
 """
 
 import re
@@ -28,13 +29,22 @@ def extract_uv_tool_loop(content: str) -> str:
     return match.group("body")
 
 
-@pytest.mark.parametrize("tool_name", ["ansible", "molecule", "ansible-lint"])
-def test_ansible_tooling_is_installed_via_uv(tool_name: str) -> None:
+@pytest.mark.parametrize(
+    ("tool_name", "expected_options"),
+    [
+        ("ansible", ""),
+        ("molecule", ', with_packages: ["molecule-plugins[podman]"]'),
+        ("ansible-lint", ""),
+    ],
+)
+def test_ansible_tooling_is_installed_via_uv(
+    tool_name: str, expected_options: str
+) -> None:
     """Ensure each Ansible workflow CLI is installed by uv_tools."""
     tasks_content = UV_TOOLS_TASKS.read_text(encoding="utf-8")
     uv_tool_loop = extract_uv_tool_loop(tasks_content)
     loop_item_pattern = re.compile(
-        rf"(?m)^    - \{{ name: {re.escape(tool_name)}(?:, [^}}]+)? \}}$"
+        rf"(?m)^    - \{{ name: {re.escape(tool_name)}{re.escape(expected_options)} \}}$"
     )
 
     assert loop_item_pattern.search(uv_tool_loop), (
