@@ -9,7 +9,7 @@ when several hosts or tasks can target the same file.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import os
+from pathlib import Path
 from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
@@ -162,9 +162,7 @@ def build_hook_definition(params: HookParams) -> dict[str, Any]:
     return clean_dict(desired)
 
 
-def hook_identity_matches(
-    existing: dict[str, Any], desired: dict[str, Any]
-) -> bool:
+def hook_identity_matches(existing: dict[str, Any], desired: dict[str, Any]) -> bool:
     """Return whether two hook entries represent the same managed hook."""
     if existing.get("event") != desired.get("event"):
         return False
@@ -173,9 +171,7 @@ def hook_identity_matches(
     return existing.get("command") == desired.get("command")
 
 
-def hook_without_managed_identity(
-    hook: object, desired: dict[str, Any]
-) -> bool:
+def hook_without_managed_identity(hook: object, desired: dict[str, Any]) -> bool:
     """Return whether an existing hook should be retained."""
     return not (isinstance(hook, dict) and hook_identity_matches(hook, desired))
 
@@ -348,7 +344,7 @@ def _resolve_hook_path(module: AnsibleModule) -> str:
             scope=module.params["scope"],
             project_dir=module.params.get("project_dir"),
             user_path="~/.deepseek/config.toml",
-            project_relative_path=os.path.join(".deepseek", "config.toml"),
+            project_relative_path=str(Path(".deepseek") / "config.toml"),
         )
     except ValueError as exc:
         module.fail_json(
