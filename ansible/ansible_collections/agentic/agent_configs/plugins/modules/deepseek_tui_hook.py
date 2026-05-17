@@ -103,6 +103,8 @@ author:
   - Leynos Project (@leynos)
 """
 
+GLOBAL_HOOK_OPTION_KEYS = frozenset({"enabled", "default_timeout_secs", "working_dir"})
+
 EXAMPLES = r"""
 - name: Add a DeepSeek-TUI session-start hook
   agentic.agent_configs.deepseek_tui_hook:
@@ -309,6 +311,11 @@ def _hooks_list_is_missing_or_empty(hooks_root: object) -> bool:
     return isinstance(hooks_root, dict) and hooks_root.get("hooks") in (None, [])
 
 
+def _hooks_root_has_global_options(hooks_root: object) -> bool:
+    """Return True when hooks_root contains explicit global hook options."""
+    return isinstance(hooks_root, dict) and bool(GLOBAL_HOOK_OPTION_KEYS & hooks_root.keys())
+
+
 def _cleanup_absent_noop(
     state: str,
     changed: bool,
@@ -322,7 +329,7 @@ def _cleanup_absent_noop(
     hooks_root = data.get("hooks")
     if not pre_state.had_hook_entries and _hooks_list_is_missing_or_empty(hooks_root):
         hooks_root.pop("hooks", None)
-    if not pre_state.had_hooks_table:
+    if not pre_state.had_hooks_table and not _hooks_root_has_global_options(hooks_root):
         data.pop("hooks", None)
 
 

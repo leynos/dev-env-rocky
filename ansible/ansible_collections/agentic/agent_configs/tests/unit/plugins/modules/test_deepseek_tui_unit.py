@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from dataclasses import dataclass
-from typing import NoReturn
+from typing import Any, Mapping, NoReturn
 
 import pytest
 import tomllib
@@ -19,11 +19,11 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 )
 
 
-def _run_module(module, args: dict) -> dict:
+def _run_module(module, args: Mapping[str, Any]) -> dict:
     return run_module(module, args)
 
 
-def _assert_fails(module, args: dict, message: str) -> None:
+def _assert_fails(module, args: Mapping[str, Any], message: str) -> None:
     return assert_module_fails(module, args, message)
 
 
@@ -117,6 +117,32 @@ def test_deepseek_tui_hook_absent_global_change_does_not_add_synthetic_hooks(
     """Verify absent hook global updates do not materialise hooks.hooks."""
     path = tmp_path / "config.toml"
     path.write_text("[hooks]\nenabled = false\n")
+
+    result = _run_module(
+        deepseek_tui_hook,
+        {
+            "path": str(path),
+            "event": "shell_env",
+            "name": "aws-creds",
+            "command": "aws-vault export dev --format=env",
+            "state": "absent",
+            "enabled": True,
+        },
+    )
+
+    assert result["changed"] is True
+    assert result["hooks"] == {"enabled": True}
+    rendered = path.read_text()
+    assert tomllib.loads(rendered) == {"hooks": {"enabled": True}}
+    assert "hooks = []" not in rendered
+
+
+def test_deepseek_tui_hook_absent_global_change_creates_hooks_table(
+    tmp_path: Path,
+) -> None:
+    """Verify absent hook global updates create [hooks] without hooks.hooks."""
+    path = tmp_path / "config.toml"
+    path.write_text("")
 
     result = _run_module(
         deepseek_tui_hook,

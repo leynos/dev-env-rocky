@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, Mapping, NoReturn
 
 import pytest
 import tomllib
@@ -49,11 +49,11 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 )
 
 
-def _run_module(module, args: dict) -> dict:
+def _run_module(module, args: Mapping[str, Any]) -> dict:
     return run_module(module, args)
 
 
-def _assert_fails(module, args: dict, message: str) -> None:
+def _assert_fails(module, args: Mapping[str, Any], message: str) -> None:
     return assert_module_fails(module, args, message)
 
 

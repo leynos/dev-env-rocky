@@ -172,7 +172,7 @@ class ServerParams:
     extra: dict[str, Any] = field(default_factory=dict)
 
 
-def build_server_definition(params: ServerParams) -> dict[str, Any]:
+def _build_server_definition(params: ServerParams) -> dict[str, Any]:
     """Build a DeepSeek-TUI MCP server definition from domain parameters."""
     managed_keys = {
         "command",
@@ -245,7 +245,7 @@ def _validate_http_params(params: dict[str, Any]) -> None:
         raise ValueError(msg)
 
 
-def validate_present_server_params(params: dict[str, Any]) -> None:
+def _validate_present_server_params(params: dict[str, Any]) -> None:
     """Validate MCP parameters that are required only when the server exists."""
     transport = params.get("transport")
     if transport is None:
@@ -285,7 +285,7 @@ def _build_desired_server(module: AnsibleModule) -> dict[str, Any] | None:
     if module.params["state"] != "present":
         return None
     try:
-        validate_present_server_params(module.params)
+        _validate_present_server_params(module.params)
         server_params = ServerParams(
             transport=module.params["transport"],
             command=module.params.get("command"),
@@ -302,7 +302,7 @@ def _build_desired_server(module: AnsibleModule) -> dict[str, Any] | None:
             disabled_tools=module.params.get("disabled_tools"),
             extra=module.params.get("extra") or {},
         )
-        return build_server_definition(server_params)
+        return _build_server_definition(server_params)
     except ValueError as exc:
         module.fail_json(msg=str(exc))
 
