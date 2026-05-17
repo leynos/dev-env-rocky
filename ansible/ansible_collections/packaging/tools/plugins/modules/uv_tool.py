@@ -199,6 +199,7 @@ def read_installed_tools(module: AnsibleModule, uv_bin: str) -> dict[str, str]:
 
 
 def build_install_target(params: dict[str, Any]) -> str:
+    """Compute the package install target string from spec, version, or name."""
     if params["spec"]:
         return params["spec"]
     if params["version"]:
@@ -209,6 +210,7 @@ def build_install_target(params: dict[str, Any]) -> str:
 def build_install_cmd(
     params: dict[str, Any], uv_bin: str, install_target: str
 ) -> list[str]:
+    """Build the uv tool install command list from params, uv_bin, and target."""
     cmd = [uv_bin, "tool", "install"]
     if params["force"]:
         cmd.append("--force")
@@ -228,6 +230,7 @@ def ensure_absent(
     uv_bin: str,
     installed_version: str | None,
 ) -> None:
+    """Ensure the specified uv tool is absent."""
     if installed_version is None:
         module.exit_json(changed=False, name=params["name"], state="absent")
 
@@ -262,6 +265,7 @@ def ensure_present(
     uv_bin: str,
     installed_version: str | None,
 ) -> None:
+    """Ensure the specified uv tool is present."""
     desired_version = params["version"]
     if installed_version is not None and (
         desired_version is None or installed_version == desired_version

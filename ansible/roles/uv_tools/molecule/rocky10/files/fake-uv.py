@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Fake uv executable for deterministic uv_tools Molecule tests."""
+"""Fake uv executable for deterministic uv_tools Molecule tests.
+
+Supported commands:
+- tool list
+- tool install <name>
+- tool uninstall <name>
+
+The script writes JSON Lines command entries to the file named by UV_FAKE_LOG,
+or to /tmp/fake-uv-log/uv-commands.jsonl when the environment variable is not
+set. Installed tool state persists across invocations in installed-tools.json.
+"""
 
 import fcntl
 import json
