@@ -213,19 +213,19 @@ def build_install_cmd(
     return cmd
 
 
-def ensure_absent(
+def _uninstall_tool(
     module: AnsibleModule,
     params: dict[str, Any],
     uv_bin: str,
     installed_version: str | None,
-) -> None:
+) -> dict[str, Any]:
     """Remove a uv tool when it is installed."""
     if installed_version is None:
-        module.exit_json(changed=False, name=params["name"], state="absent")
+        return {"changed": False, "name": params["name"], "state": "absent"}
 
     cmd = [uv_bin, "tool", "uninstall", params["name"]]
     if module.check_mode:
-        module.exit_json(changed=True, name=params["name"], state="absent", cmd=cmd)
+        return {"changed": True, "name": params["name"], "state": "absent", "cmd": cmd}
 
     rc, stdout, stderr = run(module, cmd)
     if rc != 0:
@@ -237,46 +237,46 @@ def ensure_absent(
             cmd=cmd,
         )
 
-    module.exit_json(
-        changed=True,
-        name=params["name"],
-        state="absent",
-        previous_version=installed_version,
-        cmd=cmd,
-        stdout=stdout,
-        stderr=stderr,
-    )
+    return {
+        "changed": True,
+        "name": params["name"],
+        "state": "absent",
+        "previous_version": installed_version,
+        "cmd": cmd,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
 
 
-def ensure_present(
+def _install_tool(
     module: AnsibleModule,
     params: dict[str, Any],
     uv_bin: str,
     installed_version: str | None,
-) -> None:
+) -> dict[str, Any]:
     """Install or update a uv tool when the desired version is missing."""
     desired_version = params["version"]
     if installed_version is not None and (
         desired_version is None or installed_version == desired_version
     ):
-        module.exit_json(
-            changed=False,
-            name=params["name"],
-            state="present",
-            installed_version=installed_version,
-        )
+        return {
+            "changed": False,
+            "name": params["name"],
+            "state": "present",
+            "installed_version": installed_version,
+        }
 
     install_target = build_install_target(params)
     cmd = build_install_cmd(params, uv_bin, install_target)
     if module.check_mode:
-        module.exit_json(
-            changed=True,
-            name=params["name"],
-            state="present",
-            previous_version=installed_version,
-            target=install_target,
-            cmd=cmd,
-        )
+        return {
+            "changed": True,
+            "name": params["name"],
+            "state": "present",
+            "previous_version": installed_version,
+            "target": install_target,
+            "cmd": cmd,
+        }
 
     rc, stdout, stderr = run(module, cmd)
     if rc != 0:
@@ -289,17 +289,17 @@ def ensure_present(
         )
 
     installed_after = read_installed_tools(module, uv_bin)
-    module.exit_json(
-        changed=True,
-        name=params["name"],
-        state="present",
-        previous_version=installed_version,
-        installed_version=installed_after.get(params["name"]),
-        target=install_target,
-        cmd=cmd,
-        stdout=stdout,
-        stderr=stderr,
-    )
+    return {
+        "changed": True,
+        "name": params["name"],
+        "state": "present",
+        "previous_version": installed_version,
+        "installed_version": installed_after.get(params["name"]),
+        "target": install_target,
+        "cmd": cmd,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
 
 
 def main():
@@ -333,9 +333,10 @@ def main():
     installed_version = installed.get(params["name"])
 
     if params["state"] == "absent":
-        ensure_absent(module, params, uv_bin, installed_version)
+        payload = _uninstall_tool(module, params, uv_bin, installed_version)
     else:
-        ensure_present(module, params, uv_bin, installed_version)
+        payload = _install_tool(module, params, uv_bin, installed_version)
+    module.exit_json(**payload)
 
 
 if __name__ == "__main__":

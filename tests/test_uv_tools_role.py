@@ -12,10 +12,17 @@ that make `ansible-playbook` available on fresh hosts.
 """
 
 import ast
+import importlib
 import re
 from pathlib import Path
+from typing import Any
 
 import pytest  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
+
+try:
+    yaml_loader: Any = importlib.import_module("yaml")
+except ModuleNotFoundError:
+    yaml_loader = None
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UV_TOOLS_TASKS = REPO_ROOT / "ansible/roles/uv_tools/tasks/main.yml"
@@ -31,6 +38,34 @@ def extract_uv_tool_loop(content: str) -> str:
     return match.group("body")
 
 
+def parse_uv_tool_loop_items(uv_tool_loop: str) -> list[dict[str, object]]:
+    """Return the uv_tools loop items as structured dictionaries."""
+    if yaml_loader is None:
+        return parse_inline_loop_items(uv_tool_loop)
+
+    task_body = yaml_loader.safe_load(uv_tool_loop)
+    assert isinstance(task_body, dict), "expected uv tool task body to be a mapping"
+    loop_items = task_body.get("loop")
+    assert isinstance(loop_items, list), "expected uv tool task body to include a loop"
+    assert all(isinstance(item, dict) for item in loop_items), (
+        f"expected uv tool loop items to be mappings, got {loop_items!r}"
+    )
+    return loop_items
+
+
+def parse_inline_loop_items(uv_tool_loop: str) -> list[dict[str, object]]:
+    """Return uv_tools loop items without requiring an external YAML package."""
+    loop_item_pattern = re.compile(r"(?m)^    - \{(?P<body>[^{}]+)\}$")
+    loop_items: list[dict[str, object]] = []
+    for match in loop_item_pattern.finditer(uv_tool_loop):
+        item: dict[str, object] = {}
+        for raw_pair in re.split(r",\s*(?=[A-Za-z_]+:)", match.group("body")):
+            key, raw_value = raw_pair.split(": ", maxsplit=1)
+            item[key] = parse_loop_value(raw_value)
+        loop_items.append(item)
+    return loop_items
+
+
 def parse_loop_value(raw_value: str) -> str | list[str]:
     """Return a structured value from the role's inline loop item syntax."""
     if raw_value.startswith("["):
@@ -43,22 +78,9 @@ def parse_loop_value(raw_value: str) -> str | list[str]:
     return raw_value
 
 
-def parse_uv_tool_loop_items(uv_tool_loop: str) -> list[dict[str, str | list[str]]]:
-    """Return the uv_tools loop items as structured dictionaries."""
-    loop_item_pattern = re.compile(r"(?m)^    - \{(?P<body>[^{}]+)\}$")
-    loop_items: list[dict[str, str | list[str]]] = []
-    for match in loop_item_pattern.finditer(uv_tool_loop):
-        item: dict[str, str | list[str]] = {}
-        for raw_pair in re.split(r",\s*(?=[A-Za-z_]+:)", match.group("body")):
-            key, raw_value = raw_pair.split(": ", maxsplit=1)
-            item[key] = parse_loop_value(raw_value)
-        loop_items.append(item)
-    return loop_items
-
-
 def find_uv_tool_loop_item(
-    loop_items: list[dict[str, str | list[str]]], tool_name: str
-) -> dict[str, str | list[str]]:
+    loop_items: list[dict[str, object]], tool_name: str
+) -> dict[str, object]:
     """Return the loop item matching a uv-managed tool name."""
     for item in loop_items:
         if item.get("name") == tool_name:
@@ -97,3 +119,12 @@ def test_uv_tools_installed(
         assert loop_item.get(key) == expected_value, (
             f"uv_tools must install {tool_name!r} with {key}={expected_value!r}"
         )
+    for optional_key in ("with_executables_from", "with_packages"):
+        if optional_key not in expected_parameters:
+            assert optional_key not in loop_item or loop_item[optional_key] in (
+                None,
+                [],
+            ), (
+                f"uv_tools must not install {tool_name!r} with unexpected "
+                f"{optional_key}={loop_item[optional_key]!r}"
+            )
