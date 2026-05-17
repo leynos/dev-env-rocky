@@ -321,7 +321,7 @@ configuration in the same style as existing Codex and Claude configuration.
   to be corrected before beginning DeepSeek-TUI implementation.
 - Decision: Implement MCP, hook and skill modules first, and explicitly skip
   command and subagent modules for this milestone. Rationale: the pinned
-  release exposes durable file formats for MCP, hooks and skills, while slash
+  release exposes durable file formats for MCP, hooks, and skills, while slash
   commands and sub-agents are runtime features without a declarative file
   surface to manage.
 - Decision: Continue after the CodeRabbit authentication failure while keeping
@@ -346,7 +346,7 @@ coverage, pytest-bdd behavioural coverage, and a syrupy snapshot for generated
 configuration. The reusable `agentic.agent_configs.deepseek_tui` role installs
 `deepseek-tui@0.8.24` through Bun, manages target-side TOML dependencies, links
 `deepseek` and `deepseek-tui`, and applies role variables for TOML values, MCP
-servers, hooks and skills.
+servers, hooks, and skills.
 
 The owner-user site play now includes the reusable role after `node_packages`.
 Validation covered full repository Python/doc gates, site syntax, and a Rocky
