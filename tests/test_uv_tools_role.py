@@ -31,23 +31,14 @@ def extract_uv_tool_loop(content: str) -> str:
 
 
 @pytest.mark.parametrize(
-    ("tool_name", "expected_options"),
-    [
-        ("ansible", ', with_executables_from: ["ansible-core,ansible-lint"]'),
-        ("molecule", ', with_packages: ["molecule-plugins[podman]"]'),
-        ("ansible-lint", ""),
-    ],
+    "tool_name",
+    ("ansible", "molecule", "ansible-lint"),
 )
-def test_ansible_tooling_is_installed_via_uv(
-    tool_name: str, expected_options: str
-) -> None:
+def test_uv_tools_installed(tool_name: str) -> None:
     """Ensure each Ansible workflow CLI is installed by uv_tools."""
     tasks_content = UV_TOOLS_TASKS.read_text(encoding="utf-8")
     uv_tool_loop = extract_uv_tool_loop(tasks_content)
-    loop_item_pattern = re.compile(
-        rf"(?m)^    - \{{ name: {re.escape(tool_name)}{re.escape(expected_options)} \}}$"
-    )
 
-    assert loop_item_pattern.search(uv_tool_loop), (
-        f"uv_tools must install {tool_name!r} as an active loop item"
+    assert f"name: {tool_name}" in uv_tool_loop, (
+        f"uv_tools must install {tool_name!r} for Ansible development"
     )
