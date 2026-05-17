@@ -137,37 +137,44 @@ def test_uv_tool_check_mode_installs_with_options(
 
 
 @pytest.mark.parametrize(
-    ("installed_tools", "state", "expected_stderr", "context"),
+    ("installed_tools", "module_args", "run_stderr", "context"),
     [
-        ({}, "present", "install error", "uv_tool should surface install stderr"),
-        (
+        pytest.param(
+            {},
+            {"name": "ruff", "state": "present"},
+            "install error",
+            "uv_tool should surface install stderr",
+            id="install_fails",
+        ),
+        pytest.param(
             {"ruff": "0.14.0"},
-            "absent",
+            {"name": "ruff", "state": "absent"},
             "uninstall error",
             "uv_tool should surface uninstall stderr",
+            id="uninstall_fails",
         ),
     ],
 )
 def test_uv_tool_fails_when_operation_fails(
     monkeypatch: pytest.MonkeyPatch,
     installed_tools: dict[str, str],
-    state: str,
-    expected_stderr: str,
+    module_args: dict[str, object],
+    run_stderr: str,
     context: str,
 ) -> None:
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(
         uv_tool, "read_installed_tools", lambda module, uv_bin: installed_tools
     )
-    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", expected_stderr))
-    set_module_args({"name": "ruff", "state": state})
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", run_stderr))
+    set_module_args(module_args)
 
     with pytest.raises(AnsibleFailJson) as exc:
         uv_tool.main()
 
     assert_equal(
         exc.value.args[0]["stderr"],
-        expected_stderr,
+        run_stderr,
         context,
     )
 
