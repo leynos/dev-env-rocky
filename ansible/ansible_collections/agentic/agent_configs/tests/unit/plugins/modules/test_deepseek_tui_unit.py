@@ -173,20 +173,46 @@ def test_deepseek_tui_mcp_reports_existing_data_read_errors(
     assert f"path={str(path)!r}" in message
 
 
-def test_deepseek_tui_mcp_rejects_extra_managed_field_overrides(
+@pytest.mark.parametrize(
+    ("module", "config_filename", "base_args", "extra_override", "expected_error"),
+    [
+        (
+            deepseek_tui_mcp,
+            "mcp.json",
+            {
+                "name": "repo-tools",
+                "transport": "stdio",
+                "command": "repo-tools-mcp",
+            },
+            {"command": "malicious-mcp"},
+            "extra cannot override managed MCP fields: command",
+        ),
+        (
+            deepseek_tui_hook,
+            "config.toml",
+            {
+                "event": "shell_env",
+                "name": "repo-env",
+                "command": "repo-env export",
+            },
+            {"event": "session_start"},
+            "invalid extra keys for deepseek_tui_hook: event",
+        ),
+    ],
+)
+def test_extra_cannot_override_managed_fields(
     tmp_path: Path,
+    module,
+    config_filename: str,
+    base_args: dict,
+    extra_override: dict,
+    expected_error: str,
 ) -> None:
-    """Verify DeepSeek-TUI MCP extra data cannot override managed fields."""
+    """Verify extra data cannot override managed fields in DeepSeek-TUI modules."""
     _assert_fails(
-        deepseek_tui_mcp,
-        {
-            "path": str(tmp_path / "mcp.json"),
-            "name": "repo-tools",
-            "transport": "stdio",
-            "command": "repo-tools-mcp",
-            "extra": {"command": "malicious-mcp"},
-        },
-        "extra cannot override managed MCP fields: command",
+        module,
+        {"path": str(tmp_path / config_filename), **base_args, "extra": extra_override},
+        expected_error,
     )
 
 
@@ -204,23 +230,6 @@ def test_deepseek_tui_hook_rejects_malformed_hook_entries(tmp_path: Path) -> Non
             "command": "repo-env export",
         },
         "Expected 'hooks.hooks' to be a list",
-    )
-
-
-def test_deepseek_tui_hook_rejects_extra_managed_field_overrides(
-    tmp_path: Path,
-) -> None:
-    """Verify DeepSeek-TUI hook extra data cannot override managed fields."""
-    _assert_fails(
-        deepseek_tui_hook,
-        {
-            "path": str(tmp_path / "config.toml"),
-            "event": "shell_env",
-            "name": "repo-env",
-            "command": "repo-env export",
-            "extra": {"event": "session_start"},
-        },
-        "invalid extra keys for deepseek_tui_hook: event",
     )
 
 
