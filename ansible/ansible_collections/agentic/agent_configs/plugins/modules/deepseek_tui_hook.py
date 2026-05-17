@@ -311,10 +311,16 @@ def _cleanup_absent_noop(
     data: dict[str, Any],
 ) -> None:
     """Prune TOML containers created by setdefault when an absent hook was already missing."""
-    if state != "absent" or changed:
+    del changed
+    if state != "absent":
         return
-    if not pre_state.had_hook_entries and isinstance(data.get("hooks"), dict):
-        data["hooks"].pop("hooks", None)
+    hooks_root = data.get("hooks")
+    if (
+        not pre_state.had_hook_entries
+        and isinstance(hooks_root, dict)
+        and hooks_root.get("hooks") in (None, [])
+    ):
+        hooks_root.pop("hooks", None)
     if not pre_state.had_hooks_table:
         data.pop("hooks", None)
 

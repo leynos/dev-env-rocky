@@ -110,6 +110,32 @@ def test_deepseek_tui_hook_absent_noop_does_not_return_synthetic_hooks(
     assert not path.exists(), f"expected absent no-op not to create {path}"
 
 
+def test_deepseek_tui_hook_absent_global_change_does_not_add_synthetic_hooks(
+    tmp_path: Path,
+) -> None:
+    """Verify absent hook global updates do not materialise hooks.hooks."""
+    path = tmp_path / "config.toml"
+    path.write_text("[hooks]\nenabled = false\n")
+
+    result = _run_module(
+        deepseek_tui_hook,
+        {
+            "path": str(path),
+            "event": "shell_env",
+            "name": "aws-creds",
+            "command": "aws-vault export dev --format=env",
+            "state": "absent",
+            "enabled": True,
+        },
+    )
+
+    assert result["changed"] is True
+    assert result["hooks"] == {"enabled": True}
+    rendered = path.read_text()
+    assert tomllib.loads(rendered) == {"hooks": {"enabled": True}}
+    assert "hooks = []" not in rendered
+
+
 def test_deepseek_tui_mcp_rejects_malformed_servers_root(tmp_path: Path) -> None:
     """Verify DeepSeek-TUI MCP rejects non-object servers data."""
     path = tmp_path / "mcp.json"
