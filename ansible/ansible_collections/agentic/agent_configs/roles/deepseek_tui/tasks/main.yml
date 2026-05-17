@@ -114,3 +114,4 @@
     metadata: "{{ item.metadata | default(omit) }}"
     extra_files: "{{ item.extra_files | default(omit) }}"
   loop: "{{ deepseek_tui_skills }}"
+  no_log: true

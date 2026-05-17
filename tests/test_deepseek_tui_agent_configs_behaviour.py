@@ -155,7 +155,7 @@ def test_hook_extra_cannot_override_managed_fields() -> None:
         "name": "repo-env",
         "timeout_secs": 30,
         "custom_field": "preserved",
-    }
+    }, f"unexpected hook: {hook!r}"
 
 
 def _write_deepseek_tui_playbook(tmp_path: Path, deepseek_home: Path) -> Path:

@@ -284,6 +284,8 @@ def _persist_hook_changes(
     if changed or removed_legacy_block:
         if module.check_mode:
             return True, data, existed_before
+        if removed_legacy_block:
+            changed = True
         write_toml_if_changed(module, path, data)
     return changed, data, existed_before
 

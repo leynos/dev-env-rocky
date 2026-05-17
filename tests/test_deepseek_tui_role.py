@@ -41,7 +41,10 @@ def test_deepseek_tui_system_packages_install_as_root() -> None:
         == "Ensure DeepSeek-TUI module Python package installer is available"
     )
 
-    assert package_task["when"] == "deepseek_tui_manage_python_dependencies | bool"
+    assert package_task["when"] == "deepseek_tui_manage_python_dependencies | bool", (
+        "the system package task's when condition must equal "
+        "'deepseek_tui_manage_python_dependencies | bool'"
+    )
     assert package_task["become"] == (
         "{{ ansible_user_id is not defined or ansible_user_id != 'root' }}"
     ), "the system package task must only escalate from non-root contexts"
