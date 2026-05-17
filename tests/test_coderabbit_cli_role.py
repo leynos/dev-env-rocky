@@ -198,7 +198,7 @@ def test_molecule_verify_asserts_coderabbit_output_and_state() -> None:
     assert "[SUCCESS] Installation verified" in verify_content
     assert "molecule-coderabbit-token' not in" in verify_content
     assert "coderabbit_auth_file.stat.mode == '0600'" in verify_content
-    assert "coderabbit_auth_file.stat.pw_name == owner_user" in verify_content
-    assert 'coderabbit_cli_home_dir: "{{ owner_home }}"' in verify_content
+    assert "coderabbit_auth_file.stat.pw_name == verify_owner_user" in verify_content
+    assert 'coderabbit_cli_home_dir: "{{ verify_home_dir }}"' in verify_content
     assert "Rerun CodeRabbit CLI role again to verify idempotence" in verify_content
     assert "coderabbit_cli_install_result is not changed" in verify_content

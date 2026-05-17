@@ -3,15 +3,14 @@
   hosts: all
   gather_facts: true
   vars:
-    owner_user: root
-    owner_home: "{{ '/root' if owner_user == 'root' else '/home/' ~ owner_user }}"
-    bin_path: "{{ owner_home }}/.local/bin"
+    verify_owner_user: root
+    verify_home_dir: "{{ ansible_facts.env.HOME }}"
 
   tasks:
     - name: Check CodeRabbit CLI binary
       ansible.builtin.command:
         argv:
-          - "{{ bin_path }}/coderabbit"
+          - "{{ verify_home_dir }}/.local/bin/coderabbit"
           - -V
       changed_when: false
       register: coderabbit_version
@@ -24,21 +23,21 @@
 
     - name: Check CodeRabbit CLI alias
       ansible.builtin.stat:
-        path: "{{ bin_path }}/cr"
+        path: "{{ verify_home_dir }}/.local/bin/cr"
       register: coderabbit_alias
 
     - name: Assert CodeRabbit CLI alias points at binary
       ansible.builtin.assert:
         that:
           - coderabbit_alias.stat.islnk
-          - coderabbit_alias.stat.lnk_source == bin_path ~ '/coderabbit'
-          - coderabbit_alias.stat.pw_name == owner_user
-          - coderabbit_alias.stat.gr_name == owner_user
+          - coderabbit_alias.stat.lnk_source == verify_home_dir ~ '/.local/bin/coderabbit'
+          - coderabbit_alias.stat.pw_name == verify_owner_user
+          - coderabbit_alias.stat.gr_name == verify_owner_user
         fail_msg: "CodeRabbit CLI alias was not linked to the managed binary"
 
     - name: Check CodeRabbit CLI binary metadata
       ansible.builtin.stat:
-        path: "{{ bin_path }}/coderabbit"
+        path: "{{ verify_home_dir }}/.local/bin/coderabbit"
       register: coderabbit_binary
 
     - name: Assert CodeRabbit CLI binary permissions
@@ -46,13 +45,13 @@
         that:
           - coderabbit_binary.stat.exists
           - coderabbit_binary.stat.executable
-          - coderabbit_binary.stat.pw_name == owner_user
-          - coderabbit_binary.stat.gr_name == owner_user
+          - coderabbit_binary.stat.pw_name == verify_owner_user
+          - coderabbit_binary.stat.gr_name == verify_owner_user
         fail_msg: "CodeRabbit CLI binary permissions or ownership are invalid"
 
     - name: Check CodeRabbit auth file
       ansible.builtin.stat:
-        path: "{{ owner_home }}/.coderabbit/auth.json"
+        path: "{{ verify_home_dir }}/.coderabbit/auth.json"
       register: coderabbit_auth_file
 
     - name: Assert CodeRabbit CLI was authenticated
@@ -60,30 +59,30 @@
         that:
           - coderabbit_auth_file.stat.exists
           - coderabbit_auth_file.stat.mode == '0600'
-          - coderabbit_auth_file.stat.pw_name == owner_user
-          - coderabbit_auth_file.stat.gr_name == owner_user
+          - coderabbit_auth_file.stat.pw_name == verify_owner_user
+          - coderabbit_auth_file.stat.gr_name == verify_owner_user
         fail_msg: "CodeRabbit CLI auth file was not created"
 
     - name: Remove CodeRabbit CLI binary before installer output check
       ansible.builtin.file:
-        path: "{{ bin_path }}/coderabbit"
+        path: "{{ verify_home_dir }}/.local/bin/coderabbit"
         state: absent
 
     - name: Remove CodeRabbit CLI alias before installer output check
       ansible.builtin.file:
-        path: "{{ bin_path }}/cr"
+        path: "{{ verify_home_dir }}/.local/bin/cr"
         state: absent
 
     - name: Remove CodeRabbit auth file before reinstall check
       ansible.builtin.file:
-        path: "{{ owner_home }}/.coderabbit/auth.json"
+        path: "{{ verify_home_dir }}/.coderabbit/auth.json"
         state: absent
 
     - name: Rerun CodeRabbit CLI role to capture installer output
       ansible.builtin.include_role:
         name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
       vars:
-        coderabbit_cli_home_dir: "{{ owner_home }}"
+        coderabbit_cli_home_dir: "{{ verify_home_dir }}"
         coderabbit_cli_installer_src: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/files/coderabbit-install.sh"
         coderabbit_cli_download_url: file:///tmp/coderabbit-releases
         coderabbit_api_keys:
@@ -102,7 +101,7 @@
       ansible.builtin.include_role:
         name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
       vars:
-        coderabbit_cli_home_dir: "{{ owner_home }}"
+        coderabbit_cli_home_dir: "{{ verify_home_dir }}"
         coderabbit_cli_installer_src: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/files/coderabbit-install.sh"
         coderabbit_cli_download_url: file:///tmp/coderabbit-releases
         coderabbit_api_keys:
@@ -117,7 +116,7 @@
     - name: Run CodeRabbit CLI agent review fixture
       ansible.builtin.command:
         argv:
-          - "{{ bin_path }}/coderabbit"
+          - "{{ verify_home_dir }}/.local/bin/coderabbit"
           - review
           - --agent
       changed_when: false
