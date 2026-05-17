@@ -1,13 +1,4 @@
 ---
-- name: Resolve owner user home directory
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ owner_user }}"
-
-- name: Set owner user home fact
-  ansible.builtin.set_fact:
-    owner_user_home: "{{ ansible_facts.getent_passwd[owner_user][4] }}"
-
 - name: Ensure CodeRabbit CLI bin directory exists
   ansible.builtin.file:
     path: "{{ coderabbit_cli_install_dir }}"
@@ -18,7 +9,7 @@
 
 - name: Ensure CodeRabbit CLI installer cache directory exists
   ansible.builtin.file:
-    path: "{{ owner_user_home }}/.cache"
+    path: "{{ coderabbit_cli_home_dir }}/.cache"
     state: directory
     owner: "{{ owner_user }}"
     group: "{{ owner_user }}"
@@ -27,7 +18,7 @@
 - name: Copy CodeRabbit CLI installer
   ansible.builtin.copy:
     src: "{{ coderabbit_cli_installer_src }}"
-    dest: "{{ owner_user_home }}/.cache/coderabbit-install.sh"
+    dest: "{{ coderabbit_cli_home_dir }}/.cache/coderabbit-install.sh"
     owner: "{{ owner_user }}"
     group: "{{ owner_user }}"
     mode: '0700'
@@ -36,7 +27,7 @@
   block:
     - name: Install CodeRabbit CLI
       ansible.builtin.shell:
-        cmd: "{{ owner_user_home }}/.cache/coderabbit-install.sh"
+        cmd: "{{ coderabbit_cli_home_dir }}/.cache/coderabbit-install.sh"
         executable: /bin/bash
       args:
         creates: "{{ coderabbit_cli_install_dir }}/coderabbit"
@@ -93,13 +84,13 @@
       - --api-key
       - "{{ coderabbit_cli_api_key }}"
   args:
-    creates: "{{ owner_user_home }}/.coderabbit/auth.json"
+    creates: "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
   no_log: true
   when: coderabbit_cli_api_key | length > 0
 
 - name: Restrict CodeRabbit CLI credential file permissions
   ansible.builtin.file:
-    path: "{{ owner_user_home }}/.coderabbit/auth.json"
+    path: "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
     owner: "{{ owner_user }}"
     group: "{{ owner_user }}"
     mode: '0600'

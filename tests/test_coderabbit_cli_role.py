@@ -69,6 +69,11 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     assert installer_src == "{{ role_path }}/files/coderabbit-install.sh", (
         "installer src must use the checked-in role files path"
     )
+    assert defaults_data["coderabbit_cli_install_dir"] == (
+        "{{ coderabbit_cli_home_dir }}/.local/bin"
+    ), (
+        "install_dir must be derived from coderabbit_cli_home_dir, not ansible_facts.env.HOME"
+    )
     assert "lookup(" not in defaults_text, "defaults must not use any lookup() calls"
     assert (
         defaults_data["coderabbit_cli_download_url"]
@@ -110,12 +115,12 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     assert "--api-key" in argv
     assert "{{ coderabbit_cli_api_key }}" in argv
     assert auth_task["args"]["creates"] == (
-        "{{ owner_user_home }}/.coderabbit/auth.json"
+        "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
     )
     assert auth_task.get("no_log") is True
     assert auth_task["when"] == "coderabbit_cli_api_key | length > 0"
     assert credential_mode_task["ansible.builtin.file"]["path"] == (
-        "{{ owner_user_home }}/.coderabbit/auth.json"
+        "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
     )
     assert credential_mode_task["ansible.builtin.file"]["owner"] == "{{ owner_user }}"
     assert credential_mode_task["ansible.builtin.file"]["group"] == "{{ owner_user }}"
