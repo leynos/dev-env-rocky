@@ -108,7 +108,9 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
         if t.get("name") == "Restrict CodeRabbit CLI credential file permissions"
     )
     credential_stat_task = next(
-        t for t in tasks if t.get("name") == "Check CodeRabbit CLI credential file"
+        t
+        for t in tasks
+        if t.get("name") == "Check for existing CodeRabbit CLI auth file"
     )
     argv = auth_task["ansible.builtin.command"]["argv"]
 
@@ -135,7 +137,9 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
         "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
     )
     assert credential_stat_task["register"] == "coderabbit_cli_auth_file"
-    assert credential_mode_task["when"] == "coderabbit_cli_auth_file.stat.exists"
+    assert "coderabbit_cli_auth_file.stat.exists" in credential_mode_task["when"], (
+        "permission task must be gated on auth file existence, not API key presence"
+    )
 
 
 def test_coderabbit_cli_api_key_defaults_to_empty_for_missing_host() -> None:
