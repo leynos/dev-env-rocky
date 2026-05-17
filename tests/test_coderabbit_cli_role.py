@@ -74,6 +74,9 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     ), (
         "install_dir must be derived from coderabbit_cli_home_dir, not ansible_facts.env.HOME"
     )
+    assert defaults_data["coderabbit_cli_home_dir"] == "~{{ owner_user }}", (
+        "home dir must be derived from owner_user, not ansible_facts.env.HOME"
+    )
     assert "lookup(" not in defaults_text, "defaults must not use any lookup() calls"
     assert (
         defaults_data["coderabbit_cli_download_url"]

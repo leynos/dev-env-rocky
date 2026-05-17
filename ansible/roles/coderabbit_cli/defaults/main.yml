@@ -1,5 +1,5 @@
 ---
-coderabbit_cli_home_dir: "{{ owner_user_home | default(ansible_facts.env.HOME) }}"
+coderabbit_cli_home_dir: "~{{ owner_user }}"
 coderabbit_cli_installer_src: "{{ role_path }}/files/coderabbit-install.sh"
 coderabbit_cli_install_dir: "{{ coderabbit_cli_home_dir }}/.local/bin"
 coderabbit_cli_api_key: "{{ (coderabbit_api_keys | default({}, true)).get(inventory_hostname, '') }}"
