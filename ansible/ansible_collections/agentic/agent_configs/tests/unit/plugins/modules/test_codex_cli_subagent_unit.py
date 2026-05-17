@@ -20,86 +20,81 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 )
 
 
-def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("extra_args", "expected_hook", "check_feature_flag"),
+    [
+        (
+            {
+                "event": "PostToolUse",
+                "matcher": "Bash",
+                "command": "run-checks",
+                "timeout": 60,
+                "status_message": "Checking",
+            },
+            {
+                "type": "command",
+                "command": "run-checks",
+                "timeout": 60,
+                "async": False,
+                "statusMessage": "Checking",
+            },
+            True,
+        ),
+        (
+            {
+                "event": "SessionStart",
+                "command": "session-start",
+                "timeout": 30,
+                "async_hook": True,
+            },
+            {
+                "type": "command",
+                "command": "session-start",
+                "timeout": 30,
+                "async": True,
+            },
+            False,
+        ),
+    ],
+)
+def test_codex_cli_hook_writes_hook(
+    tmp_path: Path,
+    extra_args: dict,
+    expected_hook: dict,
+    check_feature_flag: bool,
+) -> None:
     hooks_path = tmp_path / "hooks.json"
     config_path = tmp_path / "config.toml"
-    args = {
+    full_args = {
         "agent_executable": "/bin/sh",
         "path": str(hooks_path),
         "config_path": str(config_path),
-        "event": "PostToolUse",
-        "matcher": "Bash",
-        "command": "run-checks",
-        "timeout": 60,
-        "status_message": "Checking",
+        **extra_args,
     }
 
-    result = run_module(codex_cli_hook, args)
+    result = run_module(codex_cli_hook, full_args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
     )
-    expected_hook = {
-        "type": "command",
-        "command": "run-checks",
-        "timeout": 60,
-        "async": False,
-        "statusMessage": "Checking",
-    }
     assert result["hook"] == expected_hook, (
         f"expected result['hook'] to be {expected_hook!r}, got {result['hook']!r}"
     )
+    event = extra_args["event"]
     rendered_hooks = json.loads(hooks_path.read_text())
-    assert rendered_hooks["hooks"]["PostToolUse"][0]["hooks"] == [result["hook"]], (
-        f"expected PostToolUse hooks to be {[result['hook']]!r}, "
-        f"got {rendered_hooks['hooks']['PostToolUse'][0]['hooks']!r}"
+    assert rendered_hooks["hooks"][event][0]["hooks"] == [result["hook"]], (
+        f"expected {event} hooks to be {[result['hook']]!r}, "
+        f"got {rendered_hooks['hooks'][event][0]['hooks']!r}"
     )
-    rendered_config = config_path.read_text()
-    assert "[features]\ncodex_hooks = true" in rendered_config, (
-        f"expected Codex hook feature flag in config, got {rendered_config!r}"
-    )
-
-    rerun_result = run_module(codex_cli_hook, args)
+    if check_feature_flag:
+        rendered_config = config_path.read_text()
+        assert "[features]\ncodex_hooks = true" in rendered_config, (
+            f"expected Codex hook feature flag in config, got {rendered_config!r}"
+        )
+    rerun_result = run_module(codex_cli_hook, full_args)
     assert rerun_result["changed"] is False, (
-        f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
-    )
-
-
-def test_codex_cli_hook_writes_session_start_hook(tmp_path: Path) -> None:
-    hooks_path = tmp_path / "hooks.json"
-    config_path = tmp_path / "config.toml"
-    args = {
-        "agent_executable": "/bin/sh",
-        "path": str(hooks_path),
-        "config_path": str(config_path),
-        "event": "SessionStart",
-        "command": "session-start",
-        "timeout": 30,
-        "async_hook": True,
-    }
-
-    result = run_module(codex_cli_hook, args)
-
-    assert result["changed"] is True, (
-        f"expected result['changed'] to be True, got {result['changed']!r}"
-    )
-    expected_hook = {
-        "type": "command",
-        "command": "session-start",
-        "timeout": 30,
-        "async": True,
-    }
-    assert result["hook"] == expected_hook, (
-        f"expected result['hook'] to be {expected_hook!r}, got {result['hook']!r}"
-    )
-    rendered_hooks = json.loads(hooks_path.read_text())
-    assert rendered_hooks["hooks"]["SessionStart"][0]["hooks"] == [result["hook"]], (
-        f"expected SessionStart hooks to be {[result['hook']]!r}, "
-        f"got {rendered_hooks['hooks']['SessionStart'][0]['hooks']!r}"
-    )
-    rerun_result = run_module(codex_cli_hook, args)
-    assert rerun_result["changed"] is False, (
-        f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
+        f"expected idempotent rerun to report changed=False, "
+        f"got {rerun_result['changed']!r}"
     )
 
 
@@ -282,43 +277,26 @@ def test_codex_cli_subagent_restore_snapshot_preserves_mode(tmp_path: Path) -> N
     assert path.stat().st_mode & 0o7777 == 0o640
 
 
-def test_codex_cli_subagent_reraises_unexpected_registry_update_errors(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Verify non-RegistryWriteError exceptions propagate from registry update."""
-    config_path = tmp_path / "config.toml"
-    path = tmp_path / "agents/reviewer.toml"
-
-    def fail_registry(*args, **kwargs):
-        """Raise an unexpected registry update failure."""
-        raise RuntimeError("unexpected registry failure")
-
-    monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
-    set_module_args(
+@pytest.mark.parametrize(
+    "extra_args",
+    [
         {
-            "name": "Reviewer",
-            "path": str(path),
-            "config_path": str(config_path),
             "description": "Review changes.",
             "developer_instructions": "Inspect the diff.",
-        }
-    )
-
-    with pytest.raises(RuntimeError, match="unexpected registry failure"):
-        codex_cli_subagent.main()
-
-
-def test_codex_cli_subagent_reraises_unexpected_registry_removal_errors(
+        },
+        {"state": "absent"},
+    ],
+)
+def test_codex_cli_subagent_reraises_unexpected_registry_errors(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    extra_args: dict,
 ) -> None:
-    """Verify non-RegistryWriteError exceptions propagate from registry removal."""
+    """Verify non-RegistryWriteError exceptions propagate for both update and removal paths."""
     config_path = tmp_path / "config.toml"
     path = tmp_path / "agents/reviewer.toml"
 
     def fail_registry(*args, **kwargs):
-        """Raise an unexpected registry removal failure."""
         raise RuntimeError("unexpected registry failure")
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
@@ -327,7 +305,7 @@ def test_codex_cli_subagent_reraises_unexpected_registry_removal_errors(
             "name": "Reviewer",
             "path": str(path),
             "config_path": str(config_path),
-            "state": "absent",
+            **extra_args,
         }
     )
 
