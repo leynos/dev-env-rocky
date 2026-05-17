@@ -122,7 +122,6 @@ The role must appear before `agent_tools` in `site.yml`. This ordering ensures
 the `cursor-agent` binary exists before `agent_tools` configures Cursor MCP
 servers and skills.
 
-
 ## uv_tools Role
 
 The `uv_tools` role installs user-scoped Python CLIs through
