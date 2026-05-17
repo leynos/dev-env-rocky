@@ -9,7 +9,7 @@ repository and assert structural correctness without executing Ansible.
 import re
 from pathlib import Path
 
-import yaml  # ty: ignore[unresolved-import]
+import yaml  # type: ignore[unresolved-import]  # ty: ignore[unresolved-import]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CODERABBIT_DEFAULTS = REPO_ROOT / "ansible/roles/coderabbit_cli/defaults/main.yml"
@@ -69,7 +69,7 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     assert installer_src == "{{ role_path }}/files/coderabbit-install.sh", (
         "installer src must use the checked-in role files path"
     )
-    assert "lookup" not in defaults_text, "defaults must not use any lookup() calls"
+    assert "lookup(" not in defaults_text, "defaults must not use any lookup() calls"
     assert (
         defaults_data["coderabbit_cli_download_url"]
         == "https://cli.coderabbit.ai/releases"
@@ -88,7 +88,7 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
 def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     """Auth task must use --api-key with the vaulted key and set no_log."""
     defaults = yaml.safe_load(CODERABBIT_DEFAULTS.read_text())
-    tasks = yaml.safe_load(CODERABBIT_TASKS.read_text())
+    tasks = flatten_tasks(yaml.safe_load(CODERABBIT_TASKS.read_text()))
     auth_task = next(
         t
         for t in tasks

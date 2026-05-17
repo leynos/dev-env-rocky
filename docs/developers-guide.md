@@ -365,4 +365,4 @@ make molecule
 The Molecule scenarios use Podman with the `quay.io/rockylinux/rockylinux:10`
 image. They cover the `node_packages` role's Bun global install flow with a
 fake Bun fixture, including trusted postinstall handling for `css-view`, and the
- `paths` role's managed PATH precedence for login shells.
+`paths` role's managed PATH precedence for login shells.
