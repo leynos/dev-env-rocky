@@ -300,6 +300,12 @@ def manage_hook_toml(
     path = expand_path(path)
     data, removed_legacy_block = load_toml_file(module, path, default={})
     data = ensure_hook_toml_shape(path, data)
+    had_hooks_table = "hooks" in data
+    had_hook_entries = (
+        had_hooks_table
+        and isinstance(data.get("hooks"), dict)
+        and "hooks" in data["hooks"]
+    )
     hooks_root = ensure_hooks_root(path, data)
     hook_entries = ensure_hook_entries(path, hooks_root)
 
@@ -318,6 +324,12 @@ def manage_hook_toml(
         changed |= _apply_present_hook(hook_entries, desired_hook)
     else:
         changed |= _apply_absent_hook(hooks_root, data, hook_entries, desired_hook)
+
+    if state == "absent" and not changed:
+        if not had_hook_entries and isinstance(data.get("hooks"), dict):
+            data["hooks"].pop("hooks", None)
+        if not had_hooks_table:
+            data.pop("hooks", None)
 
     return _persist_hook_changes(
         module, path, data, changed, removed_legacy_block, existed_before

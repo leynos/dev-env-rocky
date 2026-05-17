@@ -1391,6 +1391,28 @@ def test_deepseek_tui_hook_writes_toml_and_removes_entry(tmp_path: Path) -> None
     }
 
 
+def test_deepseek_tui_hook_absent_noop_does_not_return_synthetic_hooks(
+    tmp_path: Path,
+) -> None:
+    """Verify absent no-op results reflect the unchanged on-disk TOML state."""
+    path = tmp_path / "config.toml"
+
+    result = _run_module(
+        deepseek_tui_hook,
+        {
+            "path": str(path),
+            "event": "shell_env",
+            "name": "aws-creds",
+            "command": "aws-vault export dev --format=env",
+            "state": "absent",
+        },
+    )
+
+    assert result["changed"] is False
+    assert result["hooks"] == {}
+    assert not path.exists(), f"expected absent no-op not to create {path}"
+
+
 @pytest.mark.parametrize(
     ("module", "relative_path", "extra_args", "missing_field"),
     [
