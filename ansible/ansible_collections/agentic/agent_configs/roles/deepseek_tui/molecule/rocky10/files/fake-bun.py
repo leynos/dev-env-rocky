@@ -13,7 +13,7 @@ EXPECTED_PACKAGE_SPEC = "deepseek-tui@0.8.24"
 PACKAGE_SPEC_RE = re.compile(r"^deepseek-tui@(.+)$")
 
 
-def append_log(argv: list[str]) -> None:
+def _append_log(argv: list[str]) -> None:
     """Append one fake Bun invocation to the configured JSONL log."""
     log_path = Path(os.environ["BUN_FAKE_LOG"])
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -33,14 +33,14 @@ def append_log(argv: list[str]) -> None:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
-def write_executable(path: Path) -> None:
+def _write_executable(path: Path) -> None:
     """Write a minimal executable shell shim."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("#!/usr/bin/env sh\nexit 0\n", encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
-def install_package(argv: list[str]) -> int:
+def _install_package(argv: list[str]) -> int:
     """Install fake DeepSeek-TUI package metadata and command shims."""
     if len(argv) != 3 or argv[:2] != ["install", "-g"]:
         print(f"unsupported fake bun install invocation: {argv}", file=sys.stderr)
@@ -68,12 +68,12 @@ def install_package(argv: list[str]) -> int:
         + "\n",
         encoding="utf-8",
     )
-    write_executable(global_bin_dir / "deepseek")
-    write_executable(global_bin_dir / "deepseek-tui")
+    _write_executable(global_bin_dir / "deepseek")
+    _write_executable(global_bin_dir / "deepseek-tui")
     return 0
 
 
-def trust_package() -> int:
+def _trust_package() -> int:
     """Record fake trusted dependency metadata."""
     global_dir = Path(os.environ["BUN_INSTALL_GLOBAL_DIR"])
     package_json = global_dir / "package.json"
@@ -88,11 +88,11 @@ def trust_package() -> int:
 def main() -> int:
     """Dispatch supported fake Bun commands."""
     argv = sys.argv[1:]
-    append_log(argv)
+    _append_log(argv)
     if argv[:2] == ["install", "-g"]:
-        return install_package(argv)
+        return _install_package(argv)
     if argv == ["pm", "trust", "deepseek-tui"]:
-        return trust_package()
+        return _trust_package()
     print(f"unsupported fake bun invocation: {argv}", file=sys.stderr)
     return 2
 
