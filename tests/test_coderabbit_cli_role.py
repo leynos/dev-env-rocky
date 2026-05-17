@@ -19,6 +19,16 @@ MAKEFILE = REPO_ROOT / "Makefile"
 SITE_PLAYBOOK = REPO_ROOT / "ansible/site.yml"
 
 
+def flatten_tasks(tasks: list[dict]) -> list[dict]:
+    """Return top-level tasks and nested block/rescue/always tasks."""
+    flattened: list[dict] = []
+    for task in tasks:
+        flattened.append(task)
+        for block_name in ("block", "rescue", "always"):
+            flattened.extend(flatten_tasks(task.get(block_name, [])))
+    return flattened
+
+
 def extract_task(content: str, name: str) -> str:
     """Return the YAML body of the task identified by *name*.
 
@@ -47,7 +57,7 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     """Role must copy the checked-in installer and guard with creates:."""
     defaults_data = yaml.safe_load(CODERABBIT_DEFAULTS.read_text())
     installer_src: str = defaults_data["coderabbit_cli_installer_src"]
-    tasks = yaml.safe_load(CODERABBIT_TASKS.read_text())
+    tasks = flatten_tasks(yaml.safe_load(CODERABBIT_TASKS.read_text()))
     install_task = next(t for t in tasks if t.get("name") == "Install CodeRabbit CLI")
     copy_task = next(
         t for t in tasks if t.get("name") == "Copy CodeRabbit CLI installer"
@@ -123,6 +133,30 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     assert credential_mode_task["when"] == "coderabbit_cli_api_key | length > 0"
 
 
+def test_coderabbit_cli_api_key_defaults_to_empty_for_missing_host() -> None:
+    """API key expression must skip authentication when no host key exists."""
+    defaults = yaml.safe_load(CODERABBIT_DEFAULTS.read_text())
+    expression = defaults["coderabbit_cli_api_key"]
+
+    assert "default({}, true)" in expression
+    assert ".get(inventory_hostname, '')" in expression
+    assert "default(omit)" not in expression
+
+
+def test_coderabbit_cli_role_reports_install_diagnostics() -> None:
+    """Install block must expose stdout and stderr when installation fails."""
+    task_body = extract_task(
+        CODERABBIT_TASKS.read_text(), "Install and validate CodeRabbit CLI"
+    )
+
+    assert "block:" in task_body
+    assert "rescue:" in task_body
+    assert "coderabbit_cli_install_result.stderr" in task_body
+    assert "coderabbit_cli_install_result.stdout" in task_body
+    assert "Assert CodeRabbit CLI install invariants" in task_body
+    assert "coderabbit_cli_binary.stat.executable" in task_body
+
+
 def test_site_runs_coderabbit_cli_before_agent_tools() -> None:
     """coderabbit_cli must precede agent_tools in site.yml role list."""
     plays = yaml.safe_load(SITE_PLAYBOOK.read_text())
@@ -144,3 +178,17 @@ def test_make_molecule_runs_coderabbit_cli_scenario() -> None:
 
     assert "cd ansible/roles/coderabbit_cli &&" in target_body
     assert "$(MOLECULE) test -s rocky10" in target_body
+
+
+def test_molecule_verify_asserts_coderabbit_output_and_state() -> None:
+    """Molecule verify must cover output, permissions, ownership, and idempotence."""
+    verify_path = REPO_ROOT / "ansible/roles/coderabbit_cli/molecule/rocky10/verify.yml"
+    verify_content = verify_path.read_text()
+
+    assert "[INFO] Platform: linux-x64" in verify_content
+    assert "[SUCCESS] Installation verified" in verify_content
+    assert "molecule-coderabbit-token' not in" in verify_content
+    assert "coderabbit_auth_file.stat.mode == '0600'" in verify_content
+    assert "coderabbit_auth_file.stat.pw_name == 'root'" in verify_content
+    assert "Rerun CodeRabbit CLI role again to verify idempotence" in verify_content
+    assert "coderabbit_cli_install_result is not changed" in verify_content

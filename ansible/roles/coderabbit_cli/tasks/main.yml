@@ -23,17 +23,52 @@
     group: "{{ owner_user }}"
     mode: '0700'
 
-- name: Install CodeRabbit CLI
-  ansible.builtin.shell:
-    cmd: "{{ ansible_facts.env.HOME }}/.cache/coderabbit-install.sh"
-    executable: /bin/bash
-  args:
-    creates: "{{ coderabbit_cli_install_dir }}/coderabbit"
-  environment:
-    CODERABBIT_INSTALL_DIR: "{{ coderabbit_cli_install_dir }}"
-    CODERABBIT_DOWNLOAD_URL: "{{ coderabbit_cli_download_url }}"
-    NO_COLOR: "1"
-  register: coderabbit_cli_install_result
+- name: Install and validate CodeRabbit CLI
+  block:
+    - name: Install CodeRabbit CLI
+      ansible.builtin.shell:
+        cmd: "{{ ansible_facts.env.HOME }}/.cache/coderabbit-install.sh"
+        executable: /bin/bash
+      args:
+        creates: "{{ coderabbit_cli_install_dir }}/coderabbit"
+      environment:
+        CODERABBIT_INSTALL_DIR: "{{ coderabbit_cli_install_dir }}"
+        CODERABBIT_DOWNLOAD_URL: "{{ coderabbit_cli_download_url }}"
+        NO_COLOR: "1"
+      register: coderabbit_cli_install_result
+      failed_when:
+        - coderabbit_cli_install_result.rc != 0
+
+    - name: Check CodeRabbit CLI binary after install
+      ansible.builtin.stat:
+        path: "{{ coderabbit_cli_install_dir }}/coderabbit"
+      register: coderabbit_cli_binary
+
+    - name: Check CodeRabbit CLI alias after install
+      ansible.builtin.stat:
+        path: "{{ coderabbit_cli_install_dir }}/cr"
+      register: coderabbit_cli_alias
+
+    - name: Assert CodeRabbit CLI install invariants
+      ansible.builtin.assert:
+        that:
+          - coderabbit_cli_binary.stat.exists
+          - coderabbit_cli_binary.stat.executable
+          - coderabbit_cli_alias.stat.islnk
+          - coderabbit_cli_alias.stat.lnk_source == coderabbit_cli_install_dir ~ '/coderabbit'
+        fail_msg: >-
+          CodeRabbit CLI install did not create the expected executable and
+          alias under {{ coderabbit_cli_install_dir }}. stdout={{
+          coderabbit_cli_install_result.stdout | default('') }} stderr={{
+          coderabbit_cli_install_result.stderr | default('') }}
+  rescue:
+    - name: Report CodeRabbit CLI installer failure
+      ansible.builtin.fail:
+        msg: >-
+          CodeRabbit CLI installation failed for {{ inventory_hostname }}.
+          stdout={{ coderabbit_cli_install_result.stdout | default('') }}
+          stderr={{ coderabbit_cli_install_result.stderr | default('') }}
+          rc={{ coderabbit_cli_install_result.rc | default('not-run') }}
 
 - name: Debug CodeRabbit CLI install output
   ansible.builtin.debug:

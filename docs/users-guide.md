@@ -44,8 +44,8 @@ repository does not install Cursor stop-hook configuration.
 
 The `coderabbit_cli` role installs CodeRabbit CLI through the downloaded
 installer script vendored inside this repository at
-`ansible/roles/coderabbit_cli/files/coderabbit-install.sh`.
-The upstream source for that script is:
+`ansible/roles/coderabbit_cli/files/coderabbit-install.sh`. The upstream source
+for that script is:
 
 ```text
 https://cli.coderabbit.ai/install.sh
@@ -59,9 +59,10 @@ It then authenticates CodeRabbit CLI with:
 coderabbit auth login --api-key <vaulted-key>
 ```
 
-The API key comes from the host-keyed `coderabbit_api_keys` mapping in the
-source-of-truth vault file at `../../dev-env-rocky/ansible/group_vars/all/vault.yml`,
-and the role suppresses task output while the secret is in use.
+The API key comes from the host-keyed `coderabbit_api_keys` mapping in each
+host's source-of-truth vault file at `ansible/host_vars/<hostname>/vault.yml`,
+for example `ansible/host_vars/rohga.df12.net/vault.yml`, and the role
+suppresses task output while the secret is in use.
 
 To rotate a host's CodeRabbit API key:
 
@@ -69,13 +70,27 @@ To rotate a host's CodeRabbit API key:
    `~/__coderabbit_token_rohga` for `rohga.df12.net` or
    `~/__coderabbit_token_vendetta` for `vendetta.df12.net`.
 2. Update the `coderabbit_api_keys.<host>` value in
-   `../../dev-env-rocky/ansible/group_vars/all/vault.yml` and re-encrypt that
-   file with `~/.ansible_vault_pass`.
+   `ansible/host_vars/<hostname>/vault.yml`, for example
+   `ansible/host_vars/rohga.df12.net/vault.yml`, and re-encrypt that file with
+   `~/.ansible_vault_pass`.
 3. Remove `~/.coderabbit/auth.json` on the affected host if CodeRabbit CLI has
    already been authenticated with the old key.
 4. Run `make site`, or run a narrower play for the affected host.
 5. Verify that `coderabbit review --agent` runs from a git repository as the
    owner user.
+
+The role fails with installer stdout and stderr when installation does not
+create the expected `coderabbit` executable and `cr` alias. Common remediation
+steps are to ensure the managed host has `git` and `unzip`, check network
+access to the configured CodeRabbit release URL, and remove
+`~/.local/bin/coderabbit` only when a forced reinstall is required.
+
+Ansible runs the role sequentially for each host connection. Parallel
+multi-host playbook execution remains isolated because every host writes under
+that host's owner-user home directory. The installer uses a private `mktemp`
+directory for downloads, so playbook-managed installation is safe across hosts;
+running the installer directly in concurrent shells for the same user is not a
+supported workflow.
 
 ## Login Shell PATH
 

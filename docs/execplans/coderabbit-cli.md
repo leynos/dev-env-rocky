@@ -1,9 +1,8 @@
 # Install CodeRabbit CLI
 
-This ExecPlan (execution plan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
-`Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
-proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`,
+ `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
+and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
 Status: COMPLETE
 
@@ -12,9 +11,9 @@ Status: COMPLETE
 After this change, running the repository's Ansible site playbook installs the
 CodeRabbit CLI for the managed owner user on development hosts. The role uses
 the already-downloaded installer script at
-`ansible/roles/coderabbit_cli/files/coderabbit-install.sh`, keeps
-host-specific CodeRabbit API keys in Ansible Vault, and proves the behaviour
-with a Molecule scenario that runs on Podman against a Rocky Linux container.
+`ansible/roles/coderabbit_cli/files/coderabbit-install.sh`, keeps host-specific
+CodeRabbit API keys in Ansible Vault, and proves the behaviour with a Molecule
+scenario that runs on Podman against a Rocky Linux container.
 
 Success is observable in three ways. The user role creates
 `~/.local/bin/coderabbit` and the `~/.local/bin/cr` alias. The role
@@ -36,9 +35,9 @@ Do not place build artefacts in `/tmp`; `/tmp` is only for logs and scratch
 files. Do not create an isolated Cargo cache.
 
 The CodeRabbit installer is already available at
-`ansible/roles/coderabbit_cli/files/coderabbit-install.sh`.
-Do not fetch a different installer for the role unless the checked-in script is
-found to be unusable. The original installer source is
+`ansible/roles/coderabbit_cli/files/coderabbit-install.sh`. Do not fetch a
+different installer for the role unless the checked-in script is found to be
+unusable. The original installer source is
 `https://cli.coderabbit.ai/install.sh`.
 
 The API keys are local secret files at `~/__coderabbit_token_rohga` and
@@ -91,16 +90,15 @@ part of the normal role gate.
   Molecule role scenarios, the inventory, and current vault layout.
 - [x] 2026-05-10: Confirmed the installer script exists at
   `ansible/roles/coderabbit_cli/files/coderabbit-install.sh` and installs
-  `coderabbit` plus `cr` under
-  `~/.local/bin`.
+  `coderabbit` plus `cr` under `~/.local/bin`.
 - [x] 2026-05-10: Added the `coderabbit_cli` role, wired it into
   `ansible/site.yml`, and added focused Python regression coverage.
 - [x] 2026-05-10: Added deterministic Molecule coverage using a local fake
   CodeRabbit release archive served through `file:///tmp/coderabbit-releases`.
 - [x] 2026-05-10: Added vaulted `coderabbit_api_keys` entries for
   `rohga.df12.net` and `vendetta.df12.net` from the provided token files in the
-  source-of-truth vault file at
-  `../../dev-env-rocky/ansible/group_vars/all/vault.yml`.
+  source-of-truth host vault files under
+  `ansible/host_vars/<hostname>/vault.yml`.
 - [x] 2026-05-10: Updated `docs/users-guide.md` and
   `docs/developers-guide.md`.
 - [x] 2026-05-10: Ran CodeRabbit review checkpoints. The unauthenticated run
@@ -156,13 +154,18 @@ configuration.
 
 2026-05-10: Use Molecule's Podman driver with a Rocky Linux 10 container to
 match existing role scenarios. The scenario will serve a local fake CodeRabbit
-release archive, so the test proves the installer integration without relying on
-the public release service.
+release archive, so the test proves the installer integration without relying
+on the public release service.
 
 2026-05-10: Store CodeRabbit tokens in a host-keyed `coderabbit_api_keys`
-mapping in `../../dev-env-rocky/ansible/group_vars/all/vault.yml`, which is
-the deployment source-of-truth vault file. This avoids committing host access
+mapping in each deployment host vault file under
+`ansible/host_vars/<hostname>/vault.yml`. This avoids committing host access
 tokens to the branch, even as inline vault blocks.
+
+2026-05-17: The role reports installer stdout and stderr through block/rescue
+diagnostics, validates the installed binary and alias after the installer
+exits, and leaves authentication in a separate `no_log: true` task so secret
+argv values are not logged.
 
 2026-05-10: Authenticate CodeRabbit CLI with `coderabbit auth login --api-key`
 rather than exporting `CODERABBIT_API_KEY` in shell startup files. This matches
@@ -178,11 +181,10 @@ Second, add `ansible/roles/coderabbit_cli`. The role creates
 `{{ ansible_facts.env.HOME }}/.local/bin`, copies
 `ansible/roles/coderabbit_cli/files/coderabbit-install.sh` to a temporary
 managed location, runs it as the owner user with `CODERABBIT_INSTALL_DIR` set
-to that bin directory, and declares
-`creates: ~/.local/bin/coderabbit` for idempotence. It then runs
-`coderabbit auth login --api-key` with `coderabbit_api_keys[inventory_hostname]`
-and `no_log: true`, using `creates: ~/.coderabbit/auth.json` to avoid repeated
-authentication.
+to that bin directory, and declares `creates: ~/.local/bin/coderabbit` for
+idempotence. It then runs `coderabbit auth login --api-key` with
+`coderabbit_api_keys[inventory_hostname]` and `no_log: true`, using
+`creates: ~/.coderabbit/auth.json` to avoid repeated authentication.
 
 Third, wire `coderabbit_cli` into the user-environment role list in
 `ansible/site.yml` before `agent_tools`. Add Python regression tests that
