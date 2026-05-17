@@ -1441,6 +1441,49 @@ def test_deepseek_tui_mcp_rejects_malformed_servers_root(tmp_path: Path) -> None
     )
 
 
+@pytest.mark.parametrize(
+    ("file_content", "read_error"),
+    [
+        ("{not json}\n", None),
+        (None, OSError("permission denied")),
+    ],
+)
+def test_deepseek_tui_mcp_reports_existing_data_read_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    file_content: str | None,
+    read_error: OSError | None,
+) -> None:
+    """Verify DeepSeek-TUI MCP reports unreadable existing config with context."""
+    path = tmp_path / "mcp.json"
+    if file_content is not None:
+        path.write_text(file_content)
+    if read_error is not None:
+
+        def fail_read_json(path: str, *, default: dict) -> NoReturn:
+            raise read_error
+
+        monkeypatch.setattr(deepseek_tui_mcp, "load_json_file", fail_read_json)
+
+    set_module_args(
+        {
+            "path": str(path),
+            "name": "repo-tools",
+            "scope": "project",
+            "transport": "stdio",
+            "command": "repo-tools-mcp",
+        }
+    )
+    with pytest.raises(AnsibleFailJson) as exc:
+        deepseek_tui_mcp.main()
+
+    message = exc.value.args[0]["msg"]
+    assert "failed to read existing DeepSeek-TUI MCP data" in message
+    assert "name='repo-tools'" in message
+    assert "scope='project'" in message
+    assert f"path={str(path)!r}" in message
+
+
 def test_deepseek_tui_mcp_rejects_extra_managed_field_overrides(
     tmp_path: Path,
 ) -> None:
@@ -1461,7 +1504,7 @@ def test_deepseek_tui_mcp_rejects_extra_managed_field_overrides(
 def test_deepseek_tui_hook_rejects_malformed_hook_entries(tmp_path: Path) -> None:
     """Verify DeepSeek-TUI hook rejects malformed hooks.hooks TOML values."""
     path = tmp_path / "config.toml"
-    path.write_text("[hooks]\nhooks = \"bad\"\n")
+    path.write_text('[hooks]\nhooks = "bad"\n')
 
     _assert_fails(
         deepseek_tui_hook,

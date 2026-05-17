@@ -307,14 +307,21 @@ def _build_desired_server(module: AnsibleModule) -> dict[str, Any] | None:
         module.fail_json(msg=str(exc))
 
 
-def _check_existed_before(path: str, name: str) -> bool:
+def _check_existed_before(module: AnsibleModule, path: str, name: str) -> bool:
     """Return True if a server entry named *name* already exists in *path*."""
     try:
         existing_data = load_json_file(path, default={})
     except FileNotFoundError:
-        return False
-    except (OSError, ValueError):
-        return False
+        existing_data = {}
+    except (OSError, ValueError) as exc:
+        module.fail_json(
+            msg=(
+                "failed to read existing DeepSeek-TUI MCP data "
+                f"name={module.params.get('name')!r} "
+                f"scope={module.params.get('scope')!r} "
+                f"path={path!r}: {exc}"
+            )
+        )
     if not isinstance(existing_data, dict):
         return False
     existing_servers = existing_data.get("servers", {})
@@ -385,7 +392,7 @@ def main() -> None:
 
     path = _resolve_mcp_path(module)
     desired = _build_desired_server(module)
-    existed_before = _check_existed_before(path, module.params["name"])
+    existed_before = _check_existed_before(module, path, module.params["name"])
 
     changed, data = manage_named_json_entry(
         module=module,
