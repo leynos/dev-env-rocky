@@ -149,7 +149,7 @@ keeps the e2e test deterministic and does not depend on CodeRabbit's public
 release service.
 
 Installer failures should remain observable without exposing secrets. The
-install task captures stdout and stderr, validates the expected binary and
+installation task captures stdout and stderr, validates the expected binary and
 alias after the installer exits, and reports those streams through a rescue
 failure message. Authentication remains a separate `no_log: true` task because
 its argv contains the vaulted API key.

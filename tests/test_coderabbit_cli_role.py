@@ -6,11 +6,10 @@ and Makefile Molecule invocation. Tests load raw YAML/text from the
 repository and assert structural correctness without executing Ansible.
 """
 
-import importlib
 import re
 from pathlib import Path
 
-yaml = importlib.import_module("yaml")
+import yaml  # ty: ignore[unresolved-import]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CODERABBIT_DEFAULTS = REPO_ROOT / "ansible/roles/coderabbit_cli/defaults/main.yml"
@@ -55,7 +54,8 @@ def extract_make_target(content: str, name: str) -> str:
 
 def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     """Role must copy the checked-in installer and guard with creates:."""
-    defaults_data = yaml.safe_load(CODERABBIT_DEFAULTS.read_text())
+    defaults_text = CODERABBIT_DEFAULTS.read_text()
+    defaults_data = yaml.safe_load(defaults_text)
     installer_src: str = defaults_data["coderabbit_cli_installer_src"]
     tasks = flatten_tasks(yaml.safe_load(CODERABBIT_TASKS.read_text()))
     install_task = next(t for t in tasks if t.get("name") == "Install CodeRabbit CLI")
@@ -63,23 +63,13 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
         t for t in tasks if t.get("name") == "Copy CodeRabbit CLI installer"
     )
 
-    assert "../../../" not in installer_src, (
-        "installer src must not escape the repository via ../../.."
-    )
     assert "coderabbit-install.sh" in installer_src, (
         "installer src must reference coderabbit-install.sh"
     )
     assert installer_src == "{{ role_path }}/files/coderabbit-install.sh", (
         "installer src must use the checked-in role files path"
     )
-    traversal_depth = installer_src.count("../")
-    assert traversal_depth == 0, (
-        f"installer src must stay inside the role files directory; found "
-        f"{traversal_depth} '../' sequences in {installer_src!r}"
-    )
-    assert "lookup" not in yaml.dump(defaults_data), (
-        "defaults must not use any lookup() calls"
-    )
+    assert "lookup" not in defaults_text, "defaults must not use any lookup() calls"
     assert (
         defaults_data["coderabbit_cli_download_url"]
         == "https://cli.coderabbit.ai/releases"
@@ -120,12 +110,12 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     assert "--api-key" in argv
     assert "{{ coderabbit_cli_api_key }}" in argv
     assert auth_task["args"]["creates"] == (
-        "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"
+        "{{ owner_user_home }}/.coderabbit/auth.json"
     )
     assert auth_task.get("no_log") is True
     assert auth_task["when"] == "coderabbit_cli_api_key | length > 0"
     assert credential_mode_task["ansible.builtin.file"]["path"] == (
-        "{{ ansible_facts.env.HOME }}/.coderabbit/auth.json"
+        "{{ owner_user_home }}/.coderabbit/auth.json"
     )
     assert credential_mode_task["ansible.builtin.file"]["owner"] == "{{ owner_user }}"
     assert credential_mode_task["ansible.builtin.file"]["group"] == "{{ owner_user }}"
