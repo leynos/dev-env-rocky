@@ -1,0 +1,129 @@
+---
+- name: Verify coderabbit_cli
+  hosts: all
+  gather_facts: true
+  vars:
+    verify_owner_user: root
+    verify_home_dir: "{{ ansible_facts.env.HOME }}"
+
+  tasks:
+    - name: Check CodeRabbit CLI binary
+      ansible.builtin.command:
+        argv:
+          - "{{ verify_home_dir }}/.local/bin/coderabbit"
+          - -V
+      changed_when: false
+      register: coderabbit_version
+
+    - name: Assert CodeRabbit CLI version fixture runs
+      ansible.builtin.assert:
+        that:
+          - coderabbit_version.stdout == 'coderabbit 0.0.0-molecule'
+        fail_msg: "CodeRabbit CLI binary did not run from the managed install directory"
+
+    - name: Check CodeRabbit CLI alias
+      ansible.builtin.stat:
+        path: "{{ verify_home_dir }}/.local/bin/cr"
+      register: coderabbit_alias
+
+    - name: Assert CodeRabbit CLI alias points at binary
+      ansible.builtin.assert:
+        that:
+          - coderabbit_alias.stat.islnk
+          - coderabbit_alias.stat.lnk_source == verify_home_dir ~ '/.local/bin/coderabbit'
+          - coderabbit_alias.stat.pw_name == verify_owner_user
+          - coderabbit_alias.stat.gr_name == verify_owner_user
+        fail_msg: "CodeRabbit CLI alias was not linked to the managed binary"
+
+    - name: Check CodeRabbit CLI binary metadata
+      ansible.builtin.stat:
+        path: "{{ verify_home_dir }}/.local/bin/coderabbit"
+      register: coderabbit_binary
+
+    - name: Assert CodeRabbit CLI binary permissions
+      ansible.builtin.assert:
+        that:
+          - coderabbit_binary.stat.exists
+          - coderabbit_binary.stat.executable
+          - coderabbit_binary.stat.pw_name == verify_owner_user
+          - coderabbit_binary.stat.gr_name == verify_owner_user
+        fail_msg: "CodeRabbit CLI binary permissions or ownership are invalid"
+
+    - name: Check CodeRabbit auth file
+      ansible.builtin.stat:
+        path: "{{ verify_home_dir }}/.coderabbit/auth.json"
+      register: coderabbit_auth_file
+
+    - name: Assert CodeRabbit CLI was authenticated
+      ansible.builtin.assert:
+        that:
+          - coderabbit_auth_file.stat.exists
+          - coderabbit_auth_file.stat.mode == '0600'
+          - coderabbit_auth_file.stat.pw_name == verify_owner_user
+          - coderabbit_auth_file.stat.gr_name == verify_owner_user
+        fail_msg: "CodeRabbit CLI auth file was not created"
+
+    - name: Remove CodeRabbit CLI binary before installer output check
+      ansible.builtin.file:
+        path: "{{ verify_home_dir }}/.local/bin/coderabbit"
+        state: absent
+
+    - name: Remove CodeRabbit CLI alias before installer output check
+      ansible.builtin.file:
+        path: "{{ verify_home_dir }}/.local/bin/cr"
+        state: absent
+
+    - name: Remove CodeRabbit auth file before reinstall check
+      ansible.builtin.file:
+        path: "{{ verify_home_dir }}/.coderabbit/auth.json"
+        state: absent
+
+    - name: Rerun CodeRabbit CLI role to capture installer output
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+      vars:
+        coderabbit_cli_home_dir: "{{ verify_home_dir }}"
+        coderabbit_cli_installer_src: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/files/coderabbit-install.sh"
+        coderabbit_cli_download_url: file:///tmp/coderabbit-releases
+        coderabbit_api_keys:
+          coderabbit-cli-rocky10: molecule-coderabbit-token
+
+    - name: Assert installer output from first converge is stable and redacted
+      ansible.builtin.assert:
+        that:
+          - "'[INFO] Platform: linux-x64' in coderabbit_cli_install_result.stderr"
+          - "'[SUCCESS] Installation verified' in coderabbit_cli_install_result.stderr"
+          - "'molecule-coderabbit-token' not in coderabbit_cli_install_result.stderr"
+          - "'molecule-coderabbit-token' not in coderabbit_cli_install_result.stdout"
+        fail_msg: "CodeRabbit CLI installer output changed or leaked a test token"
+
+    - name: Rerun CodeRabbit CLI role again to verify idempotence
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+      vars:
+        coderabbit_cli_home_dir: "{{ verify_home_dir }}"
+        coderabbit_cli_installer_src: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/files/coderabbit-install.sh"
+        coderabbit_cli_download_url: file:///tmp/coderabbit-releases
+        coderabbit_api_keys:
+          coderabbit-cli-rocky10: molecule-coderabbit-token
+
+    - name: Assert installer is skipped after the first converge
+      ansible.builtin.assert:
+        that:
+          - coderabbit_cli_install_result is not changed
+        fail_msg: "CodeRabbit CLI installer did not remain idempotent"
+
+    - name: Run CodeRabbit CLI agent review fixture
+      ansible.builtin.command:
+        argv:
+          - "{{ verify_home_dir }}/.local/bin/coderabbit"
+          - review
+          - --agent
+      changed_when: false
+      register: coderabbit_review
+
+    - name: Assert CodeRabbit CLI agent mode runs
+      ansible.builtin.assert:
+        that:
+          - coderabbit_review.stdout == '{"findings":[]}'
+        fail_msg: "CodeRabbit CLI agent review mode did not run successfully"

@@ -1,0 +1,57 @@
+---
+- name: Prepare CodeRabbit CLI release fixture
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Install installer prerequisites
+      ansible.builtin.dnf:
+        name:
+          - git
+          - unzip
+        state: present
+
+    - name: Create fake CodeRabbit release archive
+      ansible.builtin.shell:
+        executable: /usr/bin/bash
+        cmd: |
+          set -euo pipefail
+          /usr/bin/python3 - <<'PY'
+          import os
+          import stat
+          import zipfile
+          from pathlib import Path
+
+          release_root = Path("/tmp/coderabbit-releases/latest")
+          build_root = Path("/tmp/coderabbit-build")
+          release_root.mkdir(parents=True, exist_ok=True)
+          build_root.mkdir(parents=True, exist_ok=True)
+
+          binary = build_root / "coderabbit"
+          binary.write_text(
+              "#!/usr/bin/env bash\n"
+              "set -euo pipefail\n"
+              "if [ \"${1:-}\" = \"-V\" ] || [ \"${1:-}\" = \"--version\" ]; then\n"
+              "  printf 'coderabbit 0.0.0-molecule\\n'\n"
+              "  exit 0\n"
+              "fi\n"
+              "if [ \"${1:-}\" = \"auth\" ] && [ \"${2:-}\" = \"login\" ] && [ \"${3:-}\" = \"--api-key\" ]; then\n"
+              "  mkdir -p \"$HOME/.coderabbit\"\n"
+              "  printf '{\"provider\":\"apiKey\",\"workspaceId\":\"molecule\"}\\n' > \"$HOME/.coderabbit/auth.json\"\n"
+              "  exit 0\n"
+              "fi\n"
+              "if [ \"${1:-}\" = \"review\" ] && [ \"${2:-}\" = \"--agent\" ]; then\n"
+              "  printf '{\"findings\":[]}\\n'\n"
+              "  exit 0\n"
+              "fi\n"
+              "printf 'fake coderabbit fixture\\n'\n",
+              encoding="utf-8",
+          )
+          binary.chmod(binary.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+          archive = release_root / "coderabbit-linux-x64.zip"
+          with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+              zf.write(binary, "coderabbit")
+          (release_root / "VERSION").write_text("v0.0.0-molecule\n", encoding="utf-8")
+          PY
+      changed_when: true

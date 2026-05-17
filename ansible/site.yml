@@ -47,6 +47,7 @@
     - go_packages
     - paths
     - cursor_cli
+    - coderabbit_cli
     - agent_tools
     - sccache_user
     - role: rust_cleanup

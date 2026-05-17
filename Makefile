@@ -70,6 +70,7 @@ molecule: ## Run Ansible role Molecule tests
 	  ANSIBLE_MODULE_UTILS=$(ANSIBLE_COLLECTIONS_ROOT)/agentic/agent_configs/plugins/module_utils \
 	  $(MOLECULE) test -s rocky10
 	cd ansible/roles/paths && $(MOLECULE) test -s rocky10
+	cd ansible/roles/coderabbit_cli && $(MOLECULE) test -s rocky10
 
 nixie: ## Validate Mermaid diagrams
 	$(call ensure_tool,$(NIXIE))

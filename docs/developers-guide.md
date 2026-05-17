@@ -122,6 +122,38 @@ The role must appear before `agent_tools` in `site.yml`. This ordering ensures
 the `cursor-agent` binary exists before `agent_tools` configures Cursor MCP
 servers and skills.
 
+
+## CodeRabbit CLI Role
+
+The `coderabbit_cli` Ansible role installs the CodeRabbit `coderabbit` binary
+and the `cr` alias into the managed user's `~/.local/bin` directory. The role
+copies the checked-in installer from
+`ansible/roles/coderabbit_cli/files/coderabbit-install.sh` instead of curling
+the installer during the play. The copied installer is executed with
+`CODERABBIT_INSTALL_DIR` set to the managed user-local bin directory and with
+`creates: ~/.local/bin/coderabbit`, so the installation task is idempotent
+after the binary exists.
+
+The role authenticates the CLI by running `coderabbit auth login --api-key`
+with the host's entry in the vaulted `coderabbit_api_keys` mapping. That
+command task must keep `no_log: true` because the argv contains a secret. The
+task uses `creates: ~/.coderabbit/auth.json` so an already-authenticated CLI is
+not re-authenticated on every playbook run.
+
+The role has a Molecule `rocky10` scenario. The scenario installs the
+installer's RPM prerequisites, builds a local fake CodeRabbit release archive
+under `/tmp/coderabbit-releases`, points `CODERABBIT_DOWNLOAD_URL` at that
+fixture, and verifies the installed binary, `cr` symlink, auth file, agent
+review mode, installer output, permissions, ownership, and idempotence. This
+keeps the e2e test deterministic and does not depend on CodeRabbit's public
+release service.
+
+Installer failures should remain observable without exposing secrets. The
+installation task captures stdout and stderr, validates the expected binary and
+alias after the installer exits, and reports those streams through a rescue
+failure message. Authentication remains a separate `no_log: true` task because
+its argv contains the vaulted API key.
+
 ## cursor_cli_mcp Module
 
 `agentic.agent_configs.cursor_cli_mcp` manages `mcpServers` entries in
@@ -333,4 +365,4 @@ make molecule
 The Molecule scenarios use Podman with the `quay.io/rockylinux/rockylinux:10`
 image. They cover the `node_packages` role's Bun global install flow with a
 fake Bun fixture, including trusted postinstall handling for `css-view`, and the
- `paths` role's managed PATH precedence for login shells.
+`paths` role's managed PATH precedence for login shells.

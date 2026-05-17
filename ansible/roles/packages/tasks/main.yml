@@ -26,6 +26,7 @@
       - vim-minimal
       - gedit
       - git
+      - unzip
       - difftastic
       - gh
       - graphviz
