@@ -1518,6 +1518,23 @@ def test_deepseek_tui_hook_rejects_malformed_hook_entries(tmp_path: Path) -> Non
     )
 
 
+def test_deepseek_tui_hook_rejects_extra_managed_field_overrides(
+    tmp_path: Path,
+) -> None:
+    """Verify DeepSeek-TUI hook extra data cannot override managed fields."""
+    _assert_fails(
+        deepseek_tui_hook,
+        {
+            "path": str(tmp_path / "config.toml"),
+            "event": "shell_env",
+            "name": "repo-env",
+            "command": "repo-env export",
+            "extra": {"event": "session_start"},
+        },
+        "invalid extra keys for deepseek_tui_hook: event",
+    )
+
+
 def test_deepseek_tui_skill_resolves_workspace_preferred_path_and_scopes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

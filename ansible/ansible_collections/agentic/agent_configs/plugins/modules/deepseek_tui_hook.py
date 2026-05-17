@@ -139,6 +139,7 @@ MANAGED_KEYS = {
     "background",
     "continue_on_error",
 }
+MANAGED_HOOK_FIELDS = MANAGED_KEYS
 
 
 @dataclass(frozen=True, slots=True)
@@ -434,6 +435,15 @@ def main() -> None:
     )
 
     path = _resolve_hook_path(module)
+    extra = module.params.get("extra") or {}
+    conflicting_extra_keys = sorted(MANAGED_HOOK_FIELDS & set(extra))
+    if conflicting_extra_keys:
+        module.fail_json(
+            msg=(
+                "invalid extra keys for deepseek_tui_hook: "
+                + ", ".join(conflicting_extra_keys)
+            )
+        )
     hook_params = HookParams(
         event=module.params["event"],
         command=module.params["command"],
@@ -442,7 +452,7 @@ def main() -> None:
         timeout_secs=module.params.get("timeout_secs"),
         background=module.params.get("background"),
         continue_on_error=module.params.get("continue_on_error"),
-        extra=module.params.get("extra") or {},
+        extra=extra,
     )
     desired = build_hook_definition(hook_params)
     changed, data, existed_before = _apply_hook_changes(module, path, desired)
