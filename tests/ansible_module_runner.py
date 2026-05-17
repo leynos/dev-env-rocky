@@ -25,4 +25,4 @@ def run_module(
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
         module.main()
-    return cast(dict[str, object], exc.value.args[0])
+    return cast("dict[str, object]", exc.value.args[0])
