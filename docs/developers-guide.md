@@ -290,7 +290,7 @@ work are:
 - `ninja-build`, installed by the `packages` role to provide the `ninja`
   binary for projects that use Ninja as their build backend;
 - `htop`, installed by the `packages` role to provide an interactive process
-  viewer for inspecting CPU, memory and process state.
+  viewer for inspecting CPU, memory, and process state.
 
 ## Validation
 
