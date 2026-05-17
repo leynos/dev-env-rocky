@@ -379,6 +379,28 @@ def persist_hook_changes_wrapper(
     )
 
 
+def _had_hook_entries_before(data: dict[str, Any]) -> bool:
+    """Return whether the TOML data already contained a hooks.hooks list before mutation."""
+    hooks = data.get("hooks")
+    return isinstance(hooks, dict) and "hooks" in hooks
+
+
+def _cleanup_absent_noop(
+    state: str,
+    changed: bool,
+    had_hooks_table: bool,
+    had_hook_entries: bool,
+    data: dict[str, Any],
+) -> None:
+    """Prune TOML containers that were created by setdefault when an absent hook was already missing."""
+    if state != "absent" or changed:
+        return
+    if not had_hook_entries and isinstance(data.get("hooks"), dict):
+        data["hooks"].pop("hooks", None)
+    if not had_hooks_table:
+        data.pop("hooks", None)
+
+
 def manage_hook_toml(
     module: AnsibleModule,
     path: str,
@@ -387,20 +409,32 @@ def manage_hook_toml(
 ) -> tuple[bool, dict[str, Any], bool]:
     """Create, update, or remove one DeepSeek-TUI hook in a TOML config file."""
     path = expand_path(path)
-    (
-        data,
-        removed_legacy_block,
-        had_hooks_table,
-        had_hook_entries,
-        hooks_root,
-        hook_entries,
-        existed_before,
-    ) = capture_hook_state(module, path, desired_hook)
-    changed = mutate_hook_for_state(
-        data, hooks_root, hook_entries, desired_hook, state, module.params
+    data, removed_legacy_block = load_toml_file(module, path, default={})
+    data = ensure_hook_toml_shape(path, data)
+    had_hooks_table = "hooks" in data
+    had_hook_entries = _had_hook_entries_before(data)
+    hooks_root = ensure_hooks_root(path, data)
+    hook_entries = ensure_hook_entries(path, hooks_root)
+
+    existed_before = any(
+        isinstance(hook, dict) and hook_identity_matches(hook, desired_hook)
+        for hook in hook_entries
     )
-    cleanup_absent_noop_shape(data, had_hooks_table, had_hook_entries, state, changed)
-    return persist_hook_changes_wrapper(
+    changed = apply_global_hook_options(
+        hooks_root,
+        enabled=module.params.get("enabled"),
+        default_timeout_secs=module.params.get("default_timeout_secs"),
+        working_dir=module.params.get("working_dir"),
+    )
+
+    if state == "present":
+        changed |= _apply_present_hook(hook_entries, desired_hook)
+    else:
+        changed |= _apply_absent_hook(hooks_root, data, hook_entries, desired_hook)
+
+    _cleanup_absent_noop(state, changed, had_hooks_table, had_hook_entries, data)
+
+    return _persist_hook_changes(
         module, path, data, changed, removed_legacy_block, existed_before
     )
 
