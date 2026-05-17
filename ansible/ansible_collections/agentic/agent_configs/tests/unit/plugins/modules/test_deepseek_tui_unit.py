@@ -148,7 +148,8 @@ def test_deepseek_tui_mcp_reports_existing_data_read_errors(
         path.write_text(file_content)
     if read_error is not None:
 
-        def fail_read_json(path: str, *, default: dict) -> NoReturn:
+        def fail_read_json(_path: str, *, default: dict) -> NoReturn:
+            del default
             raise read_error
 
         monkeypatch.setattr(deepseek_tui_mcp, "load_json_file", fail_read_json)

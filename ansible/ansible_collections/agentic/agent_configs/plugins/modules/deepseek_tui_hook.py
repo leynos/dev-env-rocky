@@ -290,14 +290,18 @@ def _persist_hook_changes(
     return changed, data, existed_before
 
 
-def manage_hook_toml(
-    module: AnsibleModule,
-    path: str,
-    desired_hook: dict[str, Any],
-    state: str,
-) -> tuple[bool, dict[str, Any], bool]:
-    """Create, update, or remove one DeepSeek-TUI hook in a TOML config file."""
-    path = expand_path(path)
+def capture_hook_state(
+    module: AnsibleModule, path: str, desired_hook: dict[str, Any]
+) -> tuple[
+    dict[str, Any],
+    bool,
+    bool,
+    bool,
+    dict[str, Any],
+    list[object],
+    bool,
+]:
+    """Load hook TOML data and capture the pre-mutation hook container shape."""
     data, removed_legacy_block = load_toml_file(module, path, default={})
     data = ensure_hook_toml_shape(path, data)
     had_hooks_table = "hooks" in data
@@ -308,30 +312,95 @@ def manage_hook_toml(
     )
     hooks_root = ensure_hooks_root(path, data)
     hook_entries = ensure_hook_entries(path, hooks_root)
-
     existed_before = any(
         isinstance(hook, dict) and hook_identity_matches(hook, desired_hook)
         for hook in hook_entries
     )
+    return (
+        data,
+        removed_legacy_block,
+        had_hooks_table,
+        had_hook_entries,
+        hooks_root,
+        hook_entries,
+        existed_before,
+    )
+
+
+def mutate_hook_for_state(
+    data: dict[str, Any],
+    hooks_root: dict[str, Any],
+    hook_entries: list[object],
+    desired_hook: dict[str, Any],
+    state: str,
+    module_params: dict[str, Any],
+) -> bool:
+    """Apply global hook options and the requested present or absent mutation."""
     changed = apply_global_hook_options(
         hooks_root,
-        enabled=module.params.get("enabled"),
-        default_timeout_secs=module.params.get("default_timeout_secs"),
-        working_dir=module.params.get("working_dir"),
+        enabled=module_params.get("enabled"),
+        default_timeout_secs=module_params.get("default_timeout_secs"),
+        working_dir=module_params.get("working_dir"),
     )
 
     if state == "present":
         changed |= _apply_present_hook(hook_entries, desired_hook)
     else:
         changed |= _apply_absent_hook(hooks_root, data, hook_entries, desired_hook)
+    return changed
 
+
+def cleanup_absent_noop_shape(
+    data: dict[str, Any],
+    had_hooks_table: bool,
+    had_hook_entries: bool,
+    state: str,
+    changed: bool,
+) -> None:
+    """Remove hook containers created only to evaluate an absent no-op request."""
     if state == "absent" and not changed:
         if not had_hook_entries and isinstance(data.get("hooks"), dict):
             data["hooks"].pop("hooks", None)
         if not had_hooks_table:
             data.pop("hooks", None)
 
+
+def persist_hook_changes_wrapper(
+    module: AnsibleModule,
+    path: str,
+    data: dict[str, Any],
+    changed: bool,
+    removed_legacy_block: bool,
+    existed_before: bool,
+) -> tuple[bool, dict[str, Any], bool]:
+    """Persist hook TOML changes through the shared persistence helper."""
     return _persist_hook_changes(
+        module, path, data, changed, removed_legacy_block, existed_before
+    )
+
+
+def manage_hook_toml(
+    module: AnsibleModule,
+    path: str,
+    desired_hook: dict[str, Any],
+    state: str,
+) -> tuple[bool, dict[str, Any], bool]:
+    """Create, update, or remove one DeepSeek-TUI hook in a TOML config file."""
+    path = expand_path(path)
+    (
+        data,
+        removed_legacy_block,
+        had_hooks_table,
+        had_hook_entries,
+        hooks_root,
+        hook_entries,
+        existed_before,
+    ) = capture_hook_state(module, path, desired_hook)
+    changed = mutate_hook_for_state(
+        data, hooks_root, hook_entries, desired_hook, state, module.params
+    )
+    cleanup_absent_noop_shape(data, had_hooks_table, had_hook_entries, state, changed)
+    return persist_hook_changes_wrapper(
         module, path, data, changed, removed_legacy_block, existed_before
     )
 
