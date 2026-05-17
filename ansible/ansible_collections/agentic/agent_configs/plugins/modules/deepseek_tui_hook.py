@@ -379,6 +379,14 @@ def persist_hook_changes_wrapper(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _HookPreState:
+    """Snapshot of hook container existence captured before any mutation."""
+
+    had_hooks_table: bool
+    had_hook_entries: bool
+
+
 def _had_hook_entries_before(data: dict[str, Any]) -> bool:
     """Return whether the TOML data already contained a hooks.hooks list before mutation."""
     hooks = data.get("hooks")
@@ -388,16 +396,15 @@ def _had_hook_entries_before(data: dict[str, Any]) -> bool:
 def _cleanup_absent_noop(
     state: str,
     changed: bool,
-    had_hooks_table: bool,
-    had_hook_entries: bool,
+    pre_state: _HookPreState,
     data: dict[str, Any],
 ) -> None:
-    """Prune TOML containers that were created by setdefault when an absent hook was already missing."""
+    """Prune TOML containers created by setdefault when an absent hook was already missing."""
     if state != "absent" or changed:
         return
-    if not had_hook_entries and isinstance(data.get("hooks"), dict):
+    if not pre_state.had_hook_entries and isinstance(data.get("hooks"), dict):
         data["hooks"].pop("hooks", None)
-    if not had_hooks_table:
+    if not pre_state.had_hooks_table:
         data.pop("hooks", None)
 
 
@@ -411,8 +418,10 @@ def manage_hook_toml(
     path = expand_path(path)
     data, removed_legacy_block = load_toml_file(module, path, default={})
     data = ensure_hook_toml_shape(path, data)
-    had_hooks_table = "hooks" in data
-    had_hook_entries = _had_hook_entries_before(data)
+    pre_state = _HookPreState(
+        had_hooks_table="hooks" in data,
+        had_hook_entries=_had_hook_entries_before(data),
+    )
     hooks_root = ensure_hooks_root(path, data)
     hook_entries = ensure_hook_entries(path, hooks_root)
 
@@ -432,7 +441,7 @@ def manage_hook_toml(
     else:
         changed |= _apply_absent_hook(hooks_root, data, hook_entries, desired_hook)
 
-    _cleanup_absent_noop(state, changed, had_hooks_table, had_hook_entries, data)
+    _cleanup_absent_noop(state, changed, pre_state, data)
 
     return _persist_hook_changes(
         module, path, data, changed, removed_legacy_block, existed_before
