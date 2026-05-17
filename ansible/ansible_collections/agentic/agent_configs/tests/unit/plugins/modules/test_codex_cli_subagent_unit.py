@@ -138,25 +138,12 @@ def test_validate_agent_executable_rejects_missing_path(tmp_path: Path) -> None:
     )
 
 
-def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> None:
-    """Verify the subagent module writes a TOML file and removes its registry entry."""
-    config_path = tmp_path / "config.toml"
-    path = tmp_path / "agents/reviewer.toml"
-    args = {
-        "name": "Reviewer",
-        "path": str(path),
-        "config_path": str(config_path),
-        "description": "Review changes.",
-        "developer_instructions": "Inspect the diff.",
-        "nickname_candidates": ["reviewer"],
-        "model": "gpt-5.4-mini",
-        "model_reasoning_effort": "medium",
-        "sandbox_mode": "read-only",
-        "mcp_servers": ["context_pack"],
-    }
-
-    result = run_module(codex_cli_subagent, args)
-
+def _assert_subagent_written(
+    result: dict,
+    path: Path,
+    config_path: Path,
+) -> None:
+    """Assert that a present-state subagent run wrote all expected artefacts."""
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
     )
@@ -188,21 +175,13 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
         "expected rendered config to include nickname candidates"
     )
 
-    rerun_result = run_module(codex_cli_subagent, args)
-    assert rerun_result["changed"] is False, (
-        f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
-    )
 
-    absent = run_module(
-        codex_cli_subagent,
-        {
-            "name": "Reviewer",
-            "path": str(path),
-            "config_path": str(config_path),
-            "state": "absent",
-        },
-    )
-
+def _assert_subagent_removed(
+    absent: dict,
+    path: Path,
+    config_path: Path,
+) -> None:
+    """Assert that an absent-state subagent run removed all expected artefacts."""
     assert absent["changed"] is True, (
         f"expected absent result['changed'] to be True, got {absent['changed']!r}"
     )
@@ -211,7 +190,48 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
     assert not path.exists(), f"expected {path} to be removed"
     rendered_config_after_absent = config_path.read_text()
     assert rendered_config_after_absent == "\n", (
-        f"expected config TOML file to contain only a newline, got {rendered_config_after_absent!r}"
+        f"expected config TOML file to contain only a newline, "
+        f"got {rendered_config_after_absent!r}"
+    )
+
+
+def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> None:
+    """Verify the subagent module writes a TOML file and removes its registry entry."""
+    config_path = tmp_path / "config.toml"
+    path = tmp_path / "agents/reviewer.toml"
+    args = {
+        "name": "Reviewer",
+        "path": str(path),
+        "config_path": str(config_path),
+        "description": "Review changes.",
+        "developer_instructions": "Inspect the diff.",
+        "nickname_candidates": ["reviewer"],
+        "model": "gpt-5.4-mini",
+        "model_reasoning_effort": "medium",
+        "sandbox_mode": "read-only",
+        "mcp_servers": ["context_pack"],
+    }
+
+    _assert_subagent_written(run_module(codex_cli_subagent, args), path, config_path)
+
+    rerun_result = run_module(codex_cli_subagent, args)
+    assert rerun_result["changed"] is False, (
+        f"expected idempotent rerun to report changed=False, "
+        f"got {rerun_result['changed']!r}"
+    )
+
+    _assert_subagent_removed(
+        run_module(
+            codex_cli_subagent,
+            {
+                "name": "Reviewer",
+                "path": str(path),
+                "config_path": str(config_path),
+                "state": "absent",
+            },
+        ),
+        path,
+        config_path,
     )
 
 
