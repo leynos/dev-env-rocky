@@ -158,15 +158,15 @@ download_file() {
 
     if command -v curl >/dev/null 2>&1; then
         if [ -n "$output" ]; then
-            curl --connect-timeout 10 --max-time 60 --retry 3 --retry-delay 5 --retry-connrefused -fsSL "$url" -o "$output"
+            curl -fsSL --connect-timeout 15 --max-time 300 --retry 3 "$url" -o "$output"
         else
-            curl --connect-timeout 10 --max-time 60 --retry 3 --retry-delay 5 --retry-connrefused -fsSL "$url"
+            curl -fsSL --connect-timeout 15 --max-time 300 --retry 3 "$url"
         fi
     elif command -v wget >/dev/null 2>&1; then
         if [ -n "$output" ]; then
-            wget --timeout=60 --tries=3 --waitretry=5 --connect-timeout=10 -q "$url" -O "$output"
+            wget -q --timeout=15 --tries=3 "$url" -O "$output"
         else
-            wget --timeout=60 --tries=3 --waitretry=5 --connect-timeout=10 -q "$url" -O -
+            wget -q --timeout=15 --tries=3 "$url" -O -
         fi
     else
         print_error "Neither curl nor wget is available. Please install one of them."
