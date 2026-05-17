@@ -13,3 +13,10 @@ def test_system_packages_include_ninja_build() -> None:
     assert "- ninja-build" in tasks_content, (
         "packages role must install the Ninja package"
     )
+
+
+def test_system_packages_include_htop() -> None:
+    """Ensure deployed systems include an interactive process viewer."""
+    tasks_content = PACKAGES_TASKS.read_text()
+
+    assert "- htop" in tasks_content, "packages role must install htop"

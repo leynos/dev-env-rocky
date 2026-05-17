@@ -64,6 +64,7 @@
       - gnome-calculator
       - xdg-utils
       - glibc-langpack-en
+      - htop
       - mold
     state: present
   become: true

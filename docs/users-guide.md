@@ -75,6 +75,8 @@ The following packages are currently provisioned:
 - `ninja-build` — provides the `ninja` binary, required when projects use
   Ninja as their build backend (e.g. Meson, or CMake configured with
   `-G Ninja`).
+- `htop` — provides an interactive process viewer for inspecting CPU, memory,
+  and process state on managed hosts.
 
 ## Factory Droid DeepSeek Models
 
