@@ -12,9 +12,13 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
     deepseek_tui_mcp,
     deepseek_tui_skill,
 )
-from pytest_bdd import given, scenarios, then, when  # type: ignore[unresolved-import]  # ty: ignore[unresolved-import]
-
 from ansible_module_runner import run_module
+from pytest_bdd import (  # type: ignore[unresolved-import]  # ty: ignore[unresolved-import]
+    given,
+    scenarios,
+    then,
+    when,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -125,6 +129,33 @@ def skill_bundle_is_written(deepseek_home: Path) -> None:
     ).read_text() == "Check tests and docs.\n", (
         "Expected references/checklist.md to contain expected checklist content"
     )
+
+
+def test_hook_extra_cannot_override_managed_fields() -> None:
+    """Extra hook fields must not replace identity or managed behaviour fields."""
+    hook = deepseek_tui_hook.build_hook_definition(
+        deepseek_tui_hook.HookParams(
+            event="shell_env",
+            command="repo-env export",
+            name="repo-env",
+            timeout_secs=30,
+            extra={
+                "event": "session_start",
+                "command": "rm -rf /",
+                "name": "override",
+                "timeout_secs": 1,
+                "custom_field": "preserved",
+            },
+        )
+    )
+
+    assert hook == {
+        "event": "shell_env",
+        "command": "repo-env export",
+        "name": "repo-env",
+        "timeout_secs": 30,
+        "custom_field": "preserved",
+    }
 
 
 def _write_deepseek_tui_playbook(tmp_path: Path, deepseek_home: Path) -> Path:

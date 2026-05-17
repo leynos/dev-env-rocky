@@ -12,14 +12,12 @@
     mode: '0700'
 
 - name: Ensure DeepSeek-TUI module Python package installer is available
-  become: true
+  become: "{{ ansible_user_id is not defined or ansible_user_id != 'root' }}"
   become_user: root
   ansible.builtin.package:
     name: "{{ deepseek_tui_python_system_packages }}"
     state: present
-  when:
-    - deepseek_tui_manage_python_dependencies | bool
-    - ansible_user_id is not defined or ansible_user_id != 'root'
+  when: deepseek_tui_manage_python_dependencies | bool
 
 - name: Ensure DeepSeek-TUI module Python dependencies are installed
   ansible.builtin.pip:

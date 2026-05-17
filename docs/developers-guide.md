@@ -251,7 +251,7 @@ The reusable `agentic.agent_configs.deepseek_tui` role composes those modules
 with the existing `bun_global` installer. It installs pinned
 `deepseek-tui@0.8.24`, trusts the package post-install script, links the
 `deepseek` and `deepseek-tui` command shims into `~/.local/bin`, writes TOML
-defaults, and loops over MCP servers, hooks and skills supplied by role
+defaults, and loops over MCP servers, hooks, and skills supplied by role
 variables. The role manages target-side Python dependencies by installing
 `python3-pip` and `python3-packaging` through the package manager, then
 installing `tomlkit` through `pip`; disable that with

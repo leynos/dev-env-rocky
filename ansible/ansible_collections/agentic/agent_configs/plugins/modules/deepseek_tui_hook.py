@@ -6,8 +6,6 @@ parallel writes externally, for example by running the play with ``serial: 1``
 when several hosts or tasks can target the same file.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -132,6 +130,16 @@ hook:
   type: dict
 """
 
+MANAGED_KEYS = {
+    "event",
+    "command",
+    "name",
+    "condition",
+    "timeout_secs",
+    "background",
+    "continue_on_error",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class HookParams:
@@ -158,7 +166,9 @@ def build_hook_definition(params: HookParams) -> dict[str, Any]:
         "background": params.background,
         "continue_on_error": params.continue_on_error,
     }
-    desired.update(params.extra)
+    desired.update(
+        {key: value for key, value in params.extra.items() if key not in MANAGED_KEYS}
+    )
     return clean_dict(desired)
 
 

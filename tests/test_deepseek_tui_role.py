@@ -41,11 +41,10 @@ def test_deepseek_tui_system_packages_install_as_root() -> None:
         == "Ensure DeepSeek-TUI module Python package installer is available"
     )
 
-    when_conditions = package_task["when"]
-
-    assert any(
-        "ansible_user_id != 'root'" in condition for condition in when_conditions
-    ), "the system package task must escape non-root owner-user play contexts"
+    assert package_task["when"] == "deepseek_tui_manage_python_dependencies | bool"
+    assert package_task["become"] == (
+        "{{ ansible_user_id is not defined or ansible_user_id != 'root' }}"
+    ), "the system package task must only escalate from non-root contexts"
     assert package_task.get("become_user") == "root", (
         "RPM installation must run as root when reached from ansible/site.yml"
     )
