@@ -41,5 +41,6 @@ verifier:
 
 lint: |
   set -e
+  ANSIBLE_ROLES_PATH=../.. ansible-playbook --syntax-check molecule/rocky10/prepare.yml
   ANSIBLE_ROLES_PATH=../.. ansible-playbook --syntax-check molecule/rocky10/converge.yml
   ANSIBLE_ROLES_PATH=../.. ansible-playbook --syntax-check molecule/rocky10/verify.yml

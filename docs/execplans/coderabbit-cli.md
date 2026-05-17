@@ -178,11 +178,12 @@ First, add the planning document and gate it with Markdown checks. Commit this
 plan before making role changes.
 
 Second, add `ansible/roles/coderabbit_cli`. The role creates
-`{{ ansible_facts.env.HOME }}/.local/bin`, copies
+`{{ coderabbit_cli_home_dir }}/.local/bin`, copies the checked-in installer from
 `ansible/roles/coderabbit_cli/files/coderabbit-install.sh` to a temporary
 managed location, runs it as the owner user with `CODERABBIT_INSTALL_DIR` set
-to that bin directory, and declares `creates: ~/.local/bin/coderabbit` for
-idempotence. It then runs `coderabbit auth login --api-key` with
+to that bin directory, and declares `creates` for
+`{{ coderabbit_cli_home_dir }}/.local/bin/coderabbit` for idempotence. It then
+runs `coderabbit auth login --api-key` with
 `coderabbit_api_keys[inventory_hostname]` and `no_log: true`, using
 `creates: ~/.coderabbit/auth.json` to avoid repeated authentication.
 

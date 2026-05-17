@@ -88,10 +88,15 @@
   no_log: true
   when: coderabbit_cli_api_key | length > 0
 
+- name: Check CodeRabbit CLI credential file
+  ansible.builtin.stat:
+    path: "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
+  register: coderabbit_cli_auth_file
+
 - name: Restrict CodeRabbit CLI credential file permissions
   ansible.builtin.file:
     path: "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
     owner: "{{ owner_user }}"
     group: "{{ owner_user }}"
     mode: '0600'
-  when: coderabbit_cli_api_key | length > 0
+  when: coderabbit_cli_auth_file.stat.exists

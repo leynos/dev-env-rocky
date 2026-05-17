@@ -104,6 +104,9 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
         for t in tasks
         if t.get("name") == "Restrict CodeRabbit CLI credential file permissions"
     )
+    credential_stat_task = next(
+        t for t in tasks if t.get("name") == "Check CodeRabbit CLI credential file"
+    )
     argv = auth_task["ansible.builtin.command"]["argv"]
 
     assert (
@@ -125,7 +128,11 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     assert credential_mode_task["ansible.builtin.file"]["owner"] == "{{ owner_user }}"
     assert credential_mode_task["ansible.builtin.file"]["group"] == "{{ owner_user }}"
     assert credential_mode_task["ansible.builtin.file"]["mode"] == "0600"
-    assert credential_mode_task["when"] == "coderabbit_cli_api_key | length > 0"
+    assert credential_stat_task["ansible.builtin.stat"]["path"] == (
+        "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
+    )
+    assert credential_stat_task["register"] == "coderabbit_cli_auth_file"
+    assert credential_mode_task["when"] == "coderabbit_cli_auth_file.stat.exists"
 
 
 def test_coderabbit_cli_api_key_defaults_to_empty_for_missing_host() -> None:
@@ -184,6 +191,7 @@ def test_molecule_verify_asserts_coderabbit_output_and_state() -> None:
     assert "[SUCCESS] Installation verified" in verify_content
     assert "molecule-coderabbit-token' not in" in verify_content
     assert "coderabbit_auth_file.stat.mode == '0600'" in verify_content
-    assert "coderabbit_auth_file.stat.pw_name == 'root'" in verify_content
+    assert "coderabbit_auth_file.stat.pw_name == owner_user" in verify_content
+    assert 'coderabbit_cli_home_dir: "{{ owner_home }}"' in verify_content
     assert "Rerun CodeRabbit CLI role again to verify idempotence" in verify_content
     assert "coderabbit_cli_install_result is not changed" in verify_content

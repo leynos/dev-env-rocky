@@ -13,10 +13,10 @@
 #   CODERABBIT_VERSION=v1.2.3 curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 #
 #   # Use custom download URL (for development/testing)
-#   CODERABBIT_DOWNLOAD_URL=https://localhost:8080/releases curl -fsSL install.sh | sh
+#   CODERABBIT_DOWNLOAD_URL=https://localhost:8080/releases curl -fsSL https://localhost:8080/releases/install.sh | sh
 #
 #   # Install to custom directory
-#   CODERABBIT_INSTALL_DIR=/usr/local/bin curl -fsSL install.sh | sh
+#   CODERABBIT_INSTALL_DIR=/usr/local/bin curl -fsSL https://localhost:8080/releases/install.sh | sh
 #
 # ENVIRONMENT VARIABLES:
 #   CODERABBIT_VERSION      - Override version to install (e.g., "v1.2.3")
@@ -158,15 +158,15 @@ download_file() {
 
     if command -v curl >/dev/null 2>&1; then
         if [ -n "$output" ]; then
-            curl -fsSL "$url" -o "$output"
+            curl --connect-timeout 10 --max-time 60 --retry 3 --retry-delay 5 --retry-connrefused -fsSL "$url" -o "$output"
         else
-            curl -fsSL "$url"
+            curl --connect-timeout 10 --max-time 60 --retry 3 --retry-delay 5 --retry-connrefused -fsSL "$url"
         fi
     elif command -v wget >/dev/null 2>&1; then
         if [ -n "$output" ]; then
-            wget -q "$url" -O "$output"
+            wget --timeout=60 --tries=3 --waitretry=5 --connect-timeout=10 -q "$url" -O "$output"
         else
-            wget -q "$url" -O -
+            wget --timeout=60 --tries=3 --waitretry=5 --connect-timeout=10 -q "$url" -O -
         fi
     else
         print_error "Neither curl nor wget is available. Please install one of them."

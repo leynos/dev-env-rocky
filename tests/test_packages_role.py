@@ -5,6 +5,8 @@ from typing import Any
 
 import yaml  # ty: ignore[unresolved-import]
 
+import yaml  # type: ignore[unresolved-import]  # ty: ignore[unresolved-import]
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGES_TASKS = REPO_ROOT / "ansible/roles/packages/tasks/main.yml"
 
@@ -56,10 +58,14 @@ def test_system_packages_include_ninja_build() -> None:
 
 def test_system_packages_include_coderabbit_installer_prerequisites() -> None:
     """Ensure the CodeRabbit installer has its required RPM tools."""
-    tasks_content = PACKAGES_TASKS.read_text()
+    tasks = yaml.safe_load(PACKAGES_TASKS.read_text())
+    package_task = next(
+        task for task in tasks if task.get("name") == "Install system packages (RPM)"
+    )
+    packages = package_task["ansible.builtin.dnf"]["name"]
 
-    assert "- git" in tasks_content, "CodeRabbit CLI installer requires git"
-    assert "- unzip" in tasks_content, "CodeRabbit CLI installer requires unzip"
+    assert "git" in packages, "CodeRabbit CLI installer requires git"
+    assert "unzip" in packages, "CodeRabbit CLI installer requires unzip"
 
 
 def test_system_packages_include_htop() -> None:
