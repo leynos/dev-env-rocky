@@ -1,7 +1,5 @@
 """Unit tests for the codex_cli_hook and codex_cli_subagent modules."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

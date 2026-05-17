@@ -1,7 +1,5 @@
 """Unit tests for the deepseek_tui_mcp, deepseek_tui_hook, and deepseek_tui_skill modules."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import NoReturn
 
