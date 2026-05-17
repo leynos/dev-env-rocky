@@ -32,7 +32,7 @@ configuration in the same style as existing Codex and Claude configuration.
 - Start by correcting this repository's AGENTS guidance so it accurately
   describes the intended Ansible development workflow.
 - Use `docs/execplans/deepseek-tui.md` as the living plan for this branch.
-- Keep the plan current as discoveries, decisions and validation evidence
+- Keep the plan current as discoveries, decisions, and validation evidence
   change.
 - Use release `v0.8.24` of
   `https://github.com/Hmbown/DeepSeek-TUI` as the capability reference.
