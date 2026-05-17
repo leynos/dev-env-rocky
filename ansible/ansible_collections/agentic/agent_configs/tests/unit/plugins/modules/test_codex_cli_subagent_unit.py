@@ -20,14 +20,6 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 )
 
 
-def _run_module(module, args: dict) -> dict:
-    return run_module(module, args)
-
-
-def _assert_fails(module, args: dict, message: str) -> None:
-    return assert_module_fails(module, args, message)
-
-
 def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> None:
     hooks_path = tmp_path / "hooks.json"
     config_path = tmp_path / "config.toml"
@@ -42,7 +34,7 @@ def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> 
         "status_message": "Checking",
     }
 
-    result = _run_module(codex_cli_hook, args)
+    result = run_module(codex_cli_hook, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -67,7 +59,7 @@ def test_codex_cli_hook_writes_hook_and_enables_feature_flag(tmp_path: Path) -> 
         f"expected Codex hook feature flag in config, got {rendered_config!r}"
     )
 
-    rerun_result = _run_module(codex_cli_hook, args)
+    rerun_result = run_module(codex_cli_hook, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
@@ -86,7 +78,7 @@ def test_codex_cli_hook_writes_session_start_hook(tmp_path: Path) -> None:
         "async_hook": True,
     }
 
-    result = _run_module(codex_cli_hook, args)
+    result = run_module(codex_cli_hook, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -105,7 +97,7 @@ def test_codex_cli_hook_writes_session_start_hook(tmp_path: Path) -> None:
         f"expected SessionStart hooks to be {[result['hook']]!r}, "
         f"got {rendered_hooks['hooks']['SessionStart'][0]['hooks']!r}"
     )
-    rerun_result = _run_module(codex_cli_hook, args)
+    rerun_result = run_module(codex_cli_hook, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
@@ -138,7 +130,7 @@ def test_codex_cli_hook_check_mode_does_not_write(tmp_path: Path) -> None:
 
 def test_validate_agent_executable_rejects_missing_path(tmp_path: Path) -> None:
     """Verify subagent validation fails when the agent executable path is absent."""
-    _assert_fails(
+    assert_module_fails(
         claude_code_hook,
         {
             "agent_executable": str(tmp_path / "missing"),
@@ -168,7 +160,7 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
         "mcp_servers": ["context_pack"],
     }
 
-    result = _run_module(codex_cli_subagent, args)
+    result = run_module(codex_cli_subagent, args)
 
     assert result["changed"] is True, (
         f"expected result['changed'] to be True, got {result['changed']!r}"
@@ -201,12 +193,12 @@ def test_codex_cli_subagent_writes_toml_and_removes_entry(tmp_path: Path) -> Non
         "expected rendered config to include nickname candidates"
     )
 
-    rerun_result = _run_module(codex_cli_subagent, args)
+    rerun_result = run_module(codex_cli_subagent, args)
     assert rerun_result["changed"] is False, (
         f"expected idempotent rerun to report changed=False, got {rerun_result['changed']!r}"
     )
 
-    absent = _run_module(
+    absent = run_module(
         codex_cli_subagent,
         {
             "name": "Reviewer",
@@ -241,7 +233,7 @@ def test_codex_cli_subagent_rolls_back_file_when_registry_update_fails(
         raise codex_cli_subagent.RegistryWriteError("registry denied")
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
-    _assert_fails(
+    assert_module_fails(
         codex_cli_subagent,
         {
             "name": "Reviewer",
@@ -354,7 +346,7 @@ def test_codex_cli_subagent_reraises_non_ansible_exceptions(
 
     monkeypatch.setattr(codex_cli_subagent, "manage_named_toml_entry", fail_registry)
     with pytest.raises(RuntimeError, match="boom"):
-        _run_module(
+        run_module(
             codex_cli_subagent,
             {
                 "name": "test",
@@ -369,7 +361,7 @@ def test_codex_cli_subagent_reraises_non_ansible_exceptions(
 
 def test_codex_cli_subagent_requires_present_fields(tmp_path: Path) -> None:
     """Verify the subagent module rejects state=present without required fields."""
-    _assert_fails(
+    assert_module_fails(
         codex_cli_subagent,
         {
             "name": "Reviewer",
