@@ -62,6 +62,42 @@ def test_uv_tool_parses_tool_list(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+def test_uv_tool_fails_when_tool_list_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeModule:
+        def fail_json(self, **kwargs: Any) -> None:
+            kwargs["failed"] = True
+            raise AnsibleFailJson(kwargs)
+
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "boom"))
+
+    with pytest.raises(AnsibleFailJson) as exc:
+        uv_tool.read_installed_tools(FakeModule(), "/usr/bin/uv")
+
+    assert_equal(
+        exc.value.args[0]["cmd"],
+        ["/usr/bin/uv", "tool", "list"],
+        "uv_tool should report failed tool-list command",
+    )
+    assert_equal(exc.value.args[0]["stderr"], "boom", "uv_tool should surface stderr")
+
+
+def test_uv_tool_fails_when_binary_not_found() -> None:
+    class FakeModule:
+        def get_bin_path(self, value: str, required: bool = False) -> None:
+            return None
+
+        def fail_json(self, **kwargs: Any) -> None:
+            kwargs["failed"] = True
+            raise AnsibleFailJson(kwargs)
+
+    with pytest.raises(AnsibleFailJson) as exc:
+        uv_tool.resolve_binary(FakeModule(), "uv")
+
+    assert "Could not find executable" in exc.value.args[0]["msg"]
+
+
 def test_uv_tool_check_mode_installs_with_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -107,6 +143,22 @@ def test_uv_tool_check_mode_installs_with_options(
     )
 
 
+def test_uv_tool_fails_when_install_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
+    monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "install error"))
+    set_module_args({"name": "ruff", "state": "present"})
+
+    with pytest.raises(AnsibleFailJson) as exc:
+        uv_tool.main()
+
+    assert_equal(
+        exc.value.args[0]["stderr"],
+        "install error",
+        "uv_tool should surface install stderr",
+    )
+
+
 def test_uv_tool_check_mode_uninstalls_existing_tool(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -132,6 +184,24 @@ def test_uv_tool_check_mode_uninstalls_existing_tool(
         result["cmd"],
         ["/usr/bin/uv", "tool", "uninstall", "ruff"],
         "uv_tool should build uninstall command",
+    )
+
+
+def test_uv_tool_fails_when_uninstall_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
+    monkeypatch.setattr(
+        uv_tool, "read_installed_tools", lambda module, uv_bin: {"ruff": "0.14.0"}
+    )
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "uninstall error"))
+    set_module_args({"name": "ruff", "state": "absent"})
+
+    with pytest.raises(AnsibleFailJson) as exc:
+        uv_tool.main()
+
+    assert_equal(
+        exc.value.args[0]["stderr"],
+        "uninstall error",
+        "uv_tool should surface uninstall stderr",
     )
 
 
