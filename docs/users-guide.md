@@ -20,10 +20,11 @@ change the current playbook commands or generated files. It records which parts
 of this configuration may later become reusable collection roles and which
 parts remain site-local orchestration for the owner's environment.
 
-Codex configuration is written to `~/.codex/config.toml`. Cursor MCP
-configuration is written to `~/.cursor/mcp.json`, and Cursor skills are
-installed under `~/.cursor/skills`. These paths use structured Ansible modules
-so existing configuration survives repeated runs.
+Codex configuration is written to `~/.codex/config.toml`.
+Cursor Model Context Protocol (MCP) configuration is written to
+`~/.cursor/mcp.json`, and Cursor skills are installed under
+`~/.cursor/skills`. These paths use structured Ansible modules so existing
+configuration survives repeated runs.
 
 Claude stop-hook configuration is an exception: `~/.claude/settings.json` is
 written by an `agent_tools` shell task that uses `jq` to write the `hooks.Stop`
