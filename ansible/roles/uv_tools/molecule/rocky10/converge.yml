@@ -1,0 +1,10 @@
+---
+- name: Converge uv_tools
+  hosts: all
+  gather_facts: true
+
+  environment:
+    UV_FAKE_LOG: /tmp/fake-uv-log/uv-commands.jsonl
+
+  roles:
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"

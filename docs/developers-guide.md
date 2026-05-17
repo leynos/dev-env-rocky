@@ -390,6 +390,8 @@ make molecule
 ```
 
 The Molecule scenarios use Podman with the `quay.io/rockylinux/rockylinux:10`
-image. They cover the `node_packages` role's Bun global install flow with a
-fake Bun fixture, including trusted postinstall handling for `css-view`, and the
-`paths` role's managed PATH precedence for login shells.
+image. They cover the `uv_tools` role's uv install loop with a fake uv fixture,
+including executable PATH checks for Ansible workflow tools; the
+`node_packages` role's Bun global install flow with a fake Bun fixture,
+including trusted postinstall handling for `css-view`; and the `paths` role's
+managed PATH precedence for login shells.
