@@ -154,6 +154,10 @@ UV_LIST_RE = re.compile(r"^(?P<name>\S+)\s+v(?P<version>\S+)(?:\s|$)")
 
 
 def resolve_binary(module: AnsibleModule, value: str) -> str:
+    """Resolve and return the absolute path to a named executable.
+
+    Fail the module when the executable cannot be found on PATH.
+    """
     path = module.get_bin_path(value, required=False)
     if path:
         return path
@@ -161,11 +165,20 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
 
 
 def run(module: AnsibleModule, cmd: list[str]) -> tuple[int, str, str]:
+    """Run a command using the Ansible module runner.
+
+    Return the command result as ``(rc, stdout, stderr)``.
+    """
     rc, stdout, stderr = module.run_command(cmd)
     return rc, stdout, stderr
 
 
 def read_installed_tools(module: AnsibleModule, uv_bin: str) -> dict[str, str]:
+    """Return installed uv tool versions keyed by tool name.
+
+    Run ``uv tool list``, parse matching output lines with ``UV_LIST_RE``, and
+    fail the module when the command exits with a non-zero status.
+    """
     rc, stdout, stderr = run(module, [uv_bin, "tool", "list"])
     if rc != 0:
         module.fail_json(
@@ -297,6 +310,11 @@ def ensure_present(
 
 
 def main() -> None:
+    """Run the uv_tool Ansible module.
+
+    Parse module arguments, resolve the uv binary, read installed tools, then
+    install or remove the requested tool according to the desired state.
+    """
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},
