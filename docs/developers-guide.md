@@ -273,7 +273,7 @@ boundaries. Builders such as `build_server_definition()` and
 failures. The `main()` entrypoints translate validation exceptions into
 `fail_json()` calls, add contextual fields such as path, scope, name and state,
 and emit `log_operation()` records for the state transition. Read-modify-write
-modules do not take file locks; serialise concurrent writes with Ansible
+modules do not take file locks; serialize concurrent writes with Ansible
 ordering, for example `serial: 1`, when several tasks can target the same
 DeepSeek-TUI file.
 
