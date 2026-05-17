@@ -20,8 +20,6 @@ Example playbook task::
         python: "3.12"
 """
 
-from __future__ import annotations
-
 import re
 
 from ansible.module_utils.basic import AnsibleModule

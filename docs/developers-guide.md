@@ -257,6 +257,11 @@ Key parameters:
 - `version`: Exact version to install.
 - `spec`: Full install specifier; overrides the `name==version` default.
 - `with_packages`: Additional packages to include via `--with`.
+- `with_executables_from`: List of package names passed through repeated
+  `--with-executables-from` flags; defaults to `[]`. Use it when dependency
+  package executables must be linked into the installed tool environment, for
+  example `with_executables_from: ["ansible-core,ansible-lint"]` in the
+  `uv_tools` role's `ansible` loop item.
 - `python`: Python version or path passed to `--python`.
 - `force`: Pass `--force` to reinstall even if already present.
 - `uv_path`: Path to the `uv` executable; defaults to `uv`.

@@ -31,14 +31,24 @@ def extract_uv_tool_loop(content: str) -> str:
 
 
 @pytest.mark.parametrize(
-    "tool_name",
-    ("ansible", "molecule", "ansible-lint"),
+    ("tool_name", "expected_fragment"),
+    (
+        (
+            "ansible",
+            '{name: ansible, with_executables_from: ["ansible-core,ansible-lint"]}',
+        ),
+        (
+            "molecule",
+            '{name: molecule, with_packages: ["molecule-plugins[podman]"]}',
+        ),
+        ("ansible-lint", "{name: ansible-lint}"),
+    ),
 )
-def test_uv_tools_installed(tool_name: str) -> None:
+def test_uv_tools_installed(tool_name: str, expected_fragment: str) -> None:
     """Ensure each Ansible workflow CLI is installed by uv_tools."""
     tasks_content = UV_TOOLS_TASKS.read_text(encoding="utf-8")
     uv_tool_loop = extract_uv_tool_loop(tasks_content)
 
-    assert f"name: {tool_name}" in uv_tool_loop, (
+    assert expected_fragment in uv_tool_loop, (
         f"uv_tools must install {tool_name!r} for Ansible development"
     )
