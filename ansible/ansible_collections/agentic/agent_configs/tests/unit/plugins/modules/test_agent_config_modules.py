@@ -48,27 +48,18 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
     AnsibleExitJson,
     AnsibleFailJson,
     FakeModule,
+    assert_module_fails,
+    run_module,
     set_module_args,
 )
 
 
 def _run_module(module, args: dict) -> dict:
-    """Run an Ansible module in-process and return its exit payload."""
-    set_module_args(args)
-    with pytest.raises(AnsibleExitJson) as exc:
-        module.main()
-    return exc.value.args[0]
+    return run_module(module, args)
 
 
 def _assert_fails(module, args: dict, message: str) -> None:
-    """Assert that an Ansible module fails with a matching message."""
-    set_module_args(args)
-    with pytest.raises(AnsibleFailJson) as exc:
-        module.main()
-    actual_message = exc.value.args[0]["msg"]
-    assert message in actual_message, (
-        f"expected failure message to contain {message!r}, got {actual_message!r}"
-    )
+    return assert_module_fails(module, args, message)
 
 
 @pytest.mark.parametrize(

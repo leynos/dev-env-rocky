@@ -14,6 +14,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+import pytest
 from ansible.module_utils import basic
 from ansible.module_utils.common.text.converters import to_bytes
 
@@ -57,3 +58,20 @@ class FakeModule:
         """Raise the captured failure result for helper-level assertions."""
         kwargs["failed"] = True
         raise AnsibleFailJson(kwargs)
+
+def run_module(module, args: dict) -> dict:
+    """Run an Ansible module in-process and return its exit payload."""
+    set_module_args(args)
+    with pytest.raises(AnsibleExitJson) as exc:
+        module.main()
+    return exc.value.args[0]
+
+def assert_module_fails(module, args: dict, message: str) -> None:
+    """Assert that an Ansible module fails with a message containing *message*."""
+    set_module_args(args)
+    with pytest.raises(AnsibleFailJson) as exc:
+        module.main()
+    actual_message = exc.value.args[0]["msg"]
+    assert message in actual_message, (
+        f"expected failure message to contain {message!r}, got {actual_message!r}"
+    )
