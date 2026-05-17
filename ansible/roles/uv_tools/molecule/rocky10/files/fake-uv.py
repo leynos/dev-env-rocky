@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Fake uv executable for deterministic uv_tools Molecule tests."""
 
-from __future__ import annotations
-
 import json
 import os
 import pathlib
@@ -13,7 +11,7 @@ TOOL_DIR = pathlib.Path("/root/.local/bin")
 STATE_PATH = pathlib.Path("/tmp/fake-uv-log/installed-tools.json")
 
 
-def log_command(argv: list[str]) -> None:
+def _log_command(argv: list[str]) -> None:
     """Append the fake uv invocation to the command log."""
     log_path = pathlib.Path(
         os.environ.get("UV_FAKE_LOG", "/tmp/fake-uv-log/uv-commands.jsonl")
@@ -24,20 +22,20 @@ def log_command(argv: list[str]) -> None:
         log_file.write(json.dumps(entry) + "\n")
 
 
-def read_installed_tools() -> dict[str, str]:
+def _read_installed_tools() -> dict[str, str]:
     """Read fake uv tool state from disk."""
     if not STATE_PATH.exists():
         return {}
     return json.loads(STATE_PATH.read_text(encoding="utf-8"))
 
 
-def write_installed_tools(installed_tools: dict[str, str]) -> None:
+def _write_installed_tools(installed_tools: dict[str, str]) -> None:
     """Persist fake uv tool state to disk."""
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     STATE_PATH.write_text(json.dumps(installed_tools, sort_keys=True), encoding="utf-8")
 
 
-def tool_name_from_target(target: str) -> str:
+def _tool_name_from_target(target: str) -> str:
     """Return the uv tool name represented by an install target."""
     normalized_target = target.rstrip("/")
     return normalized_target.rsplit("/", maxsplit=1)[-1].split("==", maxsplit=1)[0]
@@ -65,13 +63,13 @@ def write_shim(tool_name: str) -> None:
     )
 
 
-def install_tool(argv: list[str]) -> None:
+def _install_tool(argv: list[str]) -> None:
     """Record a fake uv tool install and create executable shims."""
     target = argv[-1]
-    tool_name = tool_name_from_target(target)
-    installed_tools = read_installed_tools()
+    tool_name = _tool_name_from_target(target)
+    installed_tools = _read_installed_tools()
     installed_tools[tool_name] = "1.0.0"
-    write_installed_tools(installed_tools)
+    _write_installed_tools(installed_tools)
 
     write_shim(tool_name)
     if "ansible-core" in requested_executables_from(argv):
@@ -81,21 +79,21 @@ def install_tool(argv: list[str]) -> None:
 def main() -> int:
     """Run the fake uv command."""
     argv = sys.argv[1:]
-    log_command(argv)
+    _log_command(argv)
 
     if argv == ["tool", "list"]:
-        for name, version in sorted(read_installed_tools().items()):
+        for name, version in sorted(_read_installed_tools().items()):
             print(f"{name} v{version}")
         return 0
 
     if len(argv) >= 3 and argv[:2] == ["tool", "install"]:
-        install_tool(argv)
+        _install_tool(argv)
         return 0
 
     if len(argv) == 3 and argv[:2] == ["tool", "uninstall"]:
-        installed_tools = read_installed_tools()
+        installed_tools = _read_installed_tools()
         installed_tools.pop(argv[2], None)
-        write_installed_tools(installed_tools)
+        _write_installed_tools(installed_tools)
         return 0
 
     print(f"unsupported fake uv invocation: {argv}", file=sys.stderr)
