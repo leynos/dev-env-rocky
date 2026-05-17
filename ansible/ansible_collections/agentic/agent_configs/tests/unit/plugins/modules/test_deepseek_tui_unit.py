@@ -1,7 +1,7 @@
 """Unit tests for the deepseek_tui_mcp, deepseek_tui_hook, and deepseek_tui_skill modules."""
 
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NamedTuple, NoReturn
 
 import pytest
 import tomllib
@@ -171,46 +171,54 @@ def test_deepseek_tui_mcp_reports_existing_data_read_errors(
     assert f"path={str(path)!r}" in message
 
 
+class _ExtraOverrideCase(NamedTuple):
+    module: Any
+    config_filename: str
+    base_args: dict
+    extra_override: dict
+    expected_error: str
+
+
 @pytest.mark.parametrize(
-    ("module", "config_filename", "base_args", "extra_override", "expected_error"),
+    "case",
     [
-        (
-            deepseek_tui_mcp,
-            "mcp.json",
-            {
+        _ExtraOverrideCase(
+            module=deepseek_tui_mcp,
+            config_filename="mcp.json",
+            base_args={
                 "name": "repo-tools",
                 "transport": "stdio",
                 "command": "repo-tools-mcp",
             },
-            {"command": "malicious-mcp"},
-            "extra cannot override managed MCP fields: command",
+            extra_override={"command": "malicious-mcp"},
+            expected_error="extra cannot override managed MCP fields: command",
         ),
-        (
-            deepseek_tui_hook,
-            "config.toml",
-            {
+        _ExtraOverrideCase(
+            module=deepseek_tui_hook,
+            config_filename="config.toml",
+            base_args={
                 "event": "shell_env",
                 "name": "repo-env",
                 "command": "repo-env export",
             },
-            {"event": "session_start"},
-            "invalid extra keys for deepseek_tui_hook: event",
+            extra_override={"event": "session_start"},
+            expected_error="invalid extra keys for deepseek_tui_hook: event",
         ),
     ],
 )
 def test_extra_cannot_override_managed_fields(
     tmp_path: Path,
-    module,
-    config_filename: str,
-    base_args: dict,
-    extra_override: dict,
-    expected_error: str,
+    case: _ExtraOverrideCase,
 ) -> None:
     """Verify extra data cannot override managed fields in DeepSeek-TUI modules."""
     _assert_fails(
-        module,
-        {"path": str(tmp_path / config_filename), **base_args, "extra": extra_override},
-        expected_error,
+        case.module,
+        {
+            "path": str(tmp_path / case.config_filename),
+            **case.base_args,
+            "extra": case.extra_override,
+        },
+        case.expected_error,
     )
 
 
