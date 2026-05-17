@@ -137,20 +137,18 @@ def test_uv_tool_check_mode_installs_with_options(
 
 
 @pytest.mark.parametrize(
-    ("installed_tools", "module_args", "run_stderr", "context"),
+    ("installed_tools", "module_args", "run_stderr"),
     [
         pytest.param(
             {},
             {"name": "ruff", "state": "present"},
             "install error",
-            "uv_tool should surface install stderr",
             id="install_fails",
         ),
         pytest.param(
             {"ruff": "0.14.0"},
             {"name": "ruff", "state": "absent"},
             "uninstall error",
-            "uv_tool should surface uninstall stderr",
             id="uninstall_fails",
         ),
     ],
@@ -160,7 +158,6 @@ def test_uv_tool_fails_when_operation_fails(
     installed_tools: dict[str, str],
     module_args: dict[str, object],
     run_stderr: str,
-    context: str,
 ) -> None:
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(
@@ -175,7 +172,7 @@ def test_uv_tool_fails_when_operation_fails(
     assert_equal(
         exc.value.args[0]["stderr"],
         run_stderr,
-        context,
+        "uv_tool should surface operation stderr",
     )
 
 

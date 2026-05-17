@@ -10,7 +10,7 @@ without allowing Ansible to terminate the interpreter.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Protocol
 
 import pytest
 
@@ -24,6 +24,12 @@ class AnsibleExitJson(Exception):
 
 class AnsibleFailJson(Exception):
     """Raised when a module calls fail_json during unit tests."""
+
+
+class _ModuleWithMain(Protocol):
+    """Protocol for modules executed through the unit-test harness."""
+
+    def main(self) -> None: ...
 
 
 def set_module_args(args: dict[str, Any]) -> None:
@@ -43,7 +49,7 @@ def fail_json(*args: Any, **kwargs: Any) -> None:
     raise AnsibleFailJson(kwargs)
 
 
-def run_module(module: Any, args: dict[str, Any]) -> dict[str, Any]:
+def run_module(module: _ModuleWithMain, args: dict[str, object]) -> dict[str, object]:
     """Call module.main() with args and return the exit payload."""
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
@@ -51,11 +57,11 @@ def run_module(module: Any, args: dict[str, Any]) -> dict[str, Any]:
     return exc.value.args[0]
 
 
-def assert_equal(actual: Any, expected: Any, context: str) -> None:
+def assert_equal(actual: object, expected: object, context: str) -> None:
     """Assert equality with a diagnostic message."""
     assert actual == expected, f"{context}: expected {expected!r}, got {actual!r}"
 
 
-def assert_is(actual: Any, expected: Any, context: str) -> None:
+def assert_is(actual: object, expected: object, context: str) -> None:
     """Assert identity with a diagnostic message."""
     assert actual is expected, f"{context}: expected {expected!r}, got {actual!r}"
