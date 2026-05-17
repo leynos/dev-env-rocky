@@ -9,7 +9,7 @@ repository and assert structural correctness without executing Ansible.
 import re
 from pathlib import Path
 
-import yaml  # type: ignore[unresolved-import]  # ty: ignore[unresolved-import]
+import yaml  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CODERABBIT_DEFAULTS = REPO_ROOT / "ansible/roles/coderabbit_cli/defaults/main.yml"
@@ -19,7 +19,12 @@ SITE_PLAYBOOK = REPO_ROOT / "ansible/site.yml"
 
 
 def flatten_tasks(tasks: list[dict]) -> list[dict]:
-    """Return top-level tasks and nested block/rescue/always tasks."""
+    """Return top-level tasks and nested block/rescue/always tasks.
+
+    Recurses into ``block``, ``rescue``, and ``always`` keys. Depth is
+    bounded by the nesting depth of the task file, which by Ansible
+    convention is shallow (typically one or two levels).
+    """
     flattened: list[dict] = []
     for task in tasks:
         flattened.append(task)
