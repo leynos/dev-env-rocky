@@ -51,9 +51,11 @@ for that script is:
 https://cli.coderabbit.ai/install.sh
 ```
 
-The role runs the installer with `CODERABBIT_INSTALL_DIR=~/.local/bin`, which
-creates both `~/.local/bin/coderabbit` and the short `~/.local/bin/cr` alias.
-It then authenticates CodeRabbit CLI with:
+The role runs the installer with
+`CODERABBIT_INSTALL_DIR={{ coderabbit_cli_install_dir }}`, which creates both
+`{{ coderabbit_cli_install_dir }}/coderabbit` and the short
+`{{ coderabbit_cli_install_dir }}/cr` alias. It then authenticates CodeRabbit
+CLI with:
 
 ```bash
 coderabbit auth login --api-key <vaulted-key>
@@ -73,8 +75,8 @@ To rotate a host's CodeRabbit API key:
    `ansible/host_vars/<hostname>/vault.yml`, for example
    `ansible/host_vars/rohga.df12.net/vault.yml`, and re-encrypt that file with
    `~/.ansible_vault_pass`.
-3. Remove `~/.coderabbit/auth.json` on the affected host if CodeRabbit CLI has
-   already been authenticated with the old key.
+3. Remove `{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json` on the affected
+   host if CodeRabbit CLI has already been authenticated with the old key.
 4. Run `make site`, or run a narrower play for the affected host.
 5. Verify that `coderabbit review --agent` runs from a git repository as the
    owner user.
@@ -83,14 +85,15 @@ The role fails with installer stdout and stderr when installation does not
 create the expected `coderabbit` executable and `cr` alias. Common remediation
 steps are to ensure the managed host has `git` and `unzip`, check network
 access to the configured CodeRabbit release URL, and remove
-`~/.local/bin/coderabbit` only when a forced reinstall is required.
+`{{ coderabbit_cli_install_dir }}/coderabbit` only when a forced reinstall is
+required.
 
 Ansible runs the role sequentially for each host connection. Parallel
 multi-host playbook execution remains isolated because every host writes under
 that host's owner-user home directory. The installer uses a private `mktemp`
-directory for downloads, so playbook-managed installation is safe across hosts;
-running the installer directly in concurrent shells for the same user is not a
-supported workflow.
+directory for downloads and same-directory atomic replacements for the
+`coderabbit` binary and `cr` alias, so direct concurrent installer runs for the
+same user leave a complete binary and alias.
 
 ## Login Shell PATH
 

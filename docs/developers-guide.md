@@ -153,19 +153,21 @@ managed host workflow:
 ## CodeRabbit CLI Role
 
 The `coderabbit_cli` Ansible role installs the CodeRabbit `coderabbit` binary
-and the `cr` alias into the managed user's `~/.local/bin` directory. The role
-copies the checked-in installer from
+and the `cr` alias into `{{ coderabbit_cli_install_dir }}`. The role copies the
+checked-in installer from
 `ansible/roles/coderabbit_cli/files/coderabbit-install.sh` instead of curling
 the installer during the play. The copied installer is executed with
 `CODERABBIT_INSTALL_DIR` set to the managed user-local bin directory and with
-`creates: ~/.local/bin/coderabbit`, so the installation task is idempotent
-after the binary exists.
+`creates: {{ coderabbit_cli_install_dir }}/coderabbit`, so the installation
+task is idempotent after the binary exists.
 
 The role authenticates the CLI by running `coderabbit auth login --api-key`
 with the host's entry in the vaulted `coderabbit_api_keys` mapping. That
-command task must keep `no_log: true` because the argv contains a secret. The
-task uses `creates: ~/.coderabbit/auth.json` so an already-authenticated CLI is
-not re-authenticated on every playbook run.
+command task must keep `no_log: true` because the command contains a secret.
+The role creates `{{ coderabbit_cli_home_dir }}/.coderabbit` with `0700`
+permissions before authentication, runs login under `umask 077`, and uses
+`creates: {{ coderabbit_cli_home_dir }}/.coderabbit/auth.json` so an
+already-authenticated CLI is not re-authenticated on every playbook run.
 
 The role has a Molecule `rocky10` scenario. The scenario installs the
 installer's RPM prerequisites, builds a local fake CodeRabbit release archive
@@ -176,10 +178,12 @@ keeps the e2e test deterministic and does not depend on CodeRabbit's public
 release service.
 
 Installer failures should remain observable without exposing secrets. The
+installer emits structured stderr lines with timestamp, stage, level, duration,
+and retry count for download, extraction, and install publication. The
 installation task captures stdout and stderr, validates the expected binary and
 alias after the installer exits, and reports those streams through a rescue
 failure message. Authentication remains a separate `no_log: true` task because
-its argv contains the vaulted API key.
+the command contains the vaulted API key.
 
 ## cursor_cli_mcp Module
 

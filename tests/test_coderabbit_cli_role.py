@@ -7,12 +7,18 @@ repository and assert structural correctness without executing Ansible.
 """
 
 import re
+import stat
+import subprocess
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import yaml  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CODERABBIT_DEFAULTS = REPO_ROOT / "ansible/roles/coderabbit_cli/defaults/main.yml"
+CODERABBIT_INSTALLER = (
+    REPO_ROOT / "ansible/roles/coderabbit_cli/files/coderabbit-install.sh"
+)
 CODERABBIT_TASKS = REPO_ROOT / "ansible/roles/coderabbit_cli/tasks/main.yml"
 MAKEFILE = REPO_ROOT / "Makefile"
 SITE_PLAYBOOK = REPO_ROOT / "ansible/site.yml"
@@ -57,6 +63,50 @@ def extract_make_target(content: str, name: str) -> str:
     return match.group("body")
 
 
+def write_release_fixture(release_root: Path) -> None:
+    """Write a local CodeRabbit release archive for installer tests."""
+    latest = release_root / "latest"
+    latest.mkdir(parents=True)
+    binary = release_root / "coderabbit"
+    binary.write_text(
+        "#!/usr/bin/env sh\n"
+        'if [ "${1:-}" = "-V" ]; then\n'
+        "  printf 'coderabbit 0.0.0-test\\n'\n"
+        "  exit 0\n"
+        "fi\n"
+        "printf 'fake coderabbit\\n'\n",
+        encoding="utf-8",
+    )
+    binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
+    with ZipFile(latest / "coderabbit-linux-x64.zip", "w", ZIP_DEFLATED) as archive:
+        archive.write(binary, "coderabbit")
+    (latest / "VERSION").write_text("v0.0.0-test\n", encoding="utf-8")
+
+
+def run_installer(
+    tmp_path: Path, release_root: Path
+) -> subprocess.CompletedProcess[str]:
+    """Run the checked-in installer against a local release fixture."""
+    install_dir = tmp_path / "home/.local/bin"
+    env = {
+        "CODERABBIT_DOWNLOAD_RETRIES": "1",
+        "CODERABBIT_DOWNLOAD_URL": release_root.as_uri(),
+        "CODERABBIT_INSTALL_DIR": str(install_dir),
+        "HOME": str(tmp_path / "home"),
+        "NO_COLOR": "1",
+        "PATH": "/usr/bin:/bin",
+    }
+    return subprocess.run(
+        ["/bin/sh", str(CODERABBIT_INSTALLER)],
+        cwd=tmp_path,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+
 def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     """Role must copy the checked-in installer and guard with creates:."""
     defaults_text = CODERABBIT_DEFAULTS.read_text()
@@ -96,6 +146,13 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     env = install_task["environment"]
     assert "CODERABBIT_INSTALL_DIR" in env
     assert "default(omit)" not in str(env)
+    install_block = extract_task(
+        CODERABBIT_TASKS.read_text(), "Install and validate CodeRabbit CLI"
+    )
+    assert (
+        "coderabbit_cli_alias.stat.lnk_source | basename == 'coderabbit'"
+        in install_block
+    )
 
 
 def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
@@ -117,16 +174,18 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
         for t in tasks
         if t.get("name") == "Check for existing CodeRabbit CLI auth file"
     )
-    argv = auth_task["ansible.builtin.command"]["argv"]
+    auth_command = auth_task["ansible.builtin.shell"]["cmd"]
 
     assert (
         "coderabbit_api_keys | default({}, true)" in defaults["coderabbit_cli_api_key"]
     )
     assert ".get(inventory_hostname, '')" in defaults["coderabbit_cli_api_key"]
-    assert "auth" in argv
-    assert "login" in argv
-    assert "--api-key" in argv
-    assert "{{ coderabbit_cli_api_key }}" in argv
+    assert "umask 077" in auth_command
+    assert "{{ coderabbit_cli_install_dir }}/coderabbit auth login --api-key" in (
+        auth_command
+    )
+    assert "{{ coderabbit_cli_api_key | quote }}" in auth_command
+    assert auth_task["ansible.builtin.shell"]["executable"] == "/bin/bash"
     assert auth_task["args"]["creates"] == (
         "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
     )
@@ -145,6 +204,24 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     assert "coderabbit_cli_auth_file.stat.exists" in credential_mode_task["when"], (
         "permission task must be gated on auth file existence, not API key presence"
     )
+
+
+def test_coderabbit_cli_role_creates_private_auth_directory() -> None:
+    """Auth directory must exist with private permissions before login."""
+    tasks = flatten_tasks(yaml.safe_load(CODERABBIT_TASKS.read_text()))
+    auth_dir_task = next(
+        task
+        for task in tasks
+        if task.get("name") == "Ensure CodeRabbit CLI auth directory exists"
+    )
+    file_args = auth_dir_task["ansible.builtin.file"]
+
+    assert file_args["path"] == "{{ coderabbit_cli_home_dir }}/.coderabbit"
+    assert file_args["state"] == "directory"
+    assert file_args["owner"] == "{{ owner_user }}"
+    assert file_args["group"] == "{{ owner_user }}"
+    assert file_args["mode"] == "0700"
+    assert auth_dir_task["when"] == "coderabbit_cli_api_key | length > 0"
 
 
 def test_coderabbit_cli_api_key_defaults_to_empty_for_missing_host() -> None:
@@ -204,6 +281,94 @@ def test_molecule_verify_asserts_coderabbit_output_and_state() -> None:
     assert "molecule-coderabbit-token' not in" in verify_content
     assert "coderabbit_auth_file.stat.mode == '0600'" in verify_content
     assert "coderabbit_auth_file.stat.pw_name == verify_owner_user" in verify_content
+    assert 'owner_user: "{{ verify_owner_user }}"' in verify_content
     assert 'coderabbit_cli_home_dir: "{{ verify_home_dir }}"' in verify_content
     assert "Rerun CodeRabbit CLI role again to verify idempotence" in verify_content
     assert "coderabbit_cli_install_result is not changed" in verify_content
+
+
+def test_installer_logs_retry_attempts_timing_and_state() -> None:
+    """Installer must emit structured retry, timing, and stage details."""
+    installer = CODERABBIT_INSTALLER.read_text()
+
+    assert "log_event()" in installer
+    assert "stage=%s level=%s duration_ms=%s retry_count=%s" in installer
+    assert "attempt $attempt for $url" in installer
+    assert "CODERABBIT_DOWNLOAD_RETRIES" in installer
+    assert 'log_event "extract" "info"' in installer
+    assert 'log_event "install" "info"' in installer
+
+
+def test_installer_publishes_binary_and_alias_atomically() -> None:
+    """Installer must replace binary and alias from same-directory temp paths."""
+    installer = CODERABBIT_INSTALLER.read_text()
+
+    assert "expand_home_dir()" in installer
+    assert r"\~*/*)" in installer
+    assert r'user_name="${user_part#\~}"' in installer
+    assert 'getent passwd "$user_name"' in installer
+    assert 'install_tmp_path="$BIN_DIR/.coderabbit.$$"' in installer
+    assert 'alias_tmp_path="$BIN_DIR/.cr.$$"' in installer
+    assert 'cp "$binary_path" "$install_tmp_path"' in installer
+    assert 'chmod 0755 "$install_tmp_path"' in installer
+    assert 'mv -f "$install_tmp_path" "$install_path"' in installer
+    assert 'ln -s "$install_path" "$alias_tmp_path"' in installer
+    assert 'mv -f "$alias_tmp_path" "$BIN_DIR/cr"' in installer
+
+
+def test_installer_reports_download_failure(tmp_path: Path) -> None:
+    """Installer must fail clearly when an archive cannot be downloaded."""
+    release_root = tmp_path / "releases"
+    (release_root / "latest").mkdir(parents=True)
+    (release_root / "latest/VERSION").write_text("v0.0.0-test\n", encoding="utf-8")
+
+    result = run_installer(tmp_path, release_root)
+
+    assert result.returncode != 0
+    assert "stage=download" in result.stderr
+    assert "level=error" in result.stderr
+    assert "retry_count=1" in result.stderr
+    assert "coderabbit-linux-x64.zip" in result.stderr
+
+
+def test_installer_succeeds_under_concurrent_execution(tmp_path: Path) -> None:
+    """Concurrent installer runs must leave a valid binary and alias."""
+    release_root = tmp_path / "releases"
+    write_release_fixture(release_root)
+
+    installer_env = {
+        "CODERABBIT_DOWNLOAD_RETRIES": "1",
+        "CODERABBIT_DOWNLOAD_URL": release_root.as_uri(),
+        "CODERABBIT_INSTALL_DIR": str(tmp_path / "home/.local/bin"),
+        "HOME": str(tmp_path / "home"),
+        "NO_COLOR": "1",
+        "PATH": "/usr/bin:/bin",
+    }
+    with (
+        subprocess.Popen(
+            ["/bin/sh", str(CODERABBIT_INSTALLER)],
+            cwd=tmp_path,
+            env=installer_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ) as first,
+        subprocess.Popen(
+            ["/bin/sh", str(CODERABBIT_INSTALLER)],
+            cwd=tmp_path,
+            env=installer_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ) as second,
+    ):
+        first_stdout, first_stderr = first.communicate(timeout=30)
+        second_stdout, second_stderr = second.communicate(timeout=30)
+    install_dir = tmp_path / "home/.local/bin"
+
+    assert first.returncode == 0, first_stdout + first_stderr
+    assert second.returncode == 0, second_stdout + second_stderr
+    assert (install_dir / "coderabbit").is_file()
+    assert (install_dir / "coderabbit").stat().st_mode & stat.S_IXUSR
+    assert (install_dir / "cr").is_symlink()
+    assert (install_dir / "cr").resolve() == install_dir / "coderabbit"
