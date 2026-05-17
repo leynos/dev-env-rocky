@@ -117,7 +117,7 @@ paths:
 """
 
 
-def validate_present_skill_params(params: dict[str, Any]) -> None:
+def _validate_present_skill_params(params: dict[str, Any]) -> None:
     """Validate skill parameters that are required only for present resources."""
     if params["state"] == "present" and not params.get("description"):
         msg = (
@@ -127,7 +127,7 @@ def validate_present_skill_params(params: dict[str, Any]) -> None:
         raise ValueError(msg)
 
 
-def build_frontmatter(
+def _build_frontmatter(
     *,
     name: str,
     description: str | None,
@@ -149,7 +149,7 @@ def build_frontmatter(
     )
 
 
-def resolve_directory(
+def _resolve_directory(
     *,
     path: str | None,
     scope: str,
@@ -191,8 +191,8 @@ def _build_argument_spec() -> dict[str, Any]:
 def _resolve_skill_directory(module: AnsibleModule, slug: str) -> str:
     """Validate params and resolve the skill directory path, failing the module on error."""
     try:
-        validate_present_skill_params(module.params)
-        return resolve_directory(
+        _validate_present_skill_params(module.params)
+        return _resolve_directory(
             path=module.params.get("path"),
             scope=module.params["scope"],
             project_dir=module.params.get("project_dir"),
@@ -260,7 +260,7 @@ def main() -> None:
         module=module,
         directory=directory,
         primary_filename="SKILL.md",
-        frontmatter=build_frontmatter(
+        frontmatter=_build_frontmatter(
             name=module.params["name"],
             description=module.params.get("description"),
             metadata=module.params.get("metadata") or {},
