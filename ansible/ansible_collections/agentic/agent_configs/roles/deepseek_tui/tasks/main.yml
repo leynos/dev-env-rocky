@@ -61,7 +61,7 @@
     value: "{{ item.value | default(omit) }}"
     state: "{{ item.state | default('present') }}"
   loop: "{{ deepseek_tui_config_values }}"
-  no_log: "{{ item.no_log | default(false) | bool }}"
+  no_log: "{{ item.no_log | default(true) | bool }}"
 
 - name: Configure DeepSeek-TUI MCP servers
   agentic.agent_configs.deepseek_tui_mcp:
@@ -83,7 +83,7 @@
     disabled_tools: "{{ item.disabled_tools | default(omit) }}"
     extra: "{{ item.extra | default(omit) }}"
   loop: "{{ deepseek_tui_mcp_servers }}"
-  no_log: "{{ item.no_log | default(false) | bool }}"
+  no_log: "{{ item.no_log | default(true) | bool }}"
 
 - name: Configure DeepSeek-TUI hooks
   agentic.agent_configs.deepseek_tui_hook:
@@ -101,7 +101,7 @@
     working_dir: "{{ item.working_dir | default(omit) }}"
     extra: "{{ item.extra | default(omit) }}"
   loop: "{{ deepseek_tui_hooks }}"
-  no_log: "{{ item.no_log | default(false) | bool }}"
+  no_log: "{{ item.no_log | default(true) | bool }}"
 
 - name: Configure DeepSeek-TUI skills
   agentic.agent_configs.deepseek_tui_skill:

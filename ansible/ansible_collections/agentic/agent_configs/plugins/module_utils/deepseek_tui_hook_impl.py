@@ -155,22 +155,30 @@ def _apply_absent_hook(
     return True
 
 
+@dataclass(frozen=True, slots=True)
+class HookChangeState:
+    """State captured before persisting hook TOML changes."""
+
+    changed: bool
+    removed_legacy_block: bool
+    existed_before: bool
+
+
 def _persist_hook_changes(
     module: AnsibleModule,
     path: str,
     data: dict[str, Any],
-    changed: bool,
-    removed_legacy_block: bool,
-    existed_before: bool,
+    hook_state: HookChangeState,
 ) -> tuple[bool, dict[str, Any], bool]:
     """Write TOML to disk (unless check mode) when pending changes exist."""
-    if changed or removed_legacy_block:
+    changed = hook_state.changed
+    if changed or hook_state.removed_legacy_block:
         if module.check_mode:
-            return True, data, existed_before
-        if removed_legacy_block:
+            return True, data, hook_state.existed_before
+        if hook_state.removed_legacy_block:
             changed = True
         write_toml_if_changed(module, path, data)
-    return changed, data, existed_before
+    return changed, data, hook_state.existed_before
 
 
 @dataclass(frozen=True, slots=True)
@@ -251,6 +259,9 @@ def manage_hook_toml(
 
     _cleanup_absent_noop(state, changed, pre_state, data)
 
-    return _persist_hook_changes(
-        module, path, data, changed, removed_legacy_block, existed_before
+    hook_state = HookChangeState(
+        changed=changed,
+        removed_legacy_block=removed_legacy_block,
+        existed_before=existed_before,
     )
+    return _persist_hook_changes(module, path, data, hook_state)
