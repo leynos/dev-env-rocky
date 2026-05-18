@@ -167,7 +167,7 @@ def _resolve_hook_path(module: AnsibleModule) -> str:
             user_path="~/.deepseek/config.toml",
             project_relative_path=str(Path(".deepseek") / "config.toml"),
         )
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         module.fail_json(
             msg=(
                 "failed to resolve DeepSeek-TUI hook path "
@@ -189,7 +189,7 @@ def _apply_hook_changes(
             desired_hook=desired,
             state=module.params["state"],
         )
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         module.fail_json(
             msg=(
                 "failed to manage DeepSeek-TUI hook "

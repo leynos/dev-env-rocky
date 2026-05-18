@@ -95,7 +95,7 @@ def apply_global_hook_options(
 def ensure_hook_toml_shape(path: str, data: object) -> dict[str, Any]:
     """Return a mutable TOML root object or raise a contextual validation error."""
     if not isinstance(data, dict):
-        raise ValueError(f"Expected TOML root object path={path!r}")
+        raise TypeError(f"Expected TOML root object path={path!r}")
     return data
 
 
@@ -103,7 +103,7 @@ def ensure_hooks_root(path: str, data: dict[str, Any]) -> dict[str, Any]:
     """Return the mutable DeepSeek-TUI hooks table."""
     hooks_root = data.setdefault("hooks", {})
     if not isinstance(hooks_root, dict):
-        raise ValueError(f"Expected 'hooks' to be a table path={path!r}")
+        raise TypeError(f"Expected 'hooks' to be a table path={path!r}")
     return hooks_root
 
 
@@ -111,7 +111,7 @@ def ensure_hook_entries(path: str, hooks_root: dict[str, Any]) -> list[object]:
     """Return the mutable hook entry list."""
     hook_entries = hooks_root.setdefault("hooks", [])
     if not isinstance(hook_entries, list):
-        raise ValueError(f"Expected 'hooks.hooks' to be a list path={path!r}")
+        raise TypeError(f"Expected 'hooks.hooks' to be a list path={path!r}")
     return hook_entries
 
 
@@ -209,12 +209,10 @@ def _hooks_root_has_global_options(hooks_root: object) -> bool:
 
 def _cleanup_absent_noop(
     state: str,
-    changed: bool,
     pre_state: _HookPreState,
     data: dict[str, Any],
 ) -> None:
     """Prune TOML containers created by setdefault when an absent hook was already missing."""
-    del changed
     if state != "absent":
         return
     hooks_root = data.get("hooks")
@@ -257,7 +255,7 @@ def manage_hook_toml(
     else:
         changed |= _apply_absent_hook(hooks_root, data, hook_entries, desired_hook)
 
-    _cleanup_absent_noop(state, changed, pre_state, data)
+    _cleanup_absent_noop(state, pre_state, data)
 
     hook_state = HookChangeState(
         changed=changed,
