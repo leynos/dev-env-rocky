@@ -93,18 +93,45 @@ def test_locked_state_update_serialises_concurrent_writes(
     tmp_path,
 ) -> None:
     monkeypatch.setattr(fake_uv, "STATE_PATH", tmp_path / "state.json")
+    first_has_lock = threading.Event()
+    release_first = threading.Event()
+    second_attempted_lock = threading.Event()
+    attempt_count_lock = threading.Lock()
+    lock_attempt_count = 0
+    original_flock = fake_uv.fcntl.flock
 
-    def insert_tool(name: str, version: str) -> None:
-        fake_uv._locked_state_update(lambda state: state.update({name: version}))
+    def observed_flock(fd, operation) -> None:
+        nonlocal lock_attempt_count
+        if operation == fake_uv.fcntl.LOCK_EX:
+            with attempt_count_lock:
+                lock_attempt_count += 1
+                if lock_attempt_count == 2:
+                    second_attempted_lock.set()
+        original_flock(fd, operation)
 
-    threads = [
-        threading.Thread(target=insert_tool, args=("ansible", "2.17.0")),
-        threading.Thread(target=insert_tool, args=("ruff", "1.0.0")),
-    ]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join()
+    monkeypatch.setattr(fake_uv.fcntl, "flock", observed_flock)
+
+    def insert_first_tool() -> None:
+        def updater(state) -> None:
+            state.update({"ansible": "2.17.0"})
+            first_has_lock.set()
+            release_first.wait(timeout=5)
+
+        fake_uv._locked_state_update(updater)
+
+    def insert_second_tool() -> None:
+        fake_uv._locked_state_update(lambda state: state.update({"ruff": "1.0.0"}))
+
+    first_thread = threading.Thread(target=insert_first_tool)
+    second_thread = threading.Thread(target=insert_second_tool)
+    first_thread.start()
+    assert first_has_lock.wait(timeout=5)
+
+    second_thread.start()
+    assert second_attempted_lock.wait(timeout=5)
+    release_first.set()
+    first_thread.join()
+    second_thread.join()
 
     assert fake_uv._read_installed_tools() == {
         "ansible": "2.17.0",
