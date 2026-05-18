@@ -29,22 +29,27 @@ class AnsibleFailJson(Exception):
 class _ModuleWithMain(Protocol):
     """Protocol for modules executed through the unit-test harness."""
 
-    def main(self) -> None: ...
+    def main(self) -> None:
+        """Run the module entry point under test."""
+        ...
 
 
 def set_module_args(args: dict[str, Any]) -> None:
+    """Serialize module arguments into Ansible's test input slot."""
     payload = json.dumps({"ANSIBLE_MODULE_ARGS": args})
     basic._ANSIBLE_ARGS = to_bytes(payload)
     basic._ANSIBLE_PROFILE = "legacy"
 
 
 def exit_json(*args: Any, **kwargs: Any) -> None:
+    """Raise an exit exception carrying the module success payload."""
     if "changed" not in kwargs:
         kwargs["changed"] = False
     raise AnsibleExitJson(kwargs)
 
 
 def fail_json(*args: Any, **kwargs: Any) -> None:
+    """Raise a failure exception carrying the module failure payload."""
     kwargs["failed"] = True
     raise AnsibleFailJson(kwargs)
 

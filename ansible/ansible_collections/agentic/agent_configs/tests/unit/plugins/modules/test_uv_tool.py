@@ -22,6 +22,7 @@ from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module
 
 
 def run_module(module: Any, args: dict[str, object]) -> dict[str, Any]:
+    """Call module.main() with args and return the exit payload."""
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
         module.main()
@@ -29,10 +30,12 @@ def run_module(module: Any, args: dict[str, object]) -> dict[str, Any]:
 
 
 def assert_equal(actual: Any, expected: Any, context: str) -> None:
+    """Assert equality with a diagnostic message."""
     assert actual == expected, f"{context}: expected {expected!r}, got {actual!r}"
 
 
 def assert_is(actual: Any, expected: Any, context: str) -> None:
+    """Assert identity with a diagnostic message."""
     assert actual is expected, f"{context}: expected {expected!r}, got {actual!r}"
 
 
@@ -40,14 +43,17 @@ class _FakeModule:
     """Minimal Ansible module stub for unit tests that bypass AnsibleModule."""
 
     def get_bin_path(self, value: str, required: bool = False) -> None:
+        """Pretend that no executable can be resolved from PATH."""
         return None
 
     def fail_json(self, **kwargs: object) -> None:
+        """Raise a module failure exception with Ansible-style payload data."""
         kwargs["failed"] = True
         raise AnsibleFailJson(kwargs)
 
 
 def test_uv_tool_parses_tool_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Parse valid entries from uv tool list output while ignoring noise."""
     monkeypatch.setattr(
         uv_tool,
         "run",
@@ -71,6 +77,7 @@ def test_uv_tool_parses_tool_list(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_uv_tool_fails_when_tool_list_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Surface command details when uv tool list fails."""
     monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "boom"))
 
     with pytest.raises(AnsibleFailJson) as exc:
@@ -85,6 +92,7 @@ def test_uv_tool_fails_when_tool_list_fails(
 
 
 def test_uv_tool_fails_when_binary_not_found() -> None:
+    """Fail the module when the configured uv executable cannot be found."""
     with pytest.raises(AnsibleFailJson) as exc:
         uv_tool.resolve_binary(_FakeModule(), "uv")
 
@@ -94,6 +102,7 @@ def test_uv_tool_fails_when_binary_not_found() -> None:
 def test_uv_tool_check_mode_installs_with_options(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Build the expected install command in check mode without running uv."""
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
     monkeypatch.setattr(
@@ -159,6 +168,7 @@ def test_uv_tool_fails_when_operation_fails(
     module_args: dict[str, object],
     run_stderr: str,
 ) -> None:
+    """Surface stderr when uv install or uninstall commands fail."""
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(
         uv_tool, "read_installed_tools", lambda module, uv_bin: installed_tools
@@ -179,6 +189,7 @@ def test_uv_tool_fails_when_operation_fails(
 def test_uv_tool_check_mode_uninstalls_existing_tool(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Build the expected uninstall command in check mode without running uv."""
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(
         uv_tool, "read_installed_tools", lambda module, uv_bin: {"ruff": "0.14.0"}
@@ -207,6 +218,7 @@ def test_uv_tool_check_mode_uninstalls_existing_tool(
 def test_uv_tool_absent_is_idempotent_when_tool_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Report no change when an absent uv tool is already missing."""
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
     monkeypatch.setattr(
@@ -235,6 +247,7 @@ def test_uv_tool_absent_is_idempotent_when_tool_missing(
 
 
 def test_uv_tool_uses_spec_over_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Prefer an explicit package spec over a versioned name target."""
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
     monkeypatch.setattr(
