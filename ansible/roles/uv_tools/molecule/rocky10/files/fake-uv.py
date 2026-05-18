@@ -53,7 +53,8 @@ def _write_installed_tools(installed_tools: dict[str, str]) -> None:
     """Persist fake uv tool state to disk."""
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = STATE_PATH.with_suffix(".tmp")
-    with tmp_path.open("w", encoding="utf-8") as state_file:
+    fd = os.open(str(tmp_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as state_file:
         state_file.write(json.dumps(installed_tools, sort_keys=True))
         state_file.flush()
         os.fsync(state_file.fileno())
@@ -65,7 +66,8 @@ def _locked_state_update(updater_fn: Callable[[dict[str, str]], None]) -> None:
     sequentially but accidental parallelism can occur."""
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     lock_path = STATE_PATH.with_suffix(".lock")
-    with lock_path.open("w", encoding="utf-8") as lock_file:
+    fd = os.open(str(lock_path), os.O_WRONLY | os.O_CREAT, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as lock_file:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         try:
             installed_tools = _read_installed_tools()
@@ -124,7 +126,13 @@ def main() -> int:
     _log_command(argv)
 
     if argv == ["tool", "list"]:
-        for name, version in sorted(_read_installed_tools().items()):
+        snapshot: dict[str, str] = {}
+
+        def _capture(installed_tools: dict[str, str]) -> None:
+            snapshot.update(installed_tools)
+
+        _locked_state_update(_capture)
+        for name, version in sorted(snapshot.items()):
             print(f"{name} v{version}")
         return 0
 
