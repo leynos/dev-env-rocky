@@ -4,9 +4,9 @@ import json
 import os
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
-import tomllib
 from ansible_collections.agentic.agent_configs.plugins.modules import (
     deepseek_tui_hook,
     deepseek_tui_mcp,
@@ -200,18 +200,13 @@ def _build_ansible_env() -> dict[str, str]:
     """Return an environment dict with Ansible collection search paths configured."""
     env = os.environ.copy()
     env["ANSIBLE_COLLECTIONS_PATH"] = str(_REPO_ROOT / "ansible/ansible_collections")
-    env["ANSIBLE_LIBRARY"] = os.pathsep.join(
-        [
-            str(
-                _REPO_ROOT
-                / "ansible/ansible_collections/agentic/agent_configs/plugins/modules"
-            ),
-            str(
-                _REPO_ROOT
-                / "ansible/ansible_collections/packaging/tools/plugins/modules"
-            ),
-        ]
-    )
+    env["ANSIBLE_LIBRARY"] = os.pathsep.join([
+        str(
+            _REPO_ROOT
+            / "ansible/ansible_collections/agentic/agent_configs/plugins/modules"
+        ),
+        str(_REPO_ROOT / "ansible/ansible_collections/packaging/tools/plugins/modules"),
+    ])
     env["ANSIBLE_MODULE_UTILS"] = str(
         _REPO_ROOT
         / "ansible/ansible_collections/agentic/agent_configs/plugins/module_utils"

@@ -1,16 +1,15 @@
 """Shared helpers for in-process Ansible module tests."""
 
+import typing as typ
 from types import ModuleType
-from typing import Protocol, cast
 
 import pytest  # ty: ignore[unresolved-import]
-from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
-    AnsibleExitJson,
-    set_module_args,
+from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules import (
+    module_test_utils,
 )
 
 
-class AnsibleModuleEntrypoint(Protocol):
+class AnsibleModuleEntrypoint(typ.Protocol):
     """Minimal protocol for modules exercised through their Ansible entrypoint."""
 
     def main(self) -> None:
@@ -22,7 +21,7 @@ def run_module(
     args: dict[str, object],
 ) -> dict[str, object]:
     """Run an Ansible module in-process and return its exit payload."""
-    set_module_args(args)
-    with pytest.raises(AnsibleExitJson) as exc:
+    module_test_utils.set_module_args(args)
+    with pytest.raises(module_test_utils.AnsibleExitJson) as exc:
         module.main()
-    return cast("dict[str, object]", exc.value.args[0])
+    return typ.cast("dict[str, object]", exc.value.args[0])
