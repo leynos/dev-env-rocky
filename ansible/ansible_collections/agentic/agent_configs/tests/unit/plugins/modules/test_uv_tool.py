@@ -145,36 +145,41 @@ def test_uv_tool_check_mode_installs_with_options(
     )
 
 
-def test_uv_tool_fails_when_install_fails(
+@pytest.mark.parametrize(
+    ("installed_tools", "module_args", "error_msg"),
+    [
+        pytest.param(
+            {},
+            {"state": "present", "name": "ruff"},
+            "install error",
+            id="install_fails",
+        ),
+        pytest.param(
+            {"ruff": "0.14.0"},
+            {"state": "absent", "name": "ruff"},
+            "uninstall error",
+            id="uninstall_fails",
+        ),
+    ],
+)
+def test_uv_tool_fails_when_operation_fails(
     monkeypatch: pytest.MonkeyPatch,
+    installed_tools: dict[str, str],
+    module_args: dict[str, str],
+    error_msg: str,
 ) -> None:
-    """Surface stderr when uv tool install fails."""
-    monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
-    monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
-    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "install error"))
-    set_module_args({"state": "present", "name": "ruff"})
-
-    with pytest.raises(AnsibleFailJson) as exc:
-        uv_tool.main()
-
-    assert exc.value.args[0]["stderr"] == "install error"
-
-
-def test_uv_tool_fails_when_uninstall_fails(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Surface stderr when uv tool uninstall fails."""
+    """Surface stderr when uv install or uninstall commands fail."""
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(
-        uv_tool, "read_installed_tools", lambda module, uv_bin: {"ruff": "0.14.0"}
+        uv_tool, "read_installed_tools", lambda module, uv_bin: installed_tools
     )
-    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "uninstall error"))
-    set_module_args({"state": "absent", "name": "ruff"})
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", error_msg))
+    set_module_args(module_args)
 
     with pytest.raises(AnsibleFailJson) as exc:
         uv_tool.main()
 
-    assert exc.value.args[0]["stderr"] == "uninstall error"
+    assert exc.value.args[0]["stderr"] == error_msg
 
 
 def test_uv_tool_check_mode_uninstalls_existing_tool(
