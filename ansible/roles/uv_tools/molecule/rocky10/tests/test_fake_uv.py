@@ -130,8 +130,11 @@ def test_locked_state_update_serialises_concurrent_writes(
     second_thread.start()
     assert second_attempted_lock.wait(timeout=5)
     release_first.set()
-    first_thread.join()
-    second_thread.join()
+    first_thread.join(timeout=5)
+    second_thread.join(timeout=5)
+
+    assert not first_thread.is_alive()
+    assert not second_thread.is_alive()
 
     assert fake_uv._read_installed_tools() == {
         "ansible": "2.17.0",
