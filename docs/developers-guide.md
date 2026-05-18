@@ -295,13 +295,13 @@ work are:
 ## Python linting
 
 Python linting is configured at the repository root so the top-level
-`Makefile` can lint both the `rust-cleanup` package and the repository-level
+`Makefile` can lint both the `rust_cleanup` package and the repository-level
 Python tests.
 
 `ruff.toml` defines the Ruff formatting and lint policy. It imports the Hecate
-rule families and localises existing exceptions with path-scoped ignores rather
+rule families and localizes existing exceptions with path-scoped ignores rather
 than suppressing the rules globally. The target version is `py312`, matching
-the `rust-cleanup` package's declared Python support.
+the `rust_cleanup` package's declared Python support.
 
 `pylintrc.toml` defines the Pylint policy under `tool.pylint` sections. The
 configuration enables a curated set of checks while keeping every other Pylint
