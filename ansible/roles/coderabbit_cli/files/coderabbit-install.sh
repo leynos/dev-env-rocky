@@ -223,7 +223,33 @@ download_file() {
     url="$1"
     output="$2"
     attempt=1
-    max_attempts="${CODERABBIT_DOWNLOAD_RETRIES:-3}"
+    rc=1
+    requested_max_attempts="${CODERABBIT_DOWNLOAD_RETRIES:-3}"
+    case "$requested_max_attempts" in
+        "")
+            max_attempts=3
+            ;;
+        -*)
+            negative_attempts="${requested_max_attempts#-}"
+            case "$negative_attempts" in
+                ""|*[!0-9]*)
+                    max_attempts=3
+                    ;;
+                *)
+                    max_attempts=1
+                    ;;
+            esac
+            ;;
+        *[!0-9]*)
+            max_attempts=3
+            ;;
+        *)
+            max_attempts="$requested_max_attempts"
+            ;;
+    esac
+    if [ "$max_attempts" -lt 1 ]; then
+        max_attempts=1
+    fi
     started_at=$(now_ms)
 
     # Debug: show what we're trying to download
@@ -322,9 +348,16 @@ install_cli() {
 
     extract_started_at=$(now_ms)
     if command -v unzip >/dev/null 2>&1; then
-        unzip -q "$temp_file" -d "$temp_dir"
+        if ! unzip -q "$temp_file" -d "$temp_dir"; then
+            print_error "Failed to extract CodeRabbit CLI archive: $temp_file"
+            log_event "extract" "error" "failed to extract CodeRabbit CLI archive" "$(elapsed_ms "$extract_started_at")" "0"
+            rm -rf "$temp_dir"
+            exit 1
+        fi
     else
         print_error "unzip is required but not available. Please install it."
+        log_event "extract" "error" "unzip is required but not available" "$(elapsed_ms "$extract_started_at")" "0"
+        rm -rf "$temp_dir"
         exit 1
     fi
     log_event "extract" "info" "extracted CodeRabbit CLI archive" "$(elapsed_ms "$extract_started_at")" "0"
