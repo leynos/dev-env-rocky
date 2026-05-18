@@ -55,7 +55,10 @@
           - coderabbit_cli_binary.stat.exists
           - coderabbit_cli_binary.stat.executable
           - coderabbit_cli_alias.stat.islnk
-          - coderabbit_cli_alias.stat.lnk_source | basename == 'coderabbit'
+          - >
+            (coderabbit_cli_alias.stat.lnk_source | realpath)
+            == (((coderabbit_cli_install_dir | expanduser) ~ '/coderabbit')
+            | realpath)
         fail_msg: >-
           CodeRabbit CLI install did not create the expected executable and
           alias under {{ coderabbit_cli_install_dir }}. stdout={{

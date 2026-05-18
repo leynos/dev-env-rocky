@@ -230,7 +230,7 @@ download_file() {
     # echo "DEBUG: URL='$url', Output='$output'" >&2
 
     while [ "$attempt" -le "$max_attempts" ]; do
-        log_event "download" "info" "attempt $attempt for $url" "$(elapsed_ms "$started_at")" "$((attempt - 1))"
+        log_event "download" "info" "attempt $attempt for CodeRabbit CLI artifact" "$(elapsed_ms "$started_at")" "$((attempt - 1))"
         if command -v curl >/dev/null 2>&1; then
             if [ -n "$output" ]; then
                 curl -fsSL --connect-timeout 15 --max-time 300 "$url" -o "$output"
@@ -249,17 +249,17 @@ download_file() {
         fi
         rc=$?
         if [ "$rc" -eq 0 ]; then
-            log_event "download" "info" "completed $url" "$(elapsed_ms "$started_at")" "$((attempt - 1))"
+            log_event "download" "info" "completed CodeRabbit CLI artifact download" "$(elapsed_ms "$started_at")" "$((attempt - 1))"
             return 0
         fi
-        log_event "download" "warning" "attempt $attempt failed for $url" "$(elapsed_ms "$started_at")" "$attempt"
+        log_event "download" "warning" "attempt $attempt failed for CodeRabbit CLI artifact" "$(elapsed_ms "$started_at")" "$attempt"
         if [ "$attempt" -lt "$max_attempts" ]; then
             sleep 1
         fi
         attempt=$((attempt + 1))
     done
 
-    log_event "download" "error" "failed $url" "$(elapsed_ms "$started_at")" "$max_attempts"
+    log_event "download" "error" "failed CodeRabbit CLI artifact download" "$(elapsed_ms "$started_at")" "$max_attempts"
     return "$rc"
 }
 
@@ -340,15 +340,22 @@ install_cli() {
     publish_started_at=$(now_ms)
     install_tmp_path="$BIN_DIR/.coderabbit.$$"
     alias_tmp_path="$BIN_DIR/.cr.$$"
-    cp "$binary_path" "$install_tmp_path"
-    chmod 0755 "$install_tmp_path"
-    mv -f "$install_tmp_path" "$install_path"
+
+    publish_error() {
+        log_event "install" "error" "$1" "$(elapsed_ms "$publish_started_at")" "0"
+        rm -f "$install_tmp_path" "$alias_tmp_path"
+        exit 1
+    }
+
+    cp "$binary_path" "$install_tmp_path" || publish_error "failed to stage CodeRabbit CLI binary"
+    chmod 0755 "$install_tmp_path" || publish_error "failed to set CodeRabbit CLI binary permissions"
+    mv -f "$install_tmp_path" "$install_path" || publish_error "failed to publish CodeRabbit CLI binary"
 
     # Cleanup handled by trap
 
     # Create symlink for 'cr' command
-    ln -s "$install_path" "$alias_tmp_path"
-    mv -f "$alias_tmp_path" "$BIN_DIR/cr"
+    ln -s "$install_path" "$alias_tmp_path" || publish_error "failed to stage CodeRabbit CLI alias"
+    mv -f "$alias_tmp_path" "$BIN_DIR/cr" || publish_error "failed to publish CodeRabbit CLI alias"
     log_event "install" "info" "published CodeRabbit CLI binary and alias" "$(elapsed_ms "$publish_started_at")" "0"
     log_event "install" "info" "completed CodeRabbit CLI install" "$(elapsed_ms "$install_started_at")" "0"
 

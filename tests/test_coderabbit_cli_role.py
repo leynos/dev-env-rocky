@@ -149,10 +149,8 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     install_block = extract_task(
         CODERABBIT_TASKS.read_text(), "Install and validate CodeRabbit CLI"
     )
-    assert (
-        "coderabbit_cli_alias.stat.lnk_source | basename == 'coderabbit'"
-        in install_block
-    )
+    assert "coderabbit_cli_alias.stat.lnk_source | realpath" in install_block
+    assert "coderabbit_cli_install_dir | expanduser" in install_block
 
 
 def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
@@ -287,33 +285,53 @@ def test_molecule_verify_asserts_coderabbit_output_and_state() -> None:
     assert "coderabbit_cli_install_result is not changed" in verify_content
 
 
-def test_installer_logs_retry_attempts_timing_and_state() -> None:
+def test_installer_logs_retry_attempts_timing_and_state(tmp_path: Path) -> None:
     """Installer must emit structured retry, timing, and stage details."""
-    installer = CODERABBIT_INSTALLER.read_text()
+    release_root = tmp_path / "releases"
+    write_release_fixture(release_root)
 
-    assert "log_event()" in installer
-    assert "stage=%s level=%s duration_ms=%s retry_count=%s" in installer
-    assert "attempt $attempt for $url" in installer
-    assert "CODERABBIT_DOWNLOAD_RETRIES" in installer
-    assert 'log_event "extract" "info"' in installer
-    assert 'log_event "install" "info"' in installer
+    result = run_installer(tmp_path, release_root)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    for stage, message in (
+        ("download", "attempt 1 for CodeRabbit CLI artifact"),
+        ("download", "completed CodeRabbit CLI artifact download"),
+        ("extract", "extracted CodeRabbit CLI archive"),
+        ("install", "published CodeRabbit CLI binary and alias"),
+        ("install", "completed CodeRabbit CLI install"),
+    ):
+        assert re.search(
+            rf"stage={stage} level=info duration_ms=\d+ retry_count=0 "
+            rf'message="{message}"',
+            result.stderr,
+        )
+    assert release_root.as_uri() not in result.stderr
 
 
-def test_installer_publishes_binary_and_alias_atomically() -> None:
+def test_installer_publishes_binary_and_alias_atomically(tmp_path: Path) -> None:
     """Installer must replace binary and alias from same-directory temp paths."""
-    installer = CODERABBIT_INSTALLER.read_text()
+    release_root = tmp_path / "releases"
+    install_dir = tmp_path / "home/.local/bin"
+    old_alias_target = tmp_path / "home/.local/bin/old-coderabbit"
+    write_release_fixture(release_root)
+    install_dir.mkdir(parents=True)
+    (install_dir / "coderabbit").write_text("stale binary\n", encoding="utf-8")
+    old_alias_target.write_text("stale alias target\n", encoding="utf-8")
+    (install_dir / "cr").symlink_to(old_alias_target)
 
-    assert "expand_home_dir()" in installer
-    assert r"\~*/*)" in installer
-    assert r'user_name="${user_part#\~}"' in installer
-    assert 'getent passwd "$user_name"' in installer
-    assert 'install_tmp_path="$BIN_DIR/.coderabbit.$$"' in installer
-    assert 'alias_tmp_path="$BIN_DIR/.cr.$$"' in installer
-    assert 'cp "$binary_path" "$install_tmp_path"' in installer
-    assert 'chmod 0755 "$install_tmp_path"' in installer
-    assert 'mv -f "$install_tmp_path" "$install_path"' in installer
-    assert 'ln -s "$install_path" "$alias_tmp_path"' in installer
-    assert 'mv -f "$alias_tmp_path" "$BIN_DIR/cr"' in installer
+    result = run_installer(tmp_path, release_root)
+    install_path = install_dir / "coderabbit"
+    alias_path = install_dir / "cr"
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert install_path.is_file()
+    assert install_path.stat().st_mode & stat.S_IXUSR
+    assert "fake coderabbit" in install_path.read_text(encoding="utf-8")
+    assert alias_path.is_symlink()
+    assert alias_path.resolve() == install_path
+    assert alias_path.resolve() != old_alias_target
+    assert 'message="published CodeRabbit CLI binary and alias"' in result.stderr
+    assert 'message="completed CodeRabbit CLI install"' in result.stderr
 
 
 def test_installer_reports_download_failure(tmp_path: Path) -> None:
@@ -328,7 +346,7 @@ def test_installer_reports_download_failure(tmp_path: Path) -> None:
     assert "stage=download" in result.stderr
     assert "level=error" in result.stderr
     assert "retry_count=1" in result.stderr
-    assert "coderabbit-linux-x64.zip" in result.stderr
+    assert release_root.as_uri() not in result.stderr
 
 
 def test_installer_succeeds_under_concurrent_execution(tmp_path: Path) -> None:
