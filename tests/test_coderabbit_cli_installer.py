@@ -6,6 +6,8 @@ import subprocess
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
+import pytest  # type: ignore[import-untyped]  # ty: ignore[unresolved-import]
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CODERABBIT_INSTALLER = (
     REPO_ROOT / "ansible/roles/coderabbit_cli/files/coderabbit-install.sh"
@@ -45,7 +47,8 @@ def run_installer(
         "NO_COLOR": "1",
         "PATH": "/usr/bin:/bin",
     }
-    return subprocess.run(
+    return subprocess.run(  # noqa: S603, RUF100
+        # The checked-in installer path and fully controlled env isolate the test.
         ["/bin/sh", str(CODERABBIT_INSTALLER)],
         cwd=tmp_path,
         env=env,
@@ -120,21 +123,43 @@ def test_installer_reports_download_failure(tmp_path: Path) -> None:
     assert release_root.as_uri() not in result.stderr
 
 
-def test_installer_normalizes_invalid_download_retries(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("retry_value", "retry_count"),
+    [("invalid", "3"), ("0", "1"), ("-2", "1")],
+)
+def test_installer_normalizes_invalid_download_retries(
+    tmp_path: Path, retry_value: str, retry_count: str
+) -> None:
     """Installer must return clear failures for invalid retry settings."""
-    expected_retry_counts = {"invalid": "3", "0": "1", "-2": "1"}
-    for retry_value, retry_count in expected_retry_counts.items():
-        release_root = tmp_path / f"releases-{retry_value}"
-        install_root = tmp_path / retry_value
-        (release_root / "latest").mkdir(parents=True)
-        install_root.mkdir()
-        (release_root / "latest/VERSION").write_text("v0.0.0-test\n", encoding="utf-8")
+    release_root = tmp_path / f"releases-{retry_value}"
+    install_root = tmp_path / retry_value
+    (release_root / "latest").mkdir(parents=True)
+    install_root.mkdir()
+    (release_root / "latest/VERSION").write_text("v0.0.0-test\n", encoding="utf-8")
 
-        result = run_installer(install_root, release_root, retry_value)
+    result = run_installer(install_root, release_root, retry_value)
 
-        assert result.returncode != 0
-        assert "stage=download" in result.stderr
-        assert f"retry_count={retry_count}" in result.stderr
+    assert result.returncode != 0
+    assert "stage=download" in result.stderr
+    assert f"retry_count={retry_count}" in result.stderr
+
+
+@pytest.mark.parametrize("collision_name", ["coderabbit", "cr"])
+def test_installer_rejects_directory_collisions(
+    tmp_path: Path, collision_name: str
+) -> None:
+    """Installer must fail before publishing into target directories."""
+    release_root = tmp_path / "releases"
+    install_dir = tmp_path / "home/.local/bin"
+    write_release_fixture(release_root)
+    (install_dir / collision_name).mkdir(parents=True)
+
+    result = run_installer(tmp_path, release_root)
+
+    assert result.returncode != 0
+    assert "stage=install" in result.stderr
+    assert "level=error" in result.stderr
+    assert f"{collision_name}" in result.stderr
 
 
 def test_installer_reports_extract_failure(tmp_path: Path) -> None:
@@ -170,7 +195,8 @@ def test_installer_succeeds_under_concurrent_execution(tmp_path: Path) -> None:
         "PATH": "/usr/bin:/bin",
     }
     with (
-        subprocess.Popen(
+        subprocess.Popen(  # noqa: S603, RUF100
+            # The checked-in installer path and fully controlled env isolate the test.
             ["/bin/sh", str(CODERABBIT_INSTALLER)],
             cwd=tmp_path,
             env=installer_env,
@@ -178,7 +204,8 @@ def test_installer_succeeds_under_concurrent_execution(tmp_path: Path) -> None:
             stderr=subprocess.PIPE,
             text=True,
         ) as first,
-        subprocess.Popen(
+        subprocess.Popen(  # noqa: S603, RUF100
+            # The checked-in installer path and fully controlled env isolate the test.
             ["/bin/sh", str(CODERABBIT_INSTALLER)],
             cwd=tmp_path,
             env=installer_env,

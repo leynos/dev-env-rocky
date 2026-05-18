@@ -127,11 +127,19 @@ expand_home_dir() {
             user_home="$HOME"
         elif command -v getent >/dev/null 2>&1; then
             user_home=$(getent passwd "$user_name" | cut -d: -f6)
+        elif [ "$(uname -s 2>/dev/null)" = "Darwin" ]; then
+            if command -v dscl >/dev/null 2>&1; then
+                user_home=$(dscl . -read "/Users/$user_name" NFSHomeDirectory 2>/dev/null | awk '{print $2}')
+            fi
+            if [ -z "$user_home" ] && command -v id >/dev/null 2>&1; then
+                user_home=$(id -P "$user_name" 2>/dev/null | cut -d: -f9)
+            fi
         fi
         if [ -n "$user_home" ]; then
             printf '%s%s\n' "$user_home" "$path_suffix"
         else
-            printf '%s\n' "$path"
+            print_error "Could not resolve home directory for user: $user_name"
+            return 1
         fi
         ;;
       *)
@@ -380,6 +388,8 @@ install_cli() {
         exit 1
     }
 
+    [ ! -d "$install_path" ] || publish_error "install target is a directory: $install_path"
+    [ ! -d "$BIN_DIR/cr" ] || publish_error "alias target is a directory: $BIN_DIR/cr"
     cp "$binary_path" "$install_tmp_path" || publish_error "failed to stage CodeRabbit CLI binary"
     chmod 0755 "$install_tmp_path" || publish_error "failed to set CodeRabbit CLI binary permissions"
     mv -f "$install_tmp_path" "$install_path" || publish_error "failed to publish CodeRabbit CLI binary"
