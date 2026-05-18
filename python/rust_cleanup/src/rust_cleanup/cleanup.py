@@ -30,9 +30,14 @@ import sys
 import time
 from pathlib import Path
 
-SKIP_DIRS = frozenset(
-    {".git", "node_modules", ".svn", ".hg", "__pycache__", ".pytest_cache"}
-)
+SKIP_DIRS = frozenset({
+    ".git",
+    "node_modules",
+    ".svn",
+    ".hg",
+    "__pycache__",
+    ".pytest_cache",
+})
 CACHEDIR_TAG = "CACHEDIR.TAG"
 TARGET_DIR = "target"
 CUTOFF_SECONDS = 24 * 60 * 60
@@ -205,8 +210,8 @@ def handle_stale_target(target_path: Path, dry_run: bool, verbose: bool) -> int:
         if verbose:
             print(f"  Failed to delete: {target_path}")
         return 0
-    else:
-        return 1
+
+    return 1
 
 
 def cleanup_target_dirs(

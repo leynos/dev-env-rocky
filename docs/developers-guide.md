@@ -357,6 +357,34 @@ work are:
 - `htop`, installed by the `packages` role to provide an interactive process
   viewer for inspecting CPU, memory, and process state.
 
+## Python linting
+
+Python linting is configured at the repository root so the top-level
+`Makefile` can lint both the `rust_cleanup` package and the repository-level
+Python tests.
+
+`ruff.toml` defines the Ruff formatting and lint policy. It imports the Hecate
+rule families and localizes existing exceptions with path-scoped ignores rather
+than suppressing the rules globally. The target version is `py312`, matching
+the `rust_cleanup` package's declared Python support.
+
+`pylintrc.toml` defines the Pylint policy under `tool.pylint` sections. The
+configuration enables a curated set of checks while keeping every other Pylint
+message disabled by default. `make lint` passes this file explicitly with
+`--rcfile=pylintrc.toml`, so the lint result does not depend on implicit Pylint
+configuration discovery.
+
+`make lint` runs both linters in order:
+
+1. `ruff check` over `PYTHON_PATHS`;
+2. `pylint-pypy` over `PYLINT_TARGETS`.
+
+Pylint runs through the pinned `pylint-pypy-shim` helper under PyPy because the
+PyPy-backed run is faster for this repository's lint pass. The shim is executed
+with `uv tool run --python pypy`, so `uv` must be available. The Makefile
+resolves `UV` to either a `uv` executable on `PATH` or `$$HOME/.local/bin/uv`,
+then validates that resolved executable before invoking the Pylint shim.
+
 ## Validation
 
 Before committing changes to these roles or modules, run:

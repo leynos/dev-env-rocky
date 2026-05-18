@@ -2,15 +2,21 @@ MDLINT ?= markdownlint-cli2
 NIXIE ?= nixie
 MDFORMAT_ALL ?= mdformat-all
 MOLECULE ?= molecule
+UV ?= $(shell command -v uv 2>/dev/null || printf '%s/.local/bin/uv' "$$HOME")
 PYTHON_PACKAGE_DIR ?= python/rust_cleanup
 PYTHON_PATHS = $(PYTHON_PACKAGE_DIR)/src $(PYTHON_PACKAGE_DIR)/tests tests
+PYLINT_TARGETS ?= $(PYTHON_PATHS)
 MARKDOWN_PATHS = AGENTS.md .rules/*.md docs/*.md ansible/roles/agent_tools/files/AGENTS.md $(PYTHON_PACKAGE_DIR)/README.md
 ANSIBLE_COLLECTIONS_ROOT = $(CURDIR)/ansible/ansible_collections
 TOOLS = ruff ty $(MDLINT) $(MDFORMAT_ALL) uv
 UV_ENV = PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 UV_CACHE_DIR=.uv-cache UV_TOOL_DIR=.uv-tools
 PYTEST_XDIST_WORKERS ?= 1
+PYLINT_PYTHON ?= pypy
+PYLINT_PYPY_SHIM_REF ?= 726d09f968b4d729ee4b29c71fc732e744854f3b
+PYLINT_PYPY_SHIM = git+https://github.com/leynos/pylint-pypy-shim.git@$(PYLINT_PYPY_SHIM_REF)
+PYLINT = $(UV_ENV) $(UV) tool run --python $(PYLINT_PYTHON) --from '$(PYLINT_PYPY_SHIM)' pylint-pypy
 
-.PHONY: help site check lint fmt check-fmt markdownlint molecule nixie test typecheck \
+.PHONY: help site check lint fmt check-fmt lint-uv markdownlint molecule nixie test typecheck \
         $(TOOLS)
 
 ANSIBLE_COLLECTIONS_PATH ?= ./ansible/ansible_collections
@@ -21,6 +27,13 @@ ANSIBLE_MODULE_UTILS ?= ./ansible/ansible_collections/agentic/agent_configs/plug
 define ensure_tool
 	@command -v $(1) >/dev/null 2>&1 || { \
 	  printf "Error: '%s' is required, but not installed\n" "$(1)" >&2; \
+	  exit 1; \
+	}
+endef
+
+define ensure_uv
+	@{ command -v "$(UV)" >/dev/null 2>&1 || test -x "$(UV)"; } || { \
+	  printf "Error: resolved uv executable '%s' was not found or is not executable\n" "$(UV)" >&2; \
 	  exit 1; \
 	}
 endef
@@ -52,8 +65,12 @@ fmt: ruff $(MDFORMAT_ALL) ## Format Python and Markdown sources
 check-fmt: ruff ## Verify Python formatting
 	ruff format --check $(PYTHON_PATHS)
 
-lint: ruff ## Run Python linters
+lint-uv: ## Verify resolved uv executable for lint
+	$(call ensure_uv)
+
+lint: ruff lint-uv ## Run Python linters
 	ruff check $(PYTHON_PATHS)
+	$(PYLINT) --rcfile=pylintrc.toml $(PYLINT_TARGETS)
 
 typecheck: uv ## Run Python typechecking
 	$(UV_ENV) uv run --directory $(PYTHON_PACKAGE_DIR) --project . --group dev --with ty ty --version
