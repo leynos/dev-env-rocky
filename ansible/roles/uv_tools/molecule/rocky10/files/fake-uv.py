@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Fake uv executable for deterministic uv_tools Molecule tests.
+"""Fake uv executable used as a deterministic Molecule fixture.
+
+The rocky10 uv_tools scenario places this script on PATH so role tasks can run
+``uv tool`` commands without downloading packages or depending on network
+access. It simulates the subset of uv needed by the role: recording installed
+tool names, returning them from ``tool list``, and creating executable shims for
+commands that Molecule verifies later.
 
 Supported commands:
 - tool list
@@ -8,7 +14,9 @@ Supported commands:
 
 The script writes JSON Lines command entries to the file named by UV_FAKE_LOG,
 or to /tmp/fake-uv-log/uv-commands.jsonl when the environment variable is not
-set. Installed tool state persists across invocations in installed-tools.json.
+set. Installed tool state persists across invocations in installed-tools.json,
+allowing separate Ansible tasks in the Molecule run to observe prior fake uv
+install and uninstall operations.
 """
 
 import fcntl
