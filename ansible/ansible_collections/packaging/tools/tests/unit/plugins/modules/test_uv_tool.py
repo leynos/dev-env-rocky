@@ -1,42 +1,24 @@
-"""Test agentic uv tool module behaviour.
+"""Test packaging.tools uv_tool module behaviour.
 
 This module validates ``uv_tool`` parsing, idempotence, and check-mode command
 construction through an in-process Ansible harness. Run it with:
 
     PYTHONPATH=ansible pytest \
-        ansible/ansible_collections/agentic/agent_configs/tests/unit/plugins/modules/test_uv_tool.py
+        ansible/ansible_collections/packaging/tools/tests/unit/plugins/modules/test_uv_tool.py
 """
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
-from ansible_collections.agentic.agent_configs.plugins.modules import uv_tool
-from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
-    AnsibleExitJson,
+from ansible_collections.packaging.tools.plugins.modules import uv_tool
+from ansible_collections.packaging.tools.tests.unit.plugins.modules.module_test_utils import (
     AnsibleFailJson,
     set_module_args,
+    run_module,
+    assert_equal,
+    assert_is,
 )
-
-
-def run_module(module: Any, args: dict[str, object]) -> dict[str, Any]:
-    """Call module.main() with args and return the exit payload."""
-    set_module_args(args)
-    with pytest.raises(AnsibleExitJson) as exc:
-        module.main()
-    return exc.value.args[0]
-
-
-def assert_equal(actual: Any, expected: Any, context: str) -> None:
-    """Assert equality with a diagnostic message."""
-    assert actual == expected, f"{context}: expected {expected!r}, got {actual!r}"
-
-
-def assert_is(actual: Any, expected: Any, context: str) -> None:
-    """Assert identity with a diagnostic message."""
-    assert actual is expected, f"{context}: expected {expected!r}, got {actual!r}"
 
 
 class _FakeModule:
@@ -63,7 +45,6 @@ def test_uv_tool_parses_tool_list(monkeypatch: pytest.MonkeyPatch) -> None:
             "",
         ),
     )
-
     assert_equal(
         uv_tool.read_installed_tools(_FakeModule(), "/usr/bin/uv"),
         {
@@ -79,10 +60,8 @@ def test_uv_tool_fails_when_tool_list_fails(
 ) -> None:
     """Surface command details when uv tool list fails."""
     monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "boom"))
-
     with pytest.raises(AnsibleFailJson) as exc:
         uv_tool.read_installed_tools(_FakeModule(), "/usr/bin/uv")
-
     assert_equal(
         exc.value.args[0]["cmd"],
         ["/usr/bin/uv", "tool", "list"],
@@ -95,7 +74,6 @@ def test_uv_tool_fails_when_binary_not_found() -> None:
     """Fail the module when the configured uv executable cannot be found."""
     with pytest.raises(AnsibleFailJson) as exc:
         uv_tool.resolve_binary(_FakeModule(), "uv")
-
     assert "Could not find executable" in exc.value.args[0]["msg"]
 
 
@@ -108,7 +86,6 @@ def test_uv_tool_check_mode_installs_with_options(
     monkeypatch.setattr(
         uv_tool, "run", lambda module, cmd: pytest.fail("check mode must not run uv")
     )
-
     result = run_module(
         uv_tool,
         {
@@ -117,11 +94,10 @@ def test_uv_tool_check_mode_installs_with_options(
             "version": "0.14.0",
             "python": "3.12",
             "with_packages": ["pytest"],
-            "with_executables_from": ["ansible-core,ansible-lint"],
+            "with_executables_from": ["ansible-core", "ansible-lint"],
             "force": True,
         },
     )
-
     assert_is(result["changed"], True, "uv_tool should report install change")
     assert_equal(
         result["target"], "ruff==0.14.0", "uv_tool should build versioned target"
@@ -138,7 +114,9 @@ def test_uv_tool_check_mode_installs_with_options(
             "--with",
             "pytest",
             "--with-executables-from",
-            "ansible-core,ansible-lint",
+            "ansible-core",
+            "--with-executables-from",
+            "ansible-lint",
             "ruff==0.14.0",
         ],
         "uv_tool should build install command with options",
@@ -146,40 +124,29 @@ def test_uv_tool_check_mode_installs_with_options(
 
 
 @pytest.mark.parametrize(
-    ("installed_tools", "module_args", "run_stderr"),
+    ("installed_tools", "state", "expected_stderr"),
     [
-        pytest.param(
-            {},
-            {"name": "ruff", "state": "present"},
-            "install error",
-            id="install_fails",
-        ),
-        pytest.param(
-            {"ruff": "0.14.0"},
-            {"name": "ruff", "state": "absent"},
-            "uninstall error",
-            id="uninstall_fails",
-        ),
+        ({}, "present", "install error"),
+        ({"ruff": "0.14.0"}, "absent", "uninstall error"),
     ],
+    ids=["install_fails", "uninstall_fails"],
 )
 def test_uv_tool_fails_when_operation_fails(
     monkeypatch: pytest.MonkeyPatch,
     installed_tools: dict[str, str],
-    module_args: dict[str, object],
-    run_stderr: str,
+    state: str,
+    expected_stderr: str,
 ) -> None:
     """Surface stderr when uv install or uninstall commands fail."""
     monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
     monkeypatch.setattr(
         uv_tool, "read_installed_tools", lambda module, uv_bin: installed_tools
     )
-    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", run_stderr))
-    set_module_args(module_args)
-
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", expected_stderr))
+    set_module_args({"name": "ruff", "state": state})
     with pytest.raises(AnsibleFailJson) as exc:
         uv_tool.main()
-
-    assert exc.value.args[0]["stderr"] == run_stderr
+    assert exc.value.args[0]["stderr"] == expected_stderr
 
 
 def test_uv_tool_check_mode_uninstalls_existing_tool(
@@ -193,7 +160,6 @@ def test_uv_tool_check_mode_uninstalls_existing_tool(
     monkeypatch.setattr(
         uv_tool, "run", lambda module, cmd: pytest.fail("check mode must not run uv")
     )
-
     result = run_module(
         uv_tool,
         {
@@ -202,7 +168,6 @@ def test_uv_tool_check_mode_uninstalls_existing_tool(
             "state": "absent",
         },
     )
-
     assert_is(result["changed"], True, "uv_tool should report uninstall change")
     assert_equal(
         result["cmd"],
@@ -222,7 +187,6 @@ def test_uv_tool_absent_is_idempotent_when_tool_missing(
         "run",
         lambda module, cmd: pytest.fail("missing tool must be idempotent"),
     )
-
     result = run_module(
         uv_tool,
         {
@@ -230,7 +194,6 @@ def test_uv_tool_absent_is_idempotent_when_tool_missing(
             "state": "absent",
         },
     )
-
     assert_equal(
         result,
         {
@@ -251,7 +214,6 @@ def test_uv_tool_uses_spec_over_version(monkeypatch: pytest.MonkeyPatch) -> None
         "run",
         lambda module, cmd: pytest.fail("check mode must not run uv"),
     )
-
     result = run_module(
         uv_tool,
         {
@@ -261,7 +223,6 @@ def test_uv_tool_uses_spec_over_version(monkeypatch: pytest.MonkeyPatch) -> None
             "spec": "git+https://example.test/nixie",
         },
     )
-
     assert_equal(
         result["target"],
         "git+https://example.test/nixie",

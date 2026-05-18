@@ -10,7 +10,9 @@ without allowing Ansible to terminate the interpreter.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Protocol
+
+import pytest
 
 from ansible.module_utils import basic
 from ansible.module_utils.common.text.converters import to_bytes
@@ -24,17 +26,47 @@ class AnsibleFailJson(Exception):
     """Raised when a module calls fail_json during unit tests."""
 
 
+class _ModuleWithMain(Protocol):
+    """Protocol for modules executed through the unit-test harness."""
+
+    def main(self) -> None:
+        """Run the module entry point under test."""
+        ...
+
+
 def set_module_args(args: dict[str, Any]) -> None:
+    """Serialize module arguments into Ansible's test input slot."""
     payload = json.dumps({"ANSIBLE_MODULE_ARGS": args})
     basic._ANSIBLE_ARGS = to_bytes(payload)
+    basic._ANSIBLE_PROFILE = "legacy"
 
 
 def exit_json(*args: Any, **kwargs: Any) -> None:
+    """Raise an exit exception carrying the module success payload."""
     if "changed" not in kwargs:
         kwargs["changed"] = False
     raise AnsibleExitJson(kwargs)
 
 
 def fail_json(*args: Any, **kwargs: Any) -> None:
+    """Raise a failure exception carrying the module failure payload."""
     kwargs["failed"] = True
     raise AnsibleFailJson(kwargs)
+
+
+def run_module(module: _ModuleWithMain, args: dict[str, object]) -> dict[str, object]:
+    """Call module.main() with args and return the exit payload."""
+    set_module_args(args)
+    with pytest.raises(AnsibleExitJson) as exc:
+        module.main()
+    return exc.value.args[0]
+
+
+def assert_equal(actual: object, expected: object, context: str) -> None:
+    """Assert equality with a diagnostic message."""
+    assert actual == expected, f"{context}: expected {expected!r}, got {actual!r}"
+
+
+def assert_is(actual: object, expected: object, context: str) -> None:
+    """Assert identity with a diagnostic message."""
+    assert actual is expected, f"{context}: expected {expected!r}, got {actual!r}"

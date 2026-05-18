@@ -1,0 +1,139 @@
+---
+- name: Verify uv_tools
+  hosts: all
+  gather_facts: false
+
+  vars:
+    fake_uv_log_dir: /tmp/fake-uv-log
+    ansible_python_tools:
+      - ansible
+      - ansible-playbook
+      - molecule
+      - ansible-lint
+    ansible_python_tool_installs:
+      - name: ansible
+        argv:
+          - tool
+          - install
+          - --with-executables-from
+          - ansible-core,ansible-lint
+          - ansible
+      - name: molecule
+        argv:
+          - tool
+          - install
+          - --with
+          - molecule-plugins[podman]
+          - molecule
+      - name: ansible-lint
+        argv:
+          - tool
+          - install
+          - ansible-lint
+    molecule_podman_install_argv:
+      - tool
+      - install
+      - --with
+      - molecule-plugins[podman]
+      - molecule
+    ansible_core_executables_install_argv:
+      - tool
+      - install
+      - --with-executables-from
+      - ansible-core,ansible-lint
+      - ansible
+
+  tasks:
+    - name: Check fake uv command log exists
+      ansible.builtin.stat:
+        path: "{{ fake_uv_log_dir }}/uv-commands.jsonl"
+      register: uv_command_log_stat
+
+    - name: Fail when fake uv command log is missing
+      ansible.builtin.fail:
+        msg: "fake uv command log was not produced at {{ fake_uv_log_dir }}/uv-commands.jsonl"
+      when: not uv_command_log_stat.stat.exists
+
+    - name: Read fake uv command log
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - >-
+            import json, pathlib;
+            path = pathlib.Path('{{ fake_uv_log_dir }}/uv-commands.jsonl');
+            print(json.dumps([json.loads(line) for line in path.read_text().splitlines() if line]))
+      changed_when: false
+      register: uv_command_log
+      when: uv_command_log_stat.stat.exists
+
+    - name: Decode fake uv command log JSON
+      ansible.builtin.set_fact:
+        uv_command_entries: "{{ uv_command_log.stdout | from_json }}"
+
+    - name: Locate Ansible uv tool install commands
+      ansible.builtin.set_fact:
+        ansible_tool_installs: >-
+          {{
+            uv_command_entries
+            | selectattr('argv', 'equalto', item.argv)
+            | list
+          }}
+      loop: "{{ ansible_python_tool_installs }}"
+      register: ansible_tool_install_results
+
+    - name: Assert Ansible uv tool install commands ran
+      ansible.builtin.assert:
+        that:
+          - item.ansible_facts.ansible_tool_installs | length == 1
+        fail_msg: "uv_tools did not install {{ item.item.name }} through uv"
+      loop: "{{ ansible_tool_install_results.results }}"
+
+    - name: Locate Molecule Podman plugin install command
+      ansible.builtin.set_fact:
+        molecule_podman_installs: >-
+          {{
+            uv_command_entries
+            | selectattr('argv', 'equalto', molecule_podman_install_argv)
+            | list
+          }}
+
+    - name: Assert Molecule installs the Podman driver plugin
+      ansible.builtin.assert:
+        that:
+          - molecule_podman_installs | length == 1
+        fail_msg: "uv_tools did not install molecule with molecule-plugins[podman]"
+
+    - name: Locate Ansible core executable install command
+      ansible.builtin.set_fact:
+        ansible_core_executable_installs: >-
+          {{
+            uv_command_entries
+            | selectattr('argv', 'equalto', ansible_core_executables_install_argv)
+            | list
+          }}
+
+    - name: Assert Ansible installs ansible-core executables
+      ansible.builtin.assert:
+        that:
+          - ansible_core_executable_installs | length == 1
+        fail_msg: "uv_tools did not link ansible-core executables for ansible"
+
+    - name: Run installed Ansible Python tools through PATH
+      ansible.builtin.command:
+        argv:
+          - "{{ item }}"
+          - --version
+      environment:
+        PATH: /root/.local/bin:/usr/local/bin:/usr/bin
+      changed_when: false
+      loop: "{{ ansible_python_tools }}"
+      register: ansible_tool_versions
+
+    - name: Assert installed Ansible Python tools are executable
+      ansible.builtin.assert:
+        that:
+          - item.rc == 0
+          - item.stdout is search(item.item ~ ' fake uv tool')
+        fail_msg: "{{ item.item }} was not executable through PATH"
+      loop: "{{ ansible_tool_versions.results }}"

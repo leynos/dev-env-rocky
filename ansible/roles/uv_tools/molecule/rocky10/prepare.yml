@@ -1,0 +1,40 @@
+---
+- name: Prepare fake uv fixture
+  hosts: all
+  gather_facts: false
+
+  vars:
+    fake_uv_log_dir: /tmp/fake-uv-log
+
+  tasks:
+    - name: Ensure uv binary directory exists
+      ansible.builtin.file:
+        path: /root/.local/bin
+        state: directory
+        mode: '0755'
+
+    - name: Install fake uv executable
+      ansible.builtin.copy:
+        src: fake-uv.py
+        dest: /root/.local/bin/uv
+        mode: '0755'
+
+    - name: Expose fake uv on PATH for the role's which check
+      ansible.builtin.file:
+        src: /root/.local/bin/uv
+        dest: /usr/local/bin/uv
+        state: link
+        force: true
+
+    - name: Install minimal which command for Rocky container fixture
+      ansible.builtin.copy:
+        dest: /usr/bin/which
+        mode: '0755'
+        content: |
+          #!/usr/bin/env sh
+          command -v "$1"
+
+    - name: Remove previous fake uv command log
+      ansible.builtin.file:
+        path: "{{ fake_uv_log_dir }}"
+        state: absent

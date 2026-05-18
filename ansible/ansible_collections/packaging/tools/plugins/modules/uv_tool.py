@@ -6,8 +6,9 @@
 The uv_tool.py Ansible module creates, updates, or removes tools managed by
 ``uv tool`` while reporting the command it ran or would run in check mode. Use
 it to keep user-level Python tooling repeatable with parameters such as
-``name``, ``version``, ``spec``, ``python``, ``with_packages``, ``force``, and
-``state``. The module resolves the ``uv`` executable, reads installed tool
+``name``, ``version``, ``spec``, ``python``, ``with_packages``,
+``with_executables_from``, ``force``, and ``state``. The module resolves the
+``uv`` executable, reads installed tool
 versions from ``uv tool list``, and applies installs or removals from ``main``.
 
 Example playbook task::
@@ -21,6 +22,7 @@ Example playbook task::
 
 from __future__ import annotations
 import re
+from typing import Any
 
 from ansible.module_utils.basic import AnsibleModule
 
@@ -69,6 +71,14 @@ options:
     type: list
     elements: str
     default: []
+  with_executables_from:
+    description:
+      - Packages passed with repeated C(--with-executables-from) options.
+      - Use this when dependency package executables must be linked into the
+        installed tool environment.
+    type: list
+    elements: str
+    default: []
   force:
     description:
       - Pass C(--force) to C(uv tool install).
@@ -91,6 +101,12 @@ EXAMPLES = r"""
     spec: git+https://example.invalid/tools/my-tool
     with_packages:
       - requests
+
+- name: Install ansible with ansible-core executables linked
+  packaging.tools.uv_tool:
+    name: ansible
+    with_executables_from:
+      - ansible-core,ansible-lint
 
 - name: Remove a uv tool
   packaging.tools.uv_tool:
@@ -138,6 +154,10 @@ UV_LIST_RE = re.compile(r"^(?P<name>\S+)\s+v(?P<version>\S+)(?:\s|$)")
 
 
 def resolve_binary(module: AnsibleModule, value: str) -> str:
+    """Resolve and return the absolute path to a named executable.
+
+    Fail the module when the executable cannot be found on PATH.
+    """
     path = module.get_bin_path(value, required=False)
     if path:
         return path
@@ -145,11 +165,20 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
 
 
 def run(module: AnsibleModule, cmd: list[str]) -> tuple[int, str, str]:
+    """Run a command using the Ansible module runner.
+
+    Return the command result as ``(rc, stdout, stderr)``.
+    """
     rc, stdout, stderr = module.run_command(cmd)
     return rc, stdout, stderr
 
 
 def read_installed_tools(module: AnsibleModule, uv_bin: str) -> dict[str, str]:
+    """Return installed uv tool versions keyed by tool name.
+
+    Run ``uv tool list``, parse matching output lines with ``UV_LIST_RE``, and
+    fail the module when the command exits with a non-zero status.
+    """
     rc, stdout, stderr = run(module, [uv_bin, "tool", "list"])
     if rc != 0:
         module.fail_json(
@@ -169,69 +198,19 @@ def read_installed_tools(module: AnsibleModule, uv_bin: str) -> dict[str, str]:
     return tools
 
 
-def main() -> None:
-    module = AnsibleModule(
-        argument_spec={
-            "name": {"type": "str", "required": True},
-            "version": {"type": "str", "required": False, "default": None},
-            "spec": {"type": "str", "required": False, "default": None},
-            "state": {"type": "str", "choices": ["present", "absent"], "default": "present"},
-            "uv_path": {"type": "str", "default": "uv"},
-            "python": {"type": "str", "required": False, "default": None},
-            "with_packages": {"type": "list", "elements": "str", "default": []},
-            "force": {"type": "bool", "default": False},
-        },
-        supports_check_mode=True,
-    )
+def build_install_target(params: dict[str, Any]) -> str:
+    """Compute the package install target string from spec, version, or name."""
+    if params["spec"]:
+        return params["spec"]
+    if params["version"]:
+        return f"{params['name']}=={params['version']}"
+    return params["name"]
 
-    params = module.params
-    uv_bin = resolve_binary(module, params["uv_path"])
 
-    installed = read_installed_tools(module, uv_bin)
-    installed_version = installed.get(params["name"])
-
-    if params["state"] == "absent":
-        if installed_version is None:
-            module.exit_json(changed=False, name=params["name"], state="absent")
-
-        cmd = [uv_bin, "tool", "uninstall", params["name"]]
-        if module.check_mode:
-            module.exit_json(changed=True, name=params["name"], state="absent", cmd=cmd)
-
-        rc, stdout, stderr = run(module, cmd)
-        if rc != 0:
-            module.fail_json(
-                msg=f"Failed to uninstall uv tool {params['name']}",
-                rc=rc,
-                stdout=stdout,
-                stderr=stderr,
-                cmd=cmd,
-            )
-
-        module.exit_json(
-            changed=True,
-            name=params["name"],
-            state="absent",
-            previous_version=installed_version,
-            cmd=cmd,
-            stdout=stdout,
-            stderr=stderr,
-        )
-
-    # state == present
-    desired_version = params["version"]
-    if installed_version is not None and (desired_version is None or installed_version == desired_version):
-        module.exit_json(
-            changed=False,
-            name=params["name"],
-            state="present",
-            installed_version=installed_version,
-        )
-
-    install_target = params["spec"]
-    if not install_target:
-        install_target = f"{params['name']}=={params['version']}" if params["version"] else params["name"]
-
+def build_install_cmd(
+    params: dict[str, Any], uv_bin: str, install_target: str
+) -> list[str]:
+    """Build the uv tool install command list from params, uv_bin, and target."""
     cmd = [uv_bin, "tool", "install"]
     if params["force"]:
         cmd.append("--force")
@@ -239,8 +218,67 @@ def main() -> None:
         cmd.extend(["--python", params["python"]])
     for pkg in params["with_packages"]:
         cmd.extend(["--with", pkg])
+    for pkg in params["with_executables_from"]:
+        cmd.extend(["--with-executables-from", pkg])
     cmd.append(install_target)
+    return cmd
 
+
+def ensure_absent(
+    module: AnsibleModule,
+    params: dict[str, Any],
+    uv_bin: str,
+    installed_version: str | None,
+) -> None:
+    """Ensure the specified uv tool is absent."""
+    if installed_version is None:
+        module.exit_json(changed=False, name=params["name"], state="absent")
+
+    cmd = [uv_bin, "tool", "uninstall", params["name"]]
+    if module.check_mode:
+        module.exit_json(changed=True, name=params["name"], state="absent", cmd=cmd)
+
+    rc, stdout, stderr = run(module, cmd)
+    if rc != 0:
+        module.fail_json(
+            msg=f"Failed to uninstall uv tool {params['name']}",
+            rc=rc,
+            stdout=stdout,
+            stderr=stderr,
+            cmd=cmd,
+        )
+
+    module.exit_json(
+        changed=True,
+        name=params["name"],
+        state="absent",
+        previous_version=installed_version,
+        cmd=cmd,
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+
+def ensure_present(
+    module: AnsibleModule,
+    params: dict[str, Any],
+    uv_bin: str,
+    installed_version: str | None,
+) -> None:
+    """Ensure the specified uv tool is present."""
+    desired_version = params["version"]
+    if installed_version is not None and (
+        desired_version is None or installed_version == desired_version
+    ):
+        module.exit_json(
+            changed=False,
+            name=params["name"],
+            state="present",
+            installed_version=installed_version,
+        )
+
+    install_target = build_install_target(params)
+    cmd = build_install_cmd(params, uv_bin, install_target)
     if module.check_mode:
         module.exit_json(
             changed=True,
@@ -273,6 +311,46 @@ def main() -> None:
         stdout=stdout,
         stderr=stderr,
     )
+
+
+def main() -> None:
+    """Run the uv_tool Ansible module.
+
+    Parse module arguments, resolve the uv binary, read installed tools, then
+    install or remove the requested tool according to the desired state.
+    """
+    module = AnsibleModule(
+        argument_spec={
+            "name": {"type": "str", "required": True},
+            "version": {"type": "str", "required": False, "default": None},
+            "spec": {"type": "str", "required": False, "default": None},
+            "state": {
+                "type": "str",
+                "choices": ["present", "absent"],
+                "default": "present",
+            },
+            "uv_path": {"type": "str", "default": "uv"},
+            "python": {"type": "str", "required": False, "default": None},
+            "with_packages": {"type": "list", "elements": "str", "default": []},
+            "with_executables_from": {
+                "type": "list",
+                "elements": "str",
+                "default": [],
+            },
+            "force": {"type": "bool", "default": False},
+        },
+        supports_check_mode=True,
+    )
+
+    params = module.params
+    uv_bin = resolve_binary(module, params["uv_path"])
+    installed = read_installed_tools(module, uv_bin)
+    installed_version = installed.get(params["name"])
+
+    if params["state"] == "absent":
+        ensure_absent(module, params, uv_bin, installed_version)
+    else:
+        ensure_present(module, params, uv_bin, installed_version)
 
 
 if __name__ == "__main__":

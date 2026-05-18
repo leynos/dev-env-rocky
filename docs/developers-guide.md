@@ -122,6 +122,33 @@ The role must appear before `agent_tools` in `site.yml`. This ordering ensures
 the `cursor-agent` binary exists before `agent_tools` configures Cursor MCP
 servers and skills.
 
+## uv_tools Role
+
+The `uv_tools` role installs user-scoped Python CLIs through
+`packaging.tools.uv_tool`. It first ensures `uv` is available, then loops over
+the required tools with the explicit `uv_path` set to
+`{{ ansible_env.HOME }}/.local/bin/uv`.
+
+The role installs Ansible workflow tools:
+
+- `ansible`, with executables linked from `ansible-core` and `ansible-lint`,
+  for ad hoc Ansible commands, `ansible-playbook`, and Python package
+  availability;
+- `molecule`, with `molecule-plugins[podman]`, for local role scenario tests
+  that use the Podman driver;
+- `ansible-lint`, for playbook and role linting.
+
+It also installs the broader Python tooling used by this repository and the
+managed host workflow:
+
+- `ruff`, for Python formatting and linting;
+- `pyrefly`, `ty`, and `basedpyright`, for Python type checking;
+- `yamllint`, for YAML linting;
+- `copier`, for project templating;
+- `mbake`, for Makefile validation;
+- `repomix`, for repository packaging;
+- `python-slugify`, for slug generation;
+- `git-donkey`, `nixie`, and `lading`, from their Leynos Git repositories.
 
 ## CodeRabbit CLI Role
 
@@ -230,6 +257,10 @@ Key parameters:
 - `version`: Exact version to install.
 - `spec`: Full install specifier; overrides the `name==version` default.
 - `with_packages`: Additional packages to include via `--with`.
+- `with_executables_from`: list of package specs whose executables are linked
+  into the tool environment via `--with-executables-from`. Use this when a
+  dependency (e.g. `ansible-core`) must expose its own commands alongside the
+  primary tool.
 - `python`: Python version or path passed to `--python`.
 - `force`: Pass `--force` to reinstall even if already present.
 - `uv_path`: Path to the `uv` executable; defaults to `uv`.
@@ -318,6 +349,8 @@ Managed hosts are expected to run Rocky Linux 10 or newer with system Python
 work are:
 
 - `python3-tomlkit`, installed by the package role for TOML round-trip writes;
+- `ansible`, `molecule`, and `ansible-lint`, installed by the `uv_tools` role
+  for Ansible command execution, role scenario testing, and linting;
 - `firecrawl-mcp`, installed globally through Bun for Codex MCP access;
 - `ninja-build`, installed by the `packages` role to provide the `ninja`
   binary for projects that use Ninja as their build backend;
@@ -363,6 +396,9 @@ make molecule
 ```
 
 The Molecule scenarios use Podman with the `quay.io/rockylinux/rockylinux:10`
-image. They cover the `node_packages` role's Bun global install flow with a
-fake Bun fixture, including trusted postinstall handling for `css-view`, and the
-`paths` role's managed PATH precedence for login shells.
+image. They cover the `uv_tools` role's uv install loop with a fake uv fixture,
+including executable PATH checks for Ansible workflow tools and the
+`molecule-plugins[podman]` dependency for Molecule's Podman driver; the
+`node_packages` role's Bun global install flow with a fake Bun fixture,
+including trusted postinstall handling for `css-view`; and the `paths` role's
+managed PATH precedence for login shells.

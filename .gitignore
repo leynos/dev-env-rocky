@@ -1,4 +1,4 @@
-ansible/group_vars/all/vault.yml
+ansible/**/vault.yml
 .grepai/
 ssh-public-keys/
 *:Zone.Identifier

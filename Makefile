@@ -64,6 +64,11 @@ markdownlint: $(MDLINT) ## Lint Markdown files
 	$(MDLINT) $(MARKDOWN_PATHS)
 
 molecule: ## Run Ansible role Molecule tests
+	cd ansible/roles/uv_tools && \
+	  ANSIBLE_COLLECTIONS_PATH=$(ANSIBLE_COLLECTIONS_ROOT):~/.ansible/collections:/usr/share/ansible/collections \
+	  ANSIBLE_LIBRARY=$(ANSIBLE_COLLECTIONS_ROOT)/packaging/tools/plugins/modules:$(ANSIBLE_COLLECTIONS_ROOT)/agentic/agent_configs/plugins/modules \
+	  ANSIBLE_MODULE_UTILS=$(ANSIBLE_COLLECTIONS_ROOT)/agentic/agent_configs/plugins/module_utils \
+	  $(MOLECULE) test -s rocky10
 	cd ansible/roles/node_packages && \
 	  ANSIBLE_COLLECTIONS_PATH=$(ANSIBLE_COLLECTIONS_ROOT):~/.ansible/collections:/usr/share/ansible/collections \
 	  ANSIBLE_LIBRARY=$(ANSIBLE_COLLECTIONS_ROOT)/packaging/tools/plugins/modules:$(ANSIBLE_COLLECTIONS_ROOT)/agentic/agent_configs/plugins/modules \

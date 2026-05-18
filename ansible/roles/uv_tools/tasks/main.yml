@@ -16,17 +16,22 @@
   uv_tool:
     name: "{{ item.name }}"
     spec: "{{ item.spec | default(omit) }}"
+    with_packages: "{{ item.with_packages | default(omit) }}"
+    with_executables_from: "{{ item.with_executables_from | default(omit) }}"
     uv_path: "{{ ansible_env.HOME }}/.local/bin/uv"
   loop:
-    - { name: ruff }
-    - { name: pyrefly }
-    - { name: ty }
-    - { name: yamllint }
-    - { name: copier }
-    - { name: mbake }
-    - { name: basedpyright }
-    - { name: repomix }
-    - { name: python-slugify }
-    - { name: git-donkey, spec: "git+https://github.com/leynos/git-donkey/" }
-    - { name: nixie, spec: "git+https://github.com/leynos/nixie/" }
-    - { name: lading, spec: "git+https://github.com/leynos/lading/" }
+    - {name: ruff}
+    - {name: ansible, with_executables_from: ["ansible-core,ansible-lint"]}
+    - {name: molecule, with_packages: ["molecule-plugins[podman]"]}
+    - {name: ansible-lint}
+    - {name: pyrefly}
+    - {name: ty}
+    - {name: yamllint}
+    - {name: copier}
+    - {name: mbake}
+    - {name: basedpyright}
+    - {name: repomix}
+    - {name: python-slugify}
+    - {name: git-donkey, spec: "git+https://github.com/leynos/git-donkey/"}
+    - {name: nixie, spec: "git+https://github.com/leynos/nixie/"}
+    - {name: lading, spec: "git+https://github.com/leynos/lading/"}
