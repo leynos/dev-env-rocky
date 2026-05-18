@@ -5,14 +5,12 @@ from __future__ import annotations
 import importlib.util
 import stat
 import threading
+from pathlib import Path
 
 import pytest
 
 
-FAKE_UV_PATH = (
-    f"{__file__.rsplit('/molecule/rocky10/tests/', maxsplit=1)[0]}"
-    "/molecule/rocky10/files/fake-uv.py"
-)
+FAKE_UV_PATH = Path(__file__).resolve().parents[1] / "files" / "fake-uv.py"
 
 
 @pytest.fixture
@@ -83,7 +81,7 @@ def test_locked_state_update_creates_lock_file_with_restricted_permissions(
     lock_path = state_path.with_suffix(".lock")
     monkeypatch.setattr(fake_uv, "STATE_PATH", state_path)
 
-    fake_uv._locked_state_update(lambda state: None)
+    fake_uv._locked_state_update(lambda _: None)
 
     assert lock_path.exists()
     assert oct(stat.S_IMODE(lock_path.stat().st_mode)) == "0o600"

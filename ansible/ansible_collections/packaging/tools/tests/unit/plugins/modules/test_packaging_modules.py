@@ -356,7 +356,9 @@ def test_uv_tool_fails_when_operation_fails(
 def test_uv_tool_fails_when_binary_not_found() -> None:
     with pytest.raises(AnsibleFailJson) as exc:
         uv_tool.resolve_binary(_FakeModule(), "uv")
-    assert "Could not find executable" in exc.value.args[0]["msg"]
+    assert "Could not find executable" in exc.value.args[0]["msg"], (
+        "Expected failure message about missing executable when resolving uv binary"
+    )
 
 
 def test_cargo_binstall_check_mode_installs_requested_version(
