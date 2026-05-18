@@ -35,14 +35,16 @@ def write_release_fixture(release_root: Path) -> None:
 
 
 def run_installer(
-    tmp_path: Path, release_root: Path, download_retries: str = "1"
+    tmp_path: Path,
+    release_root: Path,
+    download_retries: str = "1",
+    install_dir: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run the checked-in installer against a local release fixture."""
-    install_dir = tmp_path / "home/.local/bin"
     env = {
         "CODERABBIT_DOWNLOAD_RETRIES": download_retries,
         "CODERABBIT_DOWNLOAD_URL": release_root.as_uri(),
-        "CODERABBIT_INSTALL_DIR": str(install_dir),
+        "CODERABBIT_INSTALL_DIR": install_dir or str(tmp_path / "home/.local/bin"),
         "HOME": str(tmp_path / "home"),
         "NO_COLOR": "1",
         "PATH": "/usr/bin:/bin",
@@ -160,6 +162,22 @@ def test_installer_rejects_directory_collisions(
     assert "stage=install" in result.stderr
     assert "level=error" in result.stderr
     assert f"{collision_name}" in result.stderr
+
+
+def test_installer_rejects_unresolved_user_home(tmp_path: Path) -> None:
+    """Installer must fail instead of using literal unresolved ~user paths."""
+    release_root = tmp_path / "releases"
+    write_release_fixture(release_root)
+
+    result = run_installer(
+        tmp_path,
+        release_root,
+        install_dir="~coderabbit_missing_user/.local/bin",
+    )
+
+    assert result.returncode != 0
+    assert "Could not resolve home directory for user" in result.stderr
+    assert not (tmp_path / "~coderabbit_missing_user").exists()
 
 
 def test_installer_reports_extract_failure(tmp_path: Path) -> None:

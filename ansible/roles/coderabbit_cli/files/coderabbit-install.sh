@@ -302,7 +302,9 @@ create_install_dir() {
     bin_dir="${CODERABBIT_INSTALL_DIR:-$HOME/.local/bin}"
 
     # Expand tilde before Ansible validates files with the same path.
-    bin_dir=$(expand_home_dir "$bin_dir")
+    if ! bin_dir=$(expand_home_dir "$bin_dir"); then
+        exit 1
+    fi
 
     BIN_DIR="$bin_dir"
     if [ ! -d "$BIN_DIR" ]; then
