@@ -1,0 +1,25 @@
+---
+- name: Prepare DeepSeek-TUI role fixture
+  hosts: all
+  gather_facts: false
+
+  vars:
+    fake_bun_log_dir: /tmp/fake-bun-log
+
+  tasks:
+    - name: Ensure Bun binary directory exists
+      ansible.builtin.file:
+        path: /root/.bun/bin
+        state: directory
+        mode: '0755'
+
+    - name: Install fake Bun executable
+      ansible.builtin.copy:
+        src: fake-bun.py
+        dest: /root/.bun/bin/bun
+        mode: '0755'
+
+    - name: Remove previous fake Bun command log
+      ansible.builtin.file:
+        path: "{{ fake_bun_log_dir }}"
+        state: absent

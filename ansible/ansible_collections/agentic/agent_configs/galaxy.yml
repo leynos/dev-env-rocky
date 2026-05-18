@@ -4,7 +4,7 @@ version: 0.1.0
 authors:
   - OpenAI
 readme: README.md
-description: Ansible modules for Claude Code, Codex CLI, and Factory Droid configuration.
+description: Ansible modules and roles for Claude Code, Codex CLI, DeepSeek-TUI, and Factory Droid configuration.
 license:
   - MIT
 tags:

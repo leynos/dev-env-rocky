@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Protocol, cast
 
+import pytest
 from ansible.module_utils import basic
 from ansible.module_utils.common.text.converters import to_bytes
 
@@ -26,21 +27,28 @@ class AnsibleFailJson(Exception):
     """Raised when a module calls fail_json during unit tests."""
 
 
-def set_module_args(args: dict[str, Any]) -> None:
+class _ModuleEntryPoint(Protocol):
+    """Structural protocol for Ansible module modules used by tests."""
+
+    def main(self) -> None:
+        """Run the module entrypoint."""
+
+
+def set_module_args(args: dict[str, object]) -> None:
     """Serialize Ansible module arguments into the global test input slot."""
     payload = json.dumps({"ANSIBLE_MODULE_ARGS": args})
     basic._ANSIBLE_ARGS = to_bytes(payload)
     basic._ANSIBLE_PROFILE = "legacy"
 
 
-def exit_json(*args: Any, **kwargs: Any) -> None:
+def exit_json(*args: object, **kwargs: object) -> None:
     """Raise the captured successful module result instead of exiting."""
     if "changed" not in kwargs:
         kwargs["changed"] = False
     raise AnsibleExitJson(kwargs)
 
 
-def fail_json(*args: Any, **kwargs: Any) -> None:
+def fail_json(*args: object, **kwargs: object) -> None:
     """Raise the captured failed module result instead of exiting."""
     kwargs["failed"] = True
     raise AnsibleFailJson(kwargs)
@@ -51,9 +59,33 @@ class FakeModule:
     """Minimal AnsibleModule replacement for direct helper tests."""
 
     check_mode: bool = False
-    params: dict[str, Any] | None = None
+    params: dict[str, object] | None = None
 
-    def fail_json(self, **kwargs: Any) -> None:
+    def fail_json(self, **kwargs: object) -> None:
         """Raise the captured failure result for helper-level assertions."""
         kwargs["failed"] = True
         raise AnsibleFailJson(kwargs)
+
+
+def run_module(
+    module: _ModuleEntryPoint, args: dict[str, object]
+) -> dict[str, object]:
+    """Run an Ansible module in-process and return its exit payload."""
+    set_module_args(args)
+    with pytest.raises(AnsibleExitJson) as exc:
+        module.main()
+    return cast("dict[str, object]", exc.value.args[0])
+
+
+def assert_module_fails(
+    module: _ModuleEntryPoint, args: dict[str, object], message: str
+) -> None:
+    """Assert that an Ansible module fails with a message containing *message*."""
+    set_module_args(args)
+    with pytest.raises(AnsibleFailJson) as exc:
+        module.main()
+    payload = cast("dict[str, object]", exc.value.args[0])
+    actual_message = str(payload["msg"])
+    assert message in actual_message, (
+        f"expected failure message to contain {message!r}, got {actual_message!r}"
+    )

@@ -1,0 +1,119 @@
+---
+- name: Ensure DeepSeek-TUI config directory exists
+  ansible.builtin.file:
+    path: "{{ deepseek_tui_config_path | dirname }}"
+    state: directory
+    mode: '0700'
+
+- name: Ensure DeepSeek-TUI skills directory exists
+  ansible.builtin.file:
+    path: "{{ deepseek_tui_skills_dir }}"
+    state: directory
+    mode: '0700'
+
+- name: Ensure DeepSeek-TUI module Python package installer is available
+  become: "{{ ansible_user_id is not defined or ansible_user_id != 'root' }}"
+  become_user: root
+  ansible.builtin.package:
+    name: "{{ deepseek_tui_python_system_packages }}"
+    state: present
+  when: deepseek_tui_manage_python_dependencies | bool
+
+- name: Ensure DeepSeek-TUI module Python dependencies are installed
+  become: true
+  become_user: root
+  ansible.builtin.pip:
+    name: "{{ deepseek_tui_python_pip_packages }}"
+    state: present
+    extra_args: "{{ deepseek_tui_python_pip_extra_args | default(omit, true) }}"
+  when: deepseek_tui_manage_python_dependencies | bool
+
+- name: Install DeepSeek-TUI package globally via Bun
+  agentic.agent_configs.bun_global:
+    name: "{{ deepseek_tui_package_name }}"
+    bun_path: "{{ deepseek_tui_bun_path }}"
+    version: "{{ deepseek_tui_version }}"
+    trust_postinstall: true
+  when: deepseek_tui_install | bool
+
+- name: Ensure local command directory exists
+  ansible.builtin.file:
+    path: "{{ deepseek_tui_local_bin_dir }}"
+    state: directory
+    mode: '0755'
+  when: deepseek_tui_link_commands | bool
+
+- name: Link DeepSeek-TUI commands into local bin
+  ansible.builtin.file:
+    src: "{{ deepseek_tui_bun_bin_dir }}/{{ item }}"
+    dest: "{{ deepseek_tui_local_bin_dir }}/{{ item }}"
+    state: link
+    force: true
+  loop:
+    - deepseek
+    - deepseek-tui
+  when: deepseek_tui_link_commands | bool
+
+- name: Configure DeepSeek-TUI TOML values
+  agentic.agent_configs.toml_file:
+    path: "{{ item.path | default(deepseek_tui_config_path) }}"
+    key: "{{ item.key }}"
+    value: "{{ item.value | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ deepseek_tui_config_values }}"
+  no_log: "{{ item.no_log | default(true) | bool }}"
+
+- name: Configure DeepSeek-TUI MCP servers
+  agentic.agent_configs.deepseek_tui_mcp:
+    path: "{{ item.path | default(deepseek_tui_mcp_path) }}"
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    transport: "{{ item.transport | default(omit) }}"
+    command: "{{ item.command | default(omit) }}"
+    args: "{{ item.args | default(omit) }}"
+    env: "{{ item.env | default(omit) }}"
+    url: "{{ item.url | default(omit) }}"
+    disabled: "{{ item.disabled | default(omit) }}"
+    enabled: "{{ item.enabled | default(omit) }}"
+    required: "{{ item.required | default(omit) }}"
+    connect_timeout: "{{ item.connect_timeout | default(omit) }}"
+    execute_timeout: "{{ item.execute_timeout | default(omit) }}"
+    read_timeout: "{{ item.read_timeout | default(omit) }}"
+    enabled_tools: "{{ item.enabled_tools | default(omit) }}"
+    disabled_tools: "{{ item.disabled_tools | default(omit) }}"
+    extra: "{{ item.extra | default(omit) }}"
+  loop: "{{ deepseek_tui_mcp_servers }}"
+  no_log: "{{ item.no_log | default(true) | bool }}"
+
+- name: Configure DeepSeek-TUI hooks
+  agentic.agent_configs.deepseek_tui_hook:
+    path: "{{ item.path | default(deepseek_tui_config_path) }}"
+    event: "{{ item.event }}"
+    command: "{{ item.command }}"
+    name: "{{ item.name | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+    condition: "{{ item.condition | default(omit) }}"
+    timeout_secs: "{{ item.timeout_secs | default(omit) }}"
+    background: "{{ item.background | default(omit) }}"
+    continue_on_error: "{{ item.continue_on_error | default(omit) }}"
+    enabled: "{{ item.enabled | default(omit) }}"
+    default_timeout_secs: "{{ item.default_timeout_secs | default(omit) }}"
+    working_dir: "{{ item.working_dir | default(omit) }}"
+    extra: "{{ item.extra | default(omit) }}"
+  loop: "{{ deepseek_tui_hooks }}"
+  no_log: "{{ item.no_log | default(true) | bool }}"
+
+- name: Configure DeepSeek-TUI skills
+  agentic.agent_configs.deepseek_tui_skill:
+    path: "{{ item.path | default(omit) }}"
+    name: "{{ item.name }}"
+    slug: "{{ item.slug | default(omit) }}"
+    scope: "{{ item.scope | default('user') }}"
+    project_dir: "{{ item.project_dir | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+    description: "{{ item.description | default(omit) }}"
+    body: "{{ item.body | default('') }}"
+    metadata: "{{ item.metadata | default(omit) }}"
+    extra_files: "{{ item.extra_files | default(omit) }}"
+  loop: "{{ deepseek_tui_skills }}"
+  no_log: true

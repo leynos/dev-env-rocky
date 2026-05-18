@@ -215,6 +215,68 @@ Key parameters:
 - `body`: Markdown body for `SKILL.md`.
 - `scope`: `user` (default) or `project`.
 
+## DeepSeek-TUI Modules
+
+DeepSeek-TUI support is based on upstream release `v0.8.24` of
+`Hmbown/DeepSeek-TUI`, pinned at commit `cd27e6c`. The reference release
+documents `~/.deepseek/config.toml`, `~/.deepseek/mcp.json`,
+`~/.deepseek/skills`, workspace `.deepseek/config.toml`, workspace
+`.deepseek/mcp.json`, and preferred workspace `.agents/skills` discovery.
+
+The collection mirrors only the DeepSeek-TUI capabilities that have a real
+declarative file surface in that release:
+
+- `agentic.agent_configs.deepseek_tui_mcp` manages named MCP servers in the
+  native `servers` object inside `~/.deepseek/mcp.json` or
+  `.deepseek/mcp.json`. It supports stdio commands, HTTP URLs, per-server
+  timeouts, required servers, enablement flags, and tool allow/deny lists.
+- `agentic.agent_configs.deepseek_tui_hook` manages lifecycle hooks in
+  `~/.deepseek/config.toml` or `.deepseek/config.toml` under
+  `[[hooks.hooks]]`. It also preserves optional global hook settings such as
+  `[hooks].enabled` and `[hooks].default_timeout_secs`.
+- `agentic.agent_configs.deepseek_tui_skill` manages skill directories under
+  `~/.deepseek/skills/<slug>` for user scope and
+  `.agents/skills/<slug>` for project scope. The project path matches the
+  release's preferred workspace discovery order.
+
+DeepSeek-TUI has built-in slash commands such as `/mcp`, `/hooks` and
+`/config`, but release `v0.8.24` does not expose a static command-file
+directory equivalent to Claude Code commands. It also has first-class runtime
+sub-agent orchestration through tools such as `agent_spawn`, but does not expose
+a Codex-style declarative subagent registry file. Do not add command or
+subagent modules unless a future pinned release adds a stable file format for
+those surfaces.
+
+The reusable `agentic.agent_configs.deepseek_tui` role composes those modules
+with the existing `bun_global` installer. It installs pinned
+`deepseek-tui@0.8.24`, trusts the package post-install script, links the
+`deepseek` and `deepseek-tui` command shims into `~/.local/bin`, writes TOML
+defaults, and loops over MCP servers, hooks, and skills supplied by role
+variables. The role manages target-side Python dependencies by installing
+`python3-pip` and `python3-packaging` through the package manager, then
+installing `tomlkit` through `pip`; disable that with
+`deepseek_tui_manage_python_dependencies: false` only when the managed host
+already provides `tomlkit` to Ansible's Python interpreter. The role does not
+pass `pip` extra arguments by default; set
+`deepseek_tui_python_pip_extra_args` only on platforms that require an
+explicit compatibility flag such as `--break-system-packages`.
+
+Role validation lives in
+`ansible/ansible_collections/agentic/agent_configs/roles/deepseek_tui/molecule/rocky10`.
+The scenario uses Podman and a fake Bun executable so it can prove install,
+trust, command linking, config rendering, MCP rendering, skill files and
+idempotence without downloading the real package.
+
+The DeepSeek-TUI modules keep domain construction separate from Ansible command
+boundaries. Builders such as `build_server_definition()` and
+`build_hook_definition()` accept plain domain parameters and raise no Ansible
+failures. The `main()` entrypoints translate validation exceptions into
+`fail_json()` calls, add contextual fields such as path, scope, name and state,
+and emit `log_operation()` records for the state transition. Read-modify-write
+modules do not take file locks; serialize concurrent writes with Ansible
+ordering, for example `serial: 1`, when several tasks can target the same
+DeepSeek-TUI file.
+
 ## CheckModeToml Adapter
 
 `CheckModeToml` is a class in `toml_file.py` that provides a `tomlkit`
@@ -357,6 +419,15 @@ work are:
 - `htop`, installed by the `packages` role to provide an interactive process
   viewer for inspecting CPU, memory, and process state.
 
+Repository-level Python tests install transient test dependencies through the
+Makefile rather than committing a lockfile for these small harnesses. The root
+test command includes `pytest-bdd` for behaviour scenarios and `syrupy` for
+snapshot assertions, alongside `ansible-core` and `tomlkit`.
+
+The site playbook uses `community.general.git_config` for Git configuration
+tasks because current `ansible-lint` resolves the canonical fully-qualified
+collection name to that collection rather than `ansible.builtin.git_config`.
+
 ## Python linting
 
 Python linting is configured at the repository root so the top-level
@@ -406,6 +477,26 @@ ANSIBLE_MODULE_UTILS=./ansible/ansible_collections/agentic/agent_configs/plugins
 ansible-playbook -i ansible/inventory.ini ansible/site.yml --syntax-check
 ```
 
+The repository has a dedicated `.ansible-lint-site-compat.yml` compatibility
+profile scoped to legacy role task/default files that pre-date the
+DeepSeek-TUI branch. Use it explicitly for full-site playbook linting, but lint
+new collection roles directly so they do
+not inherit those legacy exclusions:
+
+```bash
+ANSIBLE_COLLECTIONS_PATH=ansible/ansible_collections \
+ansible-lint --config .ansible-lint-site-compat.yml ansible/site.yml
+```
+
+```bash
+PACKAGING_MODULES=ansible/ansible_collections/packaging/tools/plugins/modules
+AGENT_MODULES=ansible/ansible_collections/agentic/agent_configs/plugins/modules
+ANSIBLE_COLLECTIONS_PATH=ansible/ansible_collections \
+ANSIBLE_LIBRARY="${AGENT_MODULES}:${PACKAGING_MODULES}" \
+ANSIBLE_MODULE_UTILS=ansible/ansible_collections/agentic/agent_configs/plugins/module_utils \
+ansible-lint ansible/ansible_collections/agentic/agent_configs/roles/deepseek_tui
+```
+
 Run focused collection tests when editing custom modules:
 
 ```bash
@@ -414,6 +505,12 @@ uv run --with pytest --with 'ansible-core==2.18.6' --with tomlkit \
 pytest -q \
   ansible/ansible_collections/agentic/agent_configs/tests/unit/plugins/modules/test_agent_config_modules.py
 ```
+
+The root `tests/conftest.py` file patches `AnsibleModule.exit_json()` and
+`AnsibleModule.fail_json()` for in-process module tests. Keep that fixture at
+the repository-test boundary only; module code should still be exercised
+through Ansible-style `main()` entrypoints or a real `ansible-playbook`
+subprocess when behaviour crosses the functional boundary.
 
 Run the Molecule role scenarios when editing role behaviour that depends on the
 managed host shell or package-install environment:
@@ -428,5 +525,8 @@ image. They cover the `uv_tools` role's uv install loop with a fake uv fixture,
 including executable PATH checks for Ansible workflow tools and the
 `molecule-plugins[podman]` dependency for Molecule's Podman driver; the
 `node_packages` role's Bun global install flow with a fake Bun fixture,
-including trusted postinstall handling for `css-view`; and the `paths` role's
-managed PATH precedence for login shells.
+including trusted postinstall handling for `css-view`; the `paths` role's
+managed PATH precedence for login shells; and the DeepSeek-TUI role scenario,
+which uses a fake Bun fixture with file locking around its JSONL command log
+and verifies persisted package metadata plus rendered DeepSeek-TUI
+configuration after the idempotence pass.

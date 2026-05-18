@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: Leynos Project
+  description: Install and configure DeepSeek-TUI.
+  license: MIT
+  min_ansible_version: "2.18"
+dependencies: []

@@ -136,6 +136,35 @@ When implementing changes, adhere to the following testing procedures:
     pass before and after, unit tests added for new units).
   - Ensure the refactoring commit itself passes all quality gates.
 
+## Ansible Development Workflow
+
+When changing Ansible collections, modules, roles, playbooks or Molecule
+scenarios, treat the Ansible artefacts as first-class code and validate them
+with the same discipline as Python changes.
+
+- Use collection-owned modules for reusable agent configuration behaviour.
+  Prefer `ansible/ansible_collections/<namespace>/<collection>/plugins/`
+  for reusable modules and module utilities, and keep host-specific wiring in
+  roles or playbooks.
+- Add unit tests for new or changed module logic with `pytest`.
+- Add behavioural tests with `pytest-bdd` when a feature has observable
+  provisioning behaviour that should be described from the operator's point of
+  view.
+- Add snapshot tests with `syrupy` when generated configuration files,
+  structured module results or rendered role artefacts need stable reviewable
+  output.
+- Add end-to-end role coverage with Molecule and Podman for new deployment
+  roles and for playbook integrations that materially change the owner user
+  environment.
+- Run `ansible-lint` for changed roles, playbooks, and Molecule scenarios
+  before committing. Do not rely on pytest alone for Ansible YAML quality.
+- Run Molecule scenarios sequentially. Do not parallelize Molecule, lint,
+  formatting, typechecking or test gates in this repository.
+- Keep reusable role documentation in `docs/users-guide.md` and developer
+  workflow details in the developer guide current with each change.
+- After each major milestone, run `coderabbit review --agent`, address every
+  still-valid concern, and record the outcome in the relevant ExecPlan.
+
 ## Markdown Guidance
 
 - Validate Markdown files using `make markdownlint`.

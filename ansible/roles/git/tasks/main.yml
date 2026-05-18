@@ -1,60 +1,60 @@
 ---
 - name: Configure Git default branch
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: init.defaultBranch
     value: main
     scope: global
 
 - name: Configure Git merge driver for mergiraf
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: merge.mergiraf.name
     value: mergiraf
     scope: global
 
 - name: Configure Git mergiraf driver
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: merge.mergiraf.driver
     value: 'mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L'
     scope: global
 
 - name: Configure Git conflict style
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: merge.conflictStyle
     value: zdiff3
     scope: global
 
 - name: Configure Git push autoSetupRemote
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: push.autoSetupRemote
     value: "true"
     scope: global
 
 - name: Configure Git external diff tool
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: diff.external
     value: difft
     scope: global
 
 - name: Configure Git pager for diff
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: pager.diff
     value: delta
     scope: global
 
 - name: Configure Git pager for show
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: pager.show
     value: delta
     scope: global
 
 - name: Configure Git user name
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: user.name
     value: "{{ git_user_name | default(ansible_user_id) }}"
     scope: global
 
 - name: Configure Git user email
-  ansible.builtin.git_config:
+  community.general.git_config:
     name: user.email
     value: "{{ git_user_email | default(ansible_user_id ~ '@' ~ ansible_hostname) }}"
     scope: global
