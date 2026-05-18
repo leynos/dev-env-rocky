@@ -21,6 +21,7 @@ Example playbook task::
 """
 
 from __future__ import annotations
+
 import re
 from typing import Any
 
@@ -154,10 +155,8 @@ UV_LIST_RE = re.compile(r"^(?P<name>\S+)\s+v(?P<version>\S+)(?:\s|$)")
 
 
 def resolve_binary(module: AnsibleModule, value: str) -> str:
-    """Resolve and return the absolute path to a named executable.
-
-    Fail the module when the executable cannot be found on PATH.
-    """
+    """Resolve and return the absolute path to the named executable,
+    failing the module if not found."""
     path = module.get_bin_path(value, required=False)
     if path:
         return path
@@ -165,20 +164,14 @@ def resolve_binary(module: AnsibleModule, value: str) -> str:
 
 
 def run(module: AnsibleModule, cmd: list[str]) -> tuple[int, str, str]:
-    """Run a command using the Ansible module runner.
-
-    Return the command result as ``(rc, stdout, stderr)``.
-    """
+    """Run cmd via the Ansible module runner and return rc, stdout, and stderr."""
     rc, stdout, stderr = module.run_command(cmd)
     return rc, stdout, stderr
 
 
 def read_installed_tools(module: AnsibleModule, uv_bin: str) -> dict[str, str]:
-    """Return installed uv tool versions keyed by tool name.
-
-    Run ``uv tool list``, parse matching output lines with ``UV_LIST_RE``, and
-    fail the module when the command exits with a non-zero status.
-    """
+    """Run uv tool list, parse output with UV_LIST_RE, and return
+    installed uv tool versions by name."""
     rc, stdout, stderr = run(module, [uv_bin, "tool", "list"])
     if rc != 0:
         module.fail_json(
@@ -314,11 +307,8 @@ def ensure_present(
 
 
 def main() -> None:
-    """Run the uv_tool Ansible module.
-
-    Parse module arguments, resolve the uv binary, read installed tools, then
-    install or remove the requested tool according to the desired state.
-    """
+    """Parse arguments, resolve uv, read installed tools, then install
+    or remove the named tool."""
     module = AnsibleModule(
         argument_spec={
             "name": {"type": "str", "required": True},

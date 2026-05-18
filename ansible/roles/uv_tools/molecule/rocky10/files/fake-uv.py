@@ -25,8 +25,7 @@ import os
 import pathlib
 import stat
 import sys
-from collections.abc import Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 
 TOOL_DIR = pathlib.Path("/root/.local/bin")
 STATE_PATH = pathlib.Path("/tmp/fake-uv-log/installed-tools.json")
@@ -61,26 +60,16 @@ def _write_installed_tools(installed_tools: dict[str, str]) -> None:
     os.replace(tmp_path, STATE_PATH)
 
 
-@contextmanager
-def _locked_state_update() -> Iterator[dict[str, str]]:
-    """Update fake uv state under a lock.
-
-    Molecule runs tasks sequentially, but the lock guards against accidental
-    parallelism.
-
-    Yields
-    ------
-    dict[str, str]
-        Mutable installed-tool state that is written atomically when the
-        context exits.
-    """
+def _locked_state_update(updater_fn: Callable[[dict[str, str]], None]) -> None:
+    """Update fake uv state under a lock because Molecule runs tasks
+    sequentially but accidental parallelism can occur."""
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     lock_path = STATE_PATH.with_suffix(".lock")
     with lock_path.open("w", encoding="utf-8") as lock_file:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         try:
             installed_tools = _read_installed_tools()
-            yield installed_tools
+            updater_fn(installed_tools)
             _write_installed_tools(installed_tools)
         finally:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
@@ -119,8 +108,10 @@ def _install_tool(argv: list[str]) -> None:
     target = argv[-1]
     tool_name = _tool_name_from_target(target)
 
-    with _locked_state_update() as installed_tools:
+    def record_install(installed_tools: dict[str, str]) -> None:
         installed_tools[tool_name] = "1.0.0"
+
+    _locked_state_update(record_install)
 
     _write_shim(tool_name)
     if "ansible-core" in _requested_executables_from(argv):
@@ -142,8 +133,11 @@ def main() -> int:
         return 0
 
     if len(argv) == 3 and argv[:2] == ["tool", "uninstall"]:
-        with _locked_state_update() as installed_tools:
+
+        def record_uninstall(installed_tools: dict[str, str]) -> None:
             installed_tools.pop(argv[2], None)
+
+        _locked_state_update(record_uninstall)
 
         return 0
 

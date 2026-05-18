@@ -14,6 +14,7 @@ import pytest
 from ansible_collections.packaging.tools.plugins.modules import (
     bun_global,
     cargo_binstall,
+    uv_tool,
 )
 from ansible_collections.packaging.tools.tests.unit.plugins.modules.module_test_utils import (
     AnsibleFailJson,
@@ -303,6 +304,60 @@ def test_cargo_binstall_fails_when_install_list_fails(
     assert_equal(
         exc.value.args[0]["stderr"], "boom", "cargo_binstall should surface stderr"
     )
+
+
+def test_uv_tool_fails_when_tool_list_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "boom"))
+    with pytest.raises(AnsibleFailJson) as exc:
+        uv_tool.read_installed_tools(_FakeModule(), "/usr/bin/uv")
+    assert_equal(
+        exc.value.args[0]["cmd"],
+        ["/usr/bin/uv", "tool", "list"],
+        "uv_tool should report failed tool-list command",
+    )
+    assert_equal(exc.value.args[0]["stderr"], "boom", "uv_tool should surface stderr")
+
+
+def test_uv_tool_fails_when_install_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
+    monkeypatch.setattr(uv_tool, "read_installed_tools", lambda module, uv_bin: {})
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "install error"))
+    with pytest.raises(AnsibleFailJson) as exc:
+        run_module(uv_tool, {"state": "present", "name": "ruff"})
+    assert_equal(
+        exc.value.args[0]["stderr"],
+        "install error",
+        "uv_tool should surface install stderr",
+    )
+
+
+def test_uv_tool_fails_when_uninstall_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(uv_tool, "resolve_binary", lambda module, value: "/usr/bin/uv")
+    monkeypatch.setattr(
+        uv_tool, "read_installed_tools", lambda module, uv_bin: {"ruff": "0.14.0"}
+    )
+    monkeypatch.setattr(uv_tool, "run", lambda module, cmd: (1, "", "uninstall error"))
+    with pytest.raises(AnsibleFailJson) as exc:
+        run_module(uv_tool, {"state": "absent", "name": "ruff"})
+    assert_equal(
+        exc.value.args[0]["stderr"],
+        "uninstall error",
+        "uv_tool should surface uninstall stderr",
+    )
+
+
+def test_uv_tool_fails_when_binary_not_found() -> None:
+    with pytest.raises(AnsibleFailJson) as exc:
+        uv_tool.resolve_binary(_FakeModule(), "uv")
+    assert "Could not find executable" in exc.value.args[0]["msg"]
+
+
 def test_cargo_binstall_check_mode_installs_requested_version(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
