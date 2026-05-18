@@ -153,11 +153,13 @@ host profile. No role tasks should move during this roadmap item.
   `make markdownlint` failures in `Surprises & Discoveries`.
 - [x] (2026-05-18T23:03:00Z) Ran `coderabbit review --agent` and resolved its
   three in-scope prose findings.
-- [ ] Commit the approved planning artefact for review.
-- [ ] Push the branch to
+- [x] (2026-05-18T23:05:00Z) Committed the planning artefact for review.
+- [x] (2026-05-18T23:05:00Z) Pushed the branch to
   `origin/1-1-2-document-the-compatibility-rule-for-extracted-roles` and set
   upstream tracking.
-- [ ] Open a draft pull request for the pre-implementation ExecPlan.
+- [x] (2026-05-18T23:06:00Z) Opened draft pull request
+  `https://github.com/leynos/dev-env-rocky/pull/32` for the
+  pre-implementation ExecPlan.
 
 ## Surprises & discoveries
 
@@ -630,3 +632,6 @@ packages, or collection metadata should be introduced for item 1.1.2.
 - 2026-05-18T22:47:00Z: Created the initial draft plan for roadmap item 1.1.2.
   This establishes the compatibility-rule implementation path and keeps actual
   documentation changes behind the required user approval gate.
+- 2026-05-18T23:06:00Z: Updated progress after publishing the draft pull
+  request. This does not approve implementation; it records that the plan is
+  ready for review.
