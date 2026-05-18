@@ -13,15 +13,17 @@ from ansible_collections.agentic.agent_configs.plugins.module_utils.agent_config
 
 GLOBAL_HOOK_OPTION_KEYS = frozenset({"enabled", "default_timeout_secs", "working_dir"})
 
-MANAGED_KEYS = {
-    "event",
-    "command",
-    "name",
-    "condition",
-    "timeout_secs",
-    "background",
-    "continue_on_error",
-}
+MANAGED_KEYS = frozenset(
+    {
+        "event",
+        "command",
+        "name",
+        "condition",
+        "timeout_secs",
+        "background",
+        "continue_on_error",
+    }
+)
 MANAGED_HOOK_FIELDS = MANAGED_KEYS
 
 
