@@ -1,7 +1,5 @@
 """Unit tests for rust_cleanup command-line handling."""
 
-from __future__ import annotations
-
 import os
 import time
 import typing as typ
@@ -54,7 +52,7 @@ class TestMain:
         assert target.exists(), "main dry run should preserve target"
 
     def test_main_default_path(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path, monkeypatch: "pytest.MonkeyPatch"
     ) -> None:
         monkeypatch.chdir(tmp_path)
         result = main([])
