@@ -96,6 +96,11 @@ def test_coderabbit_cli_role_uses_local_installer_and_is_idempotent() -> None:
     env = install_task["environment"]
     assert "CODERABBIT_INSTALL_DIR" in env
     assert "default(omit)" not in str(env)
+    install_block = extract_task(
+        CODERABBIT_TASKS.read_text(), "Install and validate CodeRabbit CLI"
+    )
+    assert "coderabbit_cli_alias.stat.lnk_source | realpath" in install_block
+    assert "coderabbit_cli_install_dir | expanduser" in install_block
 
 
 def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
@@ -117,16 +122,18 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
         for t in tasks
         if t.get("name") == "Check for existing CodeRabbit CLI auth file"
     )
-    argv = auth_task["ansible.builtin.command"]["argv"]
+    auth_command = auth_task["ansible.builtin.shell"]["cmd"]
 
     assert (
         "coderabbit_api_keys | default({}, true)" in defaults["coderabbit_cli_api_key"]
     )
     assert ".get(inventory_hostname, '')" in defaults["coderabbit_cli_api_key"]
-    assert "auth" in argv
-    assert "login" in argv
-    assert "--api-key" in argv
-    assert "{{ coderabbit_cli_api_key }}" in argv
+    assert "umask 077" in auth_command
+    assert "{{ coderabbit_cli_install_dir }}/coderabbit auth login --api-key" in (
+        auth_command
+    )
+    assert "{{ coderabbit_cli_api_key | quote }}" in auth_command
+    assert auth_task["ansible.builtin.shell"]["executable"] == "/bin/bash"
     assert auth_task["args"]["creates"] == (
         "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
     )
@@ -145,6 +152,24 @@ def test_coderabbit_cli_role_exports_vaulted_api_key_without_logging() -> None:
     assert "coderabbit_cli_auth_file.stat.exists" in credential_mode_task["when"], (
         "permission task must be gated on auth file existence, not API key presence"
     )
+
+
+def test_coderabbit_cli_role_creates_private_auth_directory() -> None:
+    """Auth directory must exist with private permissions before login."""
+    tasks = flatten_tasks(yaml.safe_load(CODERABBIT_TASKS.read_text()))
+    auth_dir_task = next(
+        task
+        for task in tasks
+        if task.get("name") == "Ensure CodeRabbit CLI auth directory exists"
+    )
+    file_args = auth_dir_task["ansible.builtin.file"]
+
+    assert file_args["path"] == "{{ coderabbit_cli_home_dir }}/.coderabbit"
+    assert file_args["state"] == "directory"
+    assert file_args["owner"] == "{{ owner_user }}"
+    assert file_args["group"] == "{{ owner_user }}"
+    assert file_args["mode"] == "0700"
+    assert auth_dir_task["when"] == "coderabbit_cli_api_key | length > 0"
 
 
 def test_coderabbit_cli_api_key_defaults_to_empty_for_missing_host() -> None:
@@ -204,6 +229,7 @@ def test_molecule_verify_asserts_coderabbit_output_and_state() -> None:
     assert "molecule-coderabbit-token' not in" in verify_content
     assert "coderabbit_auth_file.stat.mode == '0600'" in verify_content
     assert "coderabbit_auth_file.stat.pw_name == verify_owner_user" in verify_content
+    assert 'owner_user: "{{ verify_owner_user }}"' in verify_content
     assert 'coderabbit_cli_home_dir: "{{ verify_home_dir }}"' in verify_content
     assert "Rerun CodeRabbit CLI role again to verify idempotence" in verify_content
     assert "coderabbit_cli_install_result is not changed" in verify_content

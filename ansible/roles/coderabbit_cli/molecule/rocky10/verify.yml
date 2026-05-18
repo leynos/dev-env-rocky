@@ -82,6 +82,7 @@
       ansible.builtin.include_role:
         name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
       vars:
+        owner_user: "{{ verify_owner_user }}"
         coderabbit_cli_home_dir: "{{ verify_home_dir }}"
         coderabbit_cli_installer_src: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/files/coderabbit-install.sh"
         coderabbit_cli_download_url: file:///tmp/coderabbit-releases
@@ -101,6 +102,7 @@
       ansible.builtin.include_role:
         name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
       vars:
+        owner_user: "{{ verify_owner_user }}"
         coderabbit_cli_home_dir: "{{ verify_home_dir }}"
         coderabbit_cli_installer_src: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/files/coderabbit-install.sh"
         coderabbit_cli_download_url: file:///tmp/coderabbit-releases

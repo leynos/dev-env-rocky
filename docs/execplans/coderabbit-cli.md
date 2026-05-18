@@ -185,7 +185,8 @@ to that bin directory, and declares `creates` for
 `{{ coderabbit_cli_home_dir }}/.local/bin/coderabbit` for idempotence. It then
 runs `coderabbit auth login --api-key` with
 `coderabbit_api_keys[inventory_hostname]` and `no_log: true`, using
-`creates: ~/.coderabbit/auth.json` to avoid repeated authentication.
+`creates: {{ coderabbit_cli_home_dir }}/.coderabbit/auth.json` to avoid
+repeated authentication.
 
 Third, wire `coderabbit_cli` into the user-environment role list in
 `ansible/site.yml` before `agent_tools`. Add Python regression tests that

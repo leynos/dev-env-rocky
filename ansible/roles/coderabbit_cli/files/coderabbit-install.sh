@@ -22,6 +22,7 @@
 #   CODERABBIT_VERSION      - Override version to install (e.g., "v1.2.3")
 #   CODERABBIT_DOWNLOAD_URL - Override base download URL (default: https://cli.coderabbit.ai/releases)
 #   CODERABBIT_INSTALL_DIR  - Override install directory (default: ~/.local/bin)
+#   CODERABBIT_DOWNLOAD_RETRIES - Override download attempts (default: 3)
 #
 # SUPPORTED PLATFORMS:
 #   - Linux x64, ARM64
@@ -68,6 +69,83 @@ EOF
 print_path_update_failure() {
     profile_path="$1"
     print_warning "Failed to update PATH in $profile_path. Add $BIN_DIR to your PATH manually."
+}
+
+log_event() {
+    stage="$1"
+    level="$2"
+    message="$3"
+    duration_ms="${4:-0}"
+    retry_count="${5:-0}"
+    timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    printf '%s stage=%s level=%s duration_ms=%s retry_count=%s message="%s"\n' \
+        "$timestamp" "$stage" "$level" "$duration_ms" "$retry_count" "$message" >&2
+}
+
+now_ms() {
+    if command -v date >/dev/null 2>&1; then
+        date '+%s%3N' 2>/dev/null || {
+            seconds=$(date '+%s')
+            printf '%s000\n' "$seconds"
+        }
+    else
+        printf '0\n'
+    fi
+}
+
+elapsed_ms() {
+    started_at="$1"
+    finished_at=$(now_ms)
+    if [ "$started_at" -gt 0 ] 2>/dev/null && [ "$finished_at" -ge "$started_at" ] 2>/dev/null; then
+        printf '%s\n' "$((finished_at - started_at))"
+    else
+        printf '0\n'
+    fi
+}
+
+expand_home_dir() {
+    path="$1"
+    case "$path" in
+      \~)
+        printf '%s\n' "$HOME"
+        ;;
+      \~/*)
+        printf '%s/%s\n' "$HOME" "${path#~/}"
+        ;;
+      \~*/*)
+        user_part="${path%%/*}"
+        user_name="${user_part#\~}"
+        path_suffix="${path#"$user_part"}"
+        user_home=''
+        case "$user_name" in
+          *[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-]*|'')
+            printf '%s\n' "$path"
+            return 0
+            ;;
+        esac
+        if [ "$user_name" = "$(id -un 2>/dev/null)" ]; then
+            user_home="$HOME"
+        elif command -v getent >/dev/null 2>&1; then
+            user_home=$(getent passwd "$user_name" | cut -d: -f6)
+        elif [ "$(uname -s 2>/dev/null)" = "Darwin" ]; then
+            if command -v dscl >/dev/null 2>&1; then
+                user_home=$(dscl . -read "/Users/$user_name" NFSHomeDirectory 2>/dev/null | awk '{print $2}')
+            fi
+            if [ -z "$user_home" ] && command -v id >/dev/null 2>&1; then
+                user_home=$(id -P "$user_name" 2>/dev/null | cut -d: -f9)
+            fi
+        fi
+        if [ -n "$user_home" ]; then
+            printf '%s%s\n' "$user_home" "$path_suffix"
+        else
+            print_error "Could not resolve home directory for user: $user_name"
+            return 1
+        fi
+        ;;
+      *)
+        printf '%s\n' "$path"
+        ;;
+    esac
 }
 
 # Show CodeRabbit logo
@@ -152,38 +230,81 @@ detect_platform() {
 download_file() {
     url="$1"
     output="$2"
+    attempt=1
+    rc=1
+    requested_max_attempts="${CODERABBIT_DOWNLOAD_RETRIES:-3}"
+    case "$requested_max_attempts" in
+        "")
+            max_attempts=3
+            ;;
+        -*)
+            negative_attempts="${requested_max_attempts#-}"
+            case "$negative_attempts" in
+                ""|*[!0-9]*)
+                    max_attempts=3
+                    ;;
+                *)
+                    max_attempts=1
+                    ;;
+            esac
+            ;;
+        *[!0-9]*)
+            max_attempts=3
+            ;;
+        *)
+            max_attempts="$requested_max_attempts"
+            ;;
+    esac
+    if [ "$max_attempts" -lt 1 ]; then
+        max_attempts=1
+    fi
+    started_at=$(now_ms)
 
     # Debug: show what we're trying to download
     # echo "DEBUG: URL='$url', Output='$output'" >&2
 
-    if command -v curl >/dev/null 2>&1; then
-        if [ -n "$output" ]; then
-            curl -fsSL --connect-timeout 15 --max-time 300 --retry 3 "$url" -o "$output"
+    while [ "$attempt" -le "$max_attempts" ]; do
+        log_event "download" "info" "attempt $attempt for CodeRabbit CLI artifact" "$(elapsed_ms "$started_at")" "$((attempt - 1))"
+        if command -v curl >/dev/null 2>&1; then
+            if [ -n "$output" ]; then
+                curl -fsSL --connect-timeout 15 --max-time 300 "$url" -o "$output"
+            else
+                curl -fsSL --connect-timeout 15 --max-time 300 "$url"
+            fi
+        elif command -v wget >/dev/null 2>&1; then
+            if [ -n "$output" ]; then
+                wget -q --timeout=15 --tries=1 "$url" -O "$output"
+            else
+                wget -q --timeout=15 --tries=1 "$url" -O -
+            fi
         else
-            curl -fsSL --connect-timeout 15 --max-time 300 --retry 3 "$url"
+            print_error "Neither curl nor wget is available. Please install one of them."
+            return 1
         fi
-    elif command -v wget >/dev/null 2>&1; then
-        if [ -n "$output" ]; then
-            wget -q --timeout=15 --tries=3 "$url" -O "$output"
-        else
-            wget -q --timeout=15 --tries=3 "$url" -O -
+        rc=$?
+        if [ "$rc" -eq 0 ]; then
+            log_event "download" "info" "completed CodeRabbit CLI artifact download" "$(elapsed_ms "$started_at")" "$((attempt - 1))"
+            return 0
         fi
-    else
-        print_error "Neither curl nor wget is available. Please install one of them."
-        return 1
-    fi
+        log_event "download" "warning" "attempt $attempt failed for CodeRabbit CLI artifact" "$(elapsed_ms "$started_at")" "$attempt"
+        if [ "$attempt" -lt "$max_attempts" ]; then
+            sleep 1
+        fi
+        attempt=$((attempt + 1))
+    done
+
+    log_event "download" "error" "failed CodeRabbit CLI artifact download" "$(elapsed_ms "$started_at")" "$max_attempts"
+    return "$rc"
 }
 
 # Create install directory if it doesn't exist
 create_install_dir() {
     bin_dir="${CODERABBIT_INSTALL_DIR:-$HOME/.local/bin}"
 
-    # Expand tilde if present
-    case "$bin_dir" in
-      "~")        bin_dir="$HOME" ;;
-      "~/"*)      bin_dir="$HOME/${bin_dir#~/}" ;;
-      *)          : ;;
-    esac
+    # Expand tilde before Ansible validates files with the same path.
+    if ! bin_dir=$(expand_home_dir "$bin_dir"); then
+        exit 1
+    fi
 
     BIN_DIR="$bin_dir"
     if [ ! -d "$BIN_DIR" ]; then
@@ -197,6 +318,7 @@ create_install_dir() {
 install_cli() {
     base_url="${CODERABBIT_DOWNLOAD_URL:-https://cli.coderabbit.ai/releases}"
     install_path="$BIN_DIR/coderabbit"
+    install_started_at=$(now_ms)
 
     if [ -n "$CODERABBIT_VERSION" ]; then
         # Pinned version — download from the versioned folder
@@ -234,12 +356,21 @@ install_cli() {
         exit 1
     fi
 
+    extract_started_at=$(now_ms)
     if command -v unzip >/dev/null 2>&1; then
-        unzip -q "$temp_file" -d "$temp_dir"
+        if ! unzip -q "$temp_file" -d "$temp_dir"; then
+            print_error "Failed to extract CodeRabbit CLI archive: $temp_file"
+            log_event "extract" "error" "failed to extract CodeRabbit CLI archive" "$(elapsed_ms "$extract_started_at")" "0"
+            rm -rf "$temp_dir"
+            exit 1
+        fi
     else
         print_error "unzip is required but not available. Please install it."
+        log_event "extract" "error" "unzip is required but not available" "$(elapsed_ms "$extract_started_at")" "0"
+        rm -rf "$temp_dir"
         exit 1
     fi
+    log_event "extract" "info" "extracted CodeRabbit CLI archive" "$(elapsed_ms "$extract_started_at")" "0"
 
     # Find the binary in the extracted files
     binary_path="$temp_dir/coderabbit"
@@ -249,13 +380,29 @@ install_cli() {
     fi
 
     print_status "Installing to $install_path"
-    mv "$binary_path" "$install_path"
-    chmod +x "$install_path"
+    publish_started_at=$(now_ms)
+    install_tmp_path="$BIN_DIR/.coderabbit.$$"
+    alias_tmp_path="$BIN_DIR/.cr.$$"
+
+    publish_error() {
+        log_event "install" "error" "$1" "$(elapsed_ms "$publish_started_at")" "0"
+        rm -f "$install_tmp_path" "$alias_tmp_path"
+        exit 1
+    }
+
+    [ ! -d "$install_path" ] || publish_error "install target is a directory: $install_path"
+    [ ! -d "$BIN_DIR/cr" ] || publish_error "alias target is a directory: $BIN_DIR/cr"
+    cp "$binary_path" "$install_tmp_path" || publish_error "failed to stage CodeRabbit CLI binary"
+    chmod 0755 "$install_tmp_path" || publish_error "failed to set CodeRabbit CLI binary permissions"
+    mv -f "$install_tmp_path" "$install_path" || publish_error "failed to publish CodeRabbit CLI binary"
 
     # Cleanup handled by trap
 
     # Create symlink for 'cr' command
-    ln -sf "$install_path" "$BIN_DIR/cr"
+    ln -s "$install_path" "$alias_tmp_path" || publish_error "failed to stage CodeRabbit CLI alias"
+    mv -f "$alias_tmp_path" "$BIN_DIR/cr" || publish_error "failed to publish CodeRabbit CLI alias"
+    log_event "install" "info" "published CodeRabbit CLI binary and alias" "$(elapsed_ms "$publish_started_at")" "0"
+    log_event "install" "info" "completed CodeRabbit CLI install" "$(elapsed_ms "$install_started_at")" "0"
 
 }
 

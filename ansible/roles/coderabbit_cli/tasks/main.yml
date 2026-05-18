@@ -55,7 +55,10 @@
           - coderabbit_cli_binary.stat.exists
           - coderabbit_cli_binary.stat.executable
           - coderabbit_cli_alias.stat.islnk
-          - coderabbit_cli_alias.stat.lnk_source == coderabbit_cli_install_dir ~ '/coderabbit'
+          - >
+            (coderabbit_cli_alias.stat.lnk_source | realpath)
+            == (((coderabbit_cli_install_dir | expanduser) ~ '/coderabbit')
+            | realpath)
         fail_msg: >-
           CodeRabbit CLI install did not create the expected executable and
           alias under {{ coderabbit_cli_install_dir }}. stdout={{
@@ -72,17 +75,25 @@
 
 - name: Debug CodeRabbit CLI install output
   ansible.builtin.debug:
-    msg: "{{ coderabbit_cli_install_result.stdout_lines | default([]) }}"
+    msg: "{{ coderabbit_cli_install_result.stderr_lines | default([]) }}"
   when: coderabbit_cli_install_result is changed
 
+- name: Ensure CodeRabbit CLI auth directory exists
+  ansible.builtin.file:
+    path: "{{ coderabbit_cli_home_dir }}/.coderabbit"
+    state: directory
+    owner: "{{ owner_user }}"
+    group: "{{ owner_user }}"
+    mode: '0700'
+  when: coderabbit_cli_api_key | length > 0
+
 - name: Authenticate CodeRabbit CLI with vaulted API key
-  ansible.builtin.command:
-    argv:
-      - "{{ coderabbit_cli_install_dir }}/coderabbit"
-      - auth
-      - login
-      - --api-key
-      - "{{ coderabbit_cli_api_key }}"
+  ansible.builtin.shell:
+    cmd: >-
+      umask 077 &&
+      {{ coderabbit_cli_install_dir }}/coderabbit auth login --api-key
+      {{ coderabbit_cli_api_key | quote }}
+    executable: /bin/bash
   args:
     creates: "{{ coderabbit_cli_home_dir }}/.coderabbit/auth.json"
   no_log: true
