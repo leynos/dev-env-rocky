@@ -45,9 +45,8 @@ attempt to manipulate Claude's local per-project MCP storage inside
 DeepSeek-TUI modules are based on upstream release `v0.8.24`. They manage the
 file-backed surfaces that release exposes: `~/.deepseek/mcp.json`,
 `~/.deepseek/config.toml`, and DeepSeek-compatible skill directories. Runtime
-slash commands and sub-agent orchestration are not represented as modules
-because that release does not expose a static command-file or subagent registry
-format.
+slash commands and subagent orchestration are not represented as modules because
+that release does not expose a static command-file or subagent registry format.
 
 ## Example
 

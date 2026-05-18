@@ -156,7 +156,7 @@ with the same discipline as Python changes.
 - Add end-to-end role coverage with Molecule and Podman for new deployment
   roles and for playbook integrations that materially change the owner user
   environment.
-- Run `ansible-lint` for changed roles, playbooks and Molecule scenarios
+- Run `ansible-lint` for changed roles, playbooks, and Molecule scenarios
   before committing. Do not rely on pytest alone for Ansible YAML quality.
 - Run Molecule scenarios sequentially. Do not parallelize Molecule, lint,
   formatting, typechecking or test gates in this repository.

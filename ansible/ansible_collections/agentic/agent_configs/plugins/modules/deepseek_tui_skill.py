@@ -2,7 +2,7 @@
 """Manage DeepSeek-TUI skill directories.
 
 This module performs read-modify-write updates across a skill directory.
-Serialise parallel writes externally, for example by running the play with
+Serialize parallel writes externally, for example by running the play with
 ``serial: 1`` when several hosts or tasks can target the same directory.
 """
 

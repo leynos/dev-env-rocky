@@ -54,19 +54,19 @@ def test_deepseek_tui_generated_configuration_matches_snapshot(
     )
 
     generated = {
-        "config.toml": (deepseek_home / "config.toml").read_text(),
+        "config.toml": (deepseek_home / "config.toml").read_text(encoding="utf-8"),
         "mcp.json": json.dumps(
-            json.loads((deepseek_home / "mcp.json").read_text()),
+            json.loads((deepseek_home / "mcp.json").read_text(encoding="utf-8")),
             indent=2,
             sort_keys=True,
         )
         + "\n",
         "skills/repo-reviewer/SKILL.md": (
             deepseek_home / "skills" / "repo-reviewer" / "SKILL.md"
-        ).read_text(),
+        ).read_text(encoding="utf-8"),
         "skills/repo-reviewer/references/checklist.md": (
             deepseek_home / "skills" / "repo-reviewer" / "references" / "checklist.md"
-        ).read_text(),
+        ).read_text(encoding="utf-8"),
     }
 
     assert generated == snapshot
