@@ -1,4 +1,15 @@
-"""Behavioural tests for the checked-in CodeRabbit CLI installer."""
+"""Behavioural tests for the checked-in CodeRabbit CLI installer.
+
+Fixtures build local release archives so the shell installer can run without
+network access. Helpers execute the checked-in script with isolated
+environment variables, while tests assert observable installer behaviour:
+structured logs, retry normalisation, extraction failures, install-path
+resolution, atomic publication, and concurrent execution.
+
+These tests complement ``test_coderabbit_cli_role.py``. The role tests inspect
+Ansible wiring and YAML structure; this module executes the installer that the
+role copies and invokes, proving the role's script-level contract directly.
+"""
 
 import re
 import stat
