@@ -129,6 +129,7 @@ def test_uv_tool_check_mode_installs_with_options(
         ({}, "present", "install error"),
         ({"ruff": "0.14.0"}, "absent", "uninstall error"),
     ],
+    ids=["install_fails", "uninstall_fails"],
 )
 def test_uv_tool_fails_when_operation_fails(
     monkeypatch: pytest.MonkeyPatch,
@@ -145,15 +146,7 @@ def test_uv_tool_fails_when_operation_fails(
     set_module_args({"name": "ruff", "state": state})
     with pytest.raises(AnsibleFailJson) as exc:
         uv_tool.main()
-    context = (
-        f"uv_tool should surface "
-        f"{'install' if state == 'present' else 'uninstall'} stderr"
-    )
-    assert_equal(
-        exc.value.args[0]["stderr"],
-        expected_stderr,
-        context,
-    )
+    assert exc.value.args[0]["stderr"] == expected_stderr
 
 
 def test_uv_tool_check_mode_uninstalls_existing_tool(
