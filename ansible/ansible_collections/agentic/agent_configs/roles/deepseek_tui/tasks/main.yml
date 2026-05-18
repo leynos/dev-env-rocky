@@ -20,6 +20,8 @@
   when: deepseek_tui_manage_python_dependencies | bool
 
 - name: Ensure DeepSeek-TUI module Python dependencies are installed
+  become: true
+  become_user: root
   ansible.builtin.pip:
     name: "{{ deepseek_tui_python_pip_packages }}"
     state: present

@@ -1,11 +1,12 @@
 """Unit tests for the deepseek_tui_mcp, deepseek_tui_hook, and deepseek_tui_skill modules."""
 
-from pathlib import Path
+import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping, NoReturn
+from pathlib import Path
+from typing import NoReturn
 
 import pytest
-import tomllib
 from ansible_collections.agentic.agent_configs.plugins.modules import (
     deepseek_tui_hook,
     deepseek_tui_mcp,
@@ -13,18 +14,23 @@ from ansible_collections.agentic.agent_configs.plugins.modules import (
 )
 from ansible_collections.agentic.agent_configs.tests.unit.plugins.modules.module_test_utils import (
     AnsibleFailJson,
+    _ModuleEntryPoint,
     assert_module_fails,
     run_module,
     set_module_args,
 )
 
 
-def _run_module(module, args: Mapping[str, Any]) -> dict:
-    return run_module(module, args)
+def _run_module(
+    module: _ModuleEntryPoint, args: Mapping[str, object]
+) -> dict[str, object]:
+    return run_module(module, dict(args))
 
 
-def _assert_fails(module, args: Mapping[str, Any], message: str) -> None:
-    return assert_module_fails(module, args, message)
+def _assert_fails(
+    module: _ModuleEntryPoint, args: Mapping[str, object], message: str
+) -> None:
+    return assert_module_fails(module, dict(args), message)
 
 
 def test_deepseek_tui_hook_writes_toml_and_removes_entry(tmp_path: Path) -> None:

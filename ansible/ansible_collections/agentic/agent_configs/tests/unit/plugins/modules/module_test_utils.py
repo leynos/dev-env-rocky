@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, cast
 
 import pytest
 from ansible.module_utils import basic
@@ -26,11 +26,14 @@ class AnsibleExitJson(Exception):
 class AnsibleFailJson(Exception):
     """Raised when a module calls fail_json during unit tests."""
 
+
 class _ModuleEntryPoint(Protocol):
     """Structural protocol for Ansible module modules used by tests."""
 
     def main(self) -> None:
         """Run the module entrypoint."""
+
+
 def set_module_args(args: dict[str, object]) -> None:
     """Serialize Ansible module arguments into the global test input slot."""
     payload = json.dumps({"ANSIBLE_MODULE_ARGS": args})
@@ -63,12 +66,16 @@ class FakeModule:
         kwargs["failed"] = True
         raise AnsibleFailJson(kwargs)
 
-def run_module(module: _ModuleEntryPoint, args: dict[str, object]) -> dict:
+
+def run_module(
+    module: _ModuleEntryPoint, args: dict[str, object]
+) -> dict[str, object]:
     """Run an Ansible module in-process and return its exit payload."""
     set_module_args(args)
     with pytest.raises(AnsibleExitJson) as exc:
         module.main()
-    return exc.value.args[0]
+    return cast("dict[str, object]", exc.value.args[0])
+
 
 def assert_module_fails(
     module: _ModuleEntryPoint, args: dict[str, object], message: str
@@ -77,7 +84,8 @@ def assert_module_fails(
     set_module_args(args)
     with pytest.raises(AnsibleFailJson) as exc:
         module.main()
-    actual_message = exc.value.args[0]["msg"]
+    payload = cast("dict[str, object]", exc.value.args[0])
+    actual_message = str(payload["msg"])
     assert message in actual_message, (
         f"expected failure message to contain {message!r}, got {actual_message!r}"
     )

@@ -85,8 +85,12 @@
           - deepseek_tui_config_data.features.mcp
           - deepseek_tui_config_data.features.subagents
           - deepseek_tui_config_data.hooks.enabled
-          - deepseek_tui_config_data.hooks.hooks[0].event == 'shell_env'
-          - deepseek_tui_config_data.hooks.hooks[0].name == 'repo-env'
+          - >-
+            deepseek_tui_config_data.hooks.hooks
+            | selectattr('event', 'equalto', 'shell_env')
+            | selectattr('name', 'equalto', 'repo-env')
+            | list
+            | length > 0
         fail_msg: DeepSeek-TUI config.toml did not contain expected role-managed values
 
     - name: Assert DeepSeek-TUI MCP config values
